@@ -1,10 +1,11 @@
 ---
-description: Creates new Claude Code custom commands with best practices, bash permissions, and workflow patterns
+description: Creates new Claude Code custom commands with best practices and bash permission management
+ultrathink: true
 allowed-tools:
   - Write
   - Read
   - Task
-  - Bash
+  - Bash(set -e*), Bash(echo *), Bash(test *), Bash(if *), Bash(which *), Bash(gh auth status)
   - TodoWrite
   - LS
   - Glob
@@ -272,63 +273,7 @@ Once basic requirements are confirmed, I'll gather detailed specifications:
 ## 🔒 Bash Command Permission Analysis
 
 <Task>
-I'll analyze your command for bash commands that need permissions. This ensures transparency and security.
-</Task>
-
-### Command Risk Categories
-
-**🟢 Low Risk (Auto-Approved, Informational)**
-- `echo`, `printf` - Output only
-- `pwd`, `whoami`, `id` - Current state info
-- `date`, `uname`, `hostname` - System info
-- `which`, `type`, `command -v` - Command availability
-- `true`, `false` - Return codes only
-- `basename`, `dirname` - Path parsing
-- `wc`, `du -h` - File statistics
-- `env`, `printenv` - Environment display
-- `cat`, `head`, `tail`, `less`, `more` - File reading
-- `grep`, `egrep`, `fgrep` - Pattern matching
-- `awk`, `sed` (read-only mode) - Text processing
-- `cut`, `paste`, `tr` - Text manipulation
-- `sort`, `uniq` - Text organization
-- `diff`, `comm` - File comparison
-- `ls`, `ll`, `la` - Directory listing
-- `find` (read-only) - File searching
-- `test`, `[`, `[[` - Condition checking
-- `stat` - File metadata
-- `file` - File type detection
-- `md5sum`, `sha256sum` - Checksums
-- `jq`, `yq` (read mode) - JSON/YAML parsing
-- `set` - Shell options (builtin, safe)
-- `exit` - Script termination
-
-**🟡 Medium Risk (Read Operations with Side Effects)**
-- `git status`, `git log`, `git diff` - Repository info
-- `git branch`, `git remote -v` - Git metadata
-- `npm list`, `pip list` - Package listings
-- `docker ps`, `docker images` - Container info
-- `mysql -e "SELECT..."` - Database queries
-- `curl` (GET only), `wget` (spider mode) - Network reads
-- `gh auth status`, `gh repo view` - GitHub reads
-
-**🟠 High Risk (Modifications)**
-- `mkdir`, `touch` - Create files/dirs
-- `cp`, `mv` - Copy/move files
-- `git add`, `git commit` - Repository changes
-- `npm install`, `pip install` - Package installation
-- Write operations with `>`, `>>`
-
-**🔴 Critical Risk (System Changes)**
-- `rm`, `rmdir` - Delete operations
-- `chmod`, `chown` - Permission changes
-- `sudo` commands - Elevated privileges
-- Network operations (`curl`, `wget` writing files)
-- Script execution (`sh`, `bash`, `python`)
-
-### Automatic Permission Detection
-
-<Task>
-I'll scan your command template for bash commands (preceded by !) and categorize them by risk level.
+I'll analyze your command for bash commands that need permissions. This ensures transparency and security by categorizing commands by risk level and requiring explicit approval for potentially dangerous operations.
 </Task>
 
 ### 🛡️ Permission Approval Process
@@ -370,17 +315,15 @@ Once approved, I'll add to the command's frontmatter:
 ```yaml
 ---
 description: [Your description]
-allowed-tools: [...]
-allowed-bash-commands:
-  low-risk:
-    - echo
-    - which
-    - pwd
-    - test
-  medium-risk:
-    - gh  # With restrictions: read-only operations
-  high-risk:
-    - gh  # With restrictions: comment posting only
+ultrathink: true
+allowed-tools:
+  - Write
+  - Read
+  - Task
+  - Bash(set -e*), Bash(echo *), Bash(test *), Bash(if *)
+  - Bash(gh auth status)  # If GitHub authentication check needed
+  - Bash(gh issue list*)  # If GitHub issue listing needed
+  - [Other tools as needed based on command requirements]
 ---
 ```
 
@@ -439,12 +382,13 @@ Based on your requirements, I'll generate a command using this professional temp
 ```markdown
 ---
 description: [Concise description]
-allowed-tools: [Minimum required tools]
-allowed-bash-commands:
-  low-risk: [Commands like echo, test, which]
-  medium-risk: [Commands like ls, git status]
-  high-risk: [Commands that modify files]
-  critical-risk: [Commands that delete or sudo]
+ultrathink: true
+allowed-tools:
+  - Write
+  - Read
+  - Task
+  - Bash(set -e*), Bash(echo *), Bash(test *), Bash(if *)
+  - [Other tools as needed based on command requirements]
 ---
 
 # [Command Name] - [Purpose]
@@ -587,186 +531,7 @@ If something goes wrong:
 *Command created with professional standards for reliability and user safety*
 ```
 
-## 🧪 Testing Protocol
 
-I'll test your command by:
-
-1. **Validation testing**: Run all precondition checks
-2. **Dry-run testing**: Execute up to confirmation point
-3. **Edge case testing**: Test with invalid inputs
-4. **Integration testing**: Verify tool interactions
-
-## 🔐 Permission Analysis Workflow
-
-### Step 1: Command Analysis
-<Task>
-After you provide your command requirements, I'll:
-1. Generate the initial command template
-2. Scan for all bash commands (lines starting with !)
-3. Extract and categorize each command by risk level
-4. Identify any potentially dangerous patterns
-5. Auto-approve low-risk commands
-</Task>
-
-### Step 2: Permission Presentation
-For commands requiring approval, I'll show:
-- **Medium/High/Critical risk commands** requiring approval
-- **Specific commands** and their purposes
-- **Potential impacts** on the system
-- **Security considerations**
-- **Auto-approved commands** listed separately
-
-### Step 3: User Approval
-For non-auto-approved commands, you'll:
-- Review all requested permissions
-- Understand the risks involved
-- Explicitly approve or deny permissions
-- Optionally restrict certain commands
-
-### Step 4: Implementation
-After approval, I'll:
-- Add `allowed-bash-commands` to the frontmatter
-- Include both auto-approved and user-approved commands
-- Document any restrictions or conditions
-- Include security notes in the command documentation
-- Ensure the command follows principle of least privilege
-
-### Example Permission Request:
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚠️  BASH COMMAND PERMISSIONS REQUIRED  ⚠️
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Command: git-auto-commit
-Purpose: Automatically commit changes with AI-generated messages
-
-COMMANDS REQUIRING APPROVAL:
-
-🟡 MEDIUM RISK (3):
-  • git status - Check for changes
-  • git diff - Review modifications
-  • git log - Read commit history
-
-🟠 HIGH RISK (2):
-  • git add - Stage files
-  • git commit - Create commits
-
-SECURITY ANALYSIS:
-✓ No deletion commands detected
-✓ No sudo/elevated privileges required
-✓ No network writes (only git operations)
-⚠️ Will modify git history
-⚠️ Commits cannot be easily undone
-
-AUTO-APPROVED (Low Risk):
-✓ echo - Status messages (1 command)
-✓ test - File/directory checks (1 command)
-✓ cat, grep - File reading (2 commands)
-✓ Total: 4 low-risk commands
-
-RECOMMENDATIONS:
-- Always preview changes before committing
-- Include dry-run mode for safety
-- Add confirmation prompts for commits
-
-Do you approve these permissions? (yes/no)
-```
-
-## 🎭 Workflow Patterns
-
-### Pattern 1: Single Approval → Execute All
-Best for commands that perform multiple related actions that should all succeed or fail together.
-
-```bash
-# Gather all actions upfront
-!set -e; echo "This command will:"
-!set -e; echo "✓ Action 1: Create file X"
-!set -e; echo "✓ Action 2: Commit to git"
-!set -e; echo "✓ Action 3: Post to GitHub"
-!set -e; echo ""
-
-<Task>
-Ask user: "Proceed with all actions? (yes/no)"
-If yes, continue with execution. If no, abort.
-</Task>
-
-# Execute actions only if user approved
-!if [ "$USER_APPROVED" = "yes" ]; then
-    # Execute all actions (each with set -e for fail-fast)
-    set -e; echo "Creating file..."
-    # action 1
-    
-    set -e; echo "Committing to git..."
-    # action 2
-    
-    set -e; echo "Posting to GitHub..."
-    # action 3
-else
-    echo "Operation cancelled."
-    exit 0
-fi
-```
-
-### Pattern 2: Progressive with Checkpoints
-For commands where each step depends on the previous one's success.
-
-```bash
-# Step 1
-echo "Step 1: Analyzing..."
-# do analysis
-if [ $? -ne 0 ]; then
-    echo "Analysis failed"
-    exit 1
-fi
-
-# Checkpoint
-read -p "Analysis complete. Continue to implementation? (yes/no): " continue
-if [ "$continue" != "yes" ]; then
-    echo "Stopped at analysis phase"
-    exit 0
-fi
-
-# Step 2
-echo "Step 2: Implementing..."
-# do implementation
-```
-
-### Pattern 3: Dry-Run Then Execute
-For potentially destructive or complex operations.
-
-```bash
-# Dry run first
-echo "=== DRY RUN MODE ==="
-echo "Would perform these actions:"
-# show what would happen
-
-read -p "Execute these actions for real? (yes/no): " execute
-if [ "$execute" = "yes" ]; then
-    echo "=== EXECUTING ==="
-    # perform actual actions
-fi
-```
-
-### Pattern 4: Auto-Execute with Bail Points
-For commands that should "just work" but allow interruption.
-
-```bash
-echo "Starting automated workflow..."
-echo "Press Ctrl+C at any time to cancel"
-sleep 2  # Give user time to cancel
-
-# Auto-execute with status updates
-echo "[1/3] Creating plan..."
-# action 1
-
-echo "[2/3] Committing..."
-# action 2
-
-echo "[3/3] Publishing..."
-# action 3
-
-echo "✓ All actions completed successfully!"
-```
 
 ## 💡 Prompt Engineering Best Practices
 
