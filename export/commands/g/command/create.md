@@ -74,59 +74,59 @@ Based on the project structure, I'll identify key documentation that should be r
 ## 📖 Help Documentation
 
 <Task>
-First, check if the user requested help documentation.
+If the user requested --help, provide the help documentation and exit.
 </Task>
 
-!if [ "$ARGUMENTS" = "--help" ]; then \
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
-echo " COMMAND:CREATE - Create New Claude Code Commands"; \
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
-echo ""; \
-echo "Creates new Claude Code custom commands with best practices, including:"; \
-echo "  • Comprehensive error handling and fail-fast validation"; \
-echo "  • Bash command permission management"; \
-echo "  • Non-interactive command patterns"; \
-echo "  • Progress tracking and user confirmations"; \
-echo "  • Automatic --help documentation"; \
-echo ""; \
-echo "USAGE:"; \
-echo "  /g:command:create"; \
-echo "  /g:command:create [command-name]"; \
-echo "  /g:command:create --help"; \
-echo ""; \
-echo "ARGUMENTS:"; \
-echo "  [command-name]  Optional. Pre-fill the command name (e.g., 'db:migrate')"; \
-echo "  --help          Show this help message"; \
-echo ""; \
-echo "INTERACTIVE PROMPTS:"; \
-echo "  1. Command name (use : for namespacing)"; \
-echo "  2. Primary purpose"; \
-echo "  3. Whether it makes changes (yes/no)"; \
-echo "  4. Detailed requirements gathering"; \
-echo "  5. Bash permission approval"; \
-echo ""; \
-echo "EXAMPLES:"; \
-echo "  /g:command:create"; \
-echo "    Start interactive command creation wizard"; \
-echo ""; \
-echo "  /g:command:create test:integration"; \
-echo "    Create a command named 'test:integration' (skips name prompt)"; \
-echo ""; \
-echo "FEATURES:"; \
-echo "  • Enforces non-interactive bash commands"; \
-echo "  • Generates comprehensive help documentation"; \
-echo "  • Creates folder structure for namespaced commands"; \
-echo "  • Includes project documentation discovery"; \
-echo "  • Implements safety patterns and confirmations"; \
-echo ""; \
-echo "SAFETY:"; \
-echo "  • Won't overwrite existing commands"; \
-echo "  • Validates all inputs before proceeding"; \
-echo "  • Requires explicit permission for bash commands"; \
-echo "  • All created commands include --help support"; \
-echo ""; \
-exit 0; \
-fi
+If you see `--help` in the arguments, please provide this help text and stop:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ COMMAND:CREATE - Create New Claude Code Commands
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Creates new Claude Code custom commands with best practices, including:
+  • Comprehensive error handling and fail-fast validation
+  • Bash command permission management
+  • Non-interactive command patterns
+  • Progress tracking and user confirmations
+  • Automatic --help documentation
+
+USAGE:
+  /g:command:create
+  /g:command:create [command-name]
+  /g:command:create --help
+
+ARGUMENTS:
+  [command-name]  Optional. Pre-fill the command name (e.g., 'db:migrate')
+  --help          Show this help message
+
+INTERACTIVE PROMPTS:
+  1. Command name (use : for namespacing)
+  2. Primary purpose
+  3. Whether it makes changes (yes/no)
+  4. Detailed requirements gathering
+  5. Bash permission approval
+
+EXAMPLES:
+  /g:command:create
+    Start interactive command creation wizard
+
+  /g:command:create test:integration
+    Create a command named 'test:integration' (skips name prompt)
+
+FEATURES:
+  • Enforces non-interactive bash commands
+  • Generates comprehensive help documentation
+  • Creates folder structure for namespaced commands
+  • Includes project documentation discovery
+  • Implements safety patterns and confirmations
+
+SAFETY:
+  • Won't overwrite existing commands
+  • Validates all inputs before proceeding
+  • Requires explicit permission for bash commands
+  • All created commands include --help support
+```
 
 ## 🔍 Initial Validation & Preconditions
 
@@ -140,6 +140,11 @@ This outputs structured data that Claude will use throughout the command.
 </Task>
 
 !echo "=== ARGUMENT PARSING & VALIDATION ==="; \
+# First check for --help \
+if [ "$ARGUMENTS" = "--help" ]; then \
+  echo "HELP_REQUESTED: true"; \
+  exit 0; \
+fi; \
 if [ -n "$ARGUMENTS" ]; then \
   # Extract first word as command name \
   COMMAND_NAME=$(echo "$ARGUMENTS" | awk '{print $1}'); \
@@ -406,6 +411,11 @@ Parse all arguments at once and output structured data for use throughout the co
 </Task>
 
 !echo "=== ARGUMENT PARSING ==="; \
+# First check for --help \
+if [ "$ARGUMENTS" = "--help" ]; then \
+  echo "HELP_REQUESTED: true"; \
+  exit 0; \
+fi; \
 # [Parse arguments based on your command's needs] \
 # [Validate inputs and check preconditions] \
 # [Output structured data for Claude to use] \
@@ -417,44 +427,44 @@ Parse all arguments at once and output structured data for use throughout the co
 ## 📖 Help Documentation
 
 <Task>
-Check if the user requested help documentation.
+If the user requested --help, provide the help documentation and exit.
 </Task>
 
-!if [ "$ARGUMENTS" = "--help" ]; then \
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
-echo " [COMMAND NAME IN UPPERCASE]"; \
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
-echo ""; \
-echo "[Long description of what this command does, when to use it, and key features]"; \
-echo ""; \
-echo "USAGE:"; \
-echo "  /[namespace]:[command] [arguments]"; \
-echo "  /[namespace]:[command] --help"; \
-echo ""; \
-echo "ARGUMENTS:"; \
-echo "  [argument1]    [Description of argument1]"; \
-echo "  [argument2]    [Description of argument2] (optional)"; \
-echo "  --help         Show this help message"; \
-echo ""; \
-echo "EXAMPLES:"; \
-echo "  /[namespace]:[command]"; \
-echo "    [What this does]"; \
-echo ""; \
-echo "  /[namespace]:[command] [example-arg]"; \
-echo "    [What this does with the argument]"; \
-echo ""; \
-echo "PRECONDITIONS:"; \
-echo "  • [Required tool or condition 1]"; \
-echo "  • [Required tool or condition 2]"; \
-echo "  • [Required authentication or permissions]"; \
-echo ""; \
-echo "SAFETY:"; \
-echo "  • [Safety feature 1 - e.g., dry-run mode]"; \
-echo "  • [Safety feature 2 - e.g., confirmation prompts]"; \
-echo "  • [What the command will NOT do]"; \
-echo ""; \
-exit 0; \
-fi
+If you see `--help` in the arguments, please provide this help text and stop:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ [COMMAND NAME IN UPPERCASE]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[Long description of what this command does, when to use it, and key features]
+
+USAGE:
+  /[namespace]:[command] [arguments]
+  /[namespace]:[command] --help
+
+ARGUMENTS:
+  [argument1]    [Description of argument1]
+  [argument2]    [Description of argument2] (optional)
+  --help         Show this help message
+
+EXAMPLES:
+  /[namespace]:[command]
+    [What this does]
+
+  /[namespace]:[command] [example-arg]
+    [What this does with the argument]
+
+PRECONDITIONS:
+  • [Required tool or condition 1]
+  • [Required tool or condition 2]
+  • [Required authentication or permissions]
+
+SAFETY:
+  • [Safety feature 1 - e.g., dry-run mode]
+  • [Safety feature 2 - e.g., confirmation prompts]
+  • [What the command will NOT do]
+```
 
 ## 🚦 Precondition Checks
 
