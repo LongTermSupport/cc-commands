@@ -4,16 +4,6 @@
 # Usage: execute_list_plans.bash
 # Output: Plan listing with status and progress
 
-set -euo pipefail
-IFS=$'\n\t'
-
-# Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMMON_DIR="$SCRIPT_DIR/../../_common"
-
-# Load common scripts
-source "$COMMON_DIR/error/error_handlers.bash"
-
 main() {
     echo "✓ Discovering available plans"
     echo "=== DISCOVERING PLANS ==="
@@ -29,24 +19,29 @@ main() {
         echo "---------|------|--------|-------"
         
         # Process all .md files in one pass, extracting all needed info
-        find . -name "*.md" -type f -printf "%T@ %P\n" | sort -rn | head -10 | while read -r timestamp filepath; do
+        find . -name "*.md" -type f -printf "%T@ %P\n" 2>/dev/null | sort -rn | head -10 | while IFS=" " read -r timestamp filepath; do
             planname=$(basename "$filepath" .md)
             
-            # Extract all needed data in one grep pass using awk
-            eval $(awk '
-                BEGIN { total=0; completed=0; inprogress=0; has_done=0; summary="No summary" }
-                /^\[[ ✓⏳]\]/ { total++ }
-                /^\[✓\]/ { completed++ }
-                /^\[⏳\]/ { inprogress++ }
-                /^## Progress/ { if(getline && /ALL DONE!/) has_done=1 }
-                /^## Summary/ { if(getline && getline) { summary=substr($0,1,60); gsub(/[|]/, "-", summary) } }
-                END {
-                    if(has_done) status="COMPLETED";
-                    else if(inprogress>0) status="IN_PROGRESS";
-                    else if(completed>0) status="PARTIAL";
-                    else status="NOT_STARTED";
-                    print "total="total"; completed="completed"; status=\""status"\"; summary=\""summary"\""
-                }' "$filepath")
+            # Simple status checks using grep
+            total=$(grep -E '^\[[ ✓⏳]\]' "$filepath" 2>/dev/null | wc -l)
+            completed=$(grep '^\[✓\]' "$filepath" 2>/dev/null | wc -l)
+            inprogress=$(grep '^\[⏳\]' "$filepath" 2>/dev/null | wc -l)
+            
+            # Check for ALL DONE
+            if grep -A1 '^## Progress' "$filepath" 2>/dev/null | grep -q 'ALL DONE!'; then
+                status="COMPLETED"
+            elif [ "$inprogress" -gt 0 ]; then
+                status="IN_PROGRESS"
+            elif [ "$completed" -gt 0 ]; then
+                status="PARTIAL"
+            else
+                status="NOT_STARTED"
+            fi
+            
+            # Get summary - look for lines after ## Summary
+            summary=$(grep -A3 '^## Summary' "$filepath" 2>/dev/null | tail -n +2 | grep -v '^#' | grep -v '^$' | head -1 | cut -c1-60 || echo "No summary")
+            # Clean up summary - remove special chars
+            summary=$(echo "$summary" | tr '|' '-' | tr -d '`$')
             
             echo "$planname|$status|$completed/$total|$summary"
         done
@@ -56,7 +51,7 @@ main() {
     else
         echo "ERROR: No CLAUDE/plan directory found (searched case-insensitively)"
         echo "LIST_SUCCESS=false"
-        error_exit "No plan directory found"
+        exit 1
     fi
     
     echo "✓ Plan listing complete"
