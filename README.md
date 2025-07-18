@@ -116,6 +116,7 @@ Pre-installed commands available to all projects:
 
 #### Workflow Tools (`g:w:*`)
 - `/g:w:plan` - Generate comprehensive project plans with progress tracking
+- `/g:w:execute` - Execute previously created plans with workflow-based approach and status verification
 
 ### Project Commands (custom namespaces)
 
