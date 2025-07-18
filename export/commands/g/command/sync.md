@@ -245,7 +245,30 @@ else \
   fi; \
 fi
 
-### Step 3: Push to Remote
+### Step 3: Update README.md
+
+<Task>
+Check if the README.md file needs updates based on the current state of commands and repository structure. If updates are needed, update the README.md to reflect the current available commands, features, and documentation, then commit those changes.
+</Task>
+
+!echo "Checking README.md currency"; \
+set -e; cd "$CC_DIR"; \
+echo "=== README Update Check ==="; \
+# Check if README is current by comparing last modified time with recent commits \
+if [ -f "README.md" ]; then \
+  README_MODIFIED=$(stat -c %Y README.md 2>/dev/null || echo "0"); \
+  LAST_COMMAND_CHANGE=$(find export/commands -name "*.md" -printf "%T@\n" | sort -n | tail -1 | cut -d. -f1); \
+  if [ "$README_MODIFIED" -lt "$LAST_COMMAND_CHANGE" ]; then \
+    echo "⚠️  README.md appears outdated compared to command changes"; \
+    echo "📝 Consider updating README.md to reflect current command structure"; \
+  else \
+    echo "✓ README.md appears current"; \
+  fi; \
+else \
+  echo "⚠️  README.md not found"; \
+fi
+
+### Step 4: Push to Remote
 
 !echo "Pushing changes to remote"; \
 set -e; cd "$CC_DIR"; \
