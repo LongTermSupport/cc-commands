@@ -21,51 +21,51 @@ You are an expert at analyzing and improving Claude Code custom commands. Your r
 ## 📖 Help Documentation
 
 <Task>
-First, check if the user requested help documentation.
+If the user requested --help, provide the help documentation and exit.
 </Task>
 
-!if [ "$ARGUMENTS" = "--help" ]; then \
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
-echo " COMMAND:UPDATE - Update Existing Commands"; \
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
-echo ""; \
-echo "Updates existing Claude Code commands to latest standards by regenerating"; \
-echo "them with command:create. This preserves your command's core functionality"; \
-echo "while upgrading to the latest best practices, including:"; \
-echo "  • Adding --help documentation"; \
-echo "  • Improving error handling"; \
-echo "  • Updating permission management"; \
-echo "  • Applying latest command patterns"; \
-echo ""; \
-echo "USAGE:"; \
-echo "  /g:command:update [command-name]"; \
-echo "  /g:command:update --help"; \
-echo ""; \
-echo "ARGUMENTS:"; \
-echo "  [command-name]  Required. The command to update (e.g., 'db:migrate')"; \
-echo "  --help          Show this help message"; \
-echo ""; \
-echo "EXAMPLES:"; \
-echo "  /g:command:update test:integration"; \
-echo "    Updates the test:integration command to latest standards"; \
-echo ""; \
-echo "  /g:command:update g:gh:issue:plan"; \
-echo "    Updates a global command in the g namespace"; \
-echo ""; \
-echo "PROCESS:"; \
-echo "  1. Reads the existing command"; \
-echo "  2. Extracts core functionality and requirements"; \
-echo "  3. Uses command:create to regenerate with latest patterns"; \
-echo "  4. Preserves your custom logic and behavior"; \
-echo ""; \
-echo "NOTES:"; \
-echo "  • Original command is backed up before update"; \
-echo "  • Command namespace is preserved"; \
-echo "  • All custom functionality is maintained"; \
-echo "  • Adds missing features like --help support"; \
-echo ""; \
-exit 0; \
-fi
+If you see `--help` in the arguments, please provide this help text and stop:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ COMMAND:UPDATE - Update Existing Commands
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Updates existing Claude Code commands to latest standards by regenerating
+them with command:create. This preserves your command's core functionality
+while upgrading to the latest best practices, including:
+  • Adding --help documentation
+  • Improving error handling
+  • Updating permission management
+  • Applying latest command patterns
+
+USAGE:
+  /g:command:update [command-name]
+  /g:command:update --help
+
+ARGUMENTS:
+  [command-name]  Required. The command to update (e.g., 'db:migrate')
+  --help          Show this help message
+
+EXAMPLES:
+  /g:command:update test:integration
+    Updates the test:integration command to latest standards
+
+  /g:command:update g:gh:issue:plan
+    Updates a global command in the g namespace
+
+PROCESS:
+  1. Reads the existing command
+  2. Extracts core functionality and requirements
+  3. Uses command:create to regenerate with latest patterns
+  4. Preserves your custom logic and behavior
+
+NOTES:
+  • Original command is backed up before update
+  • Command namespace is preserved
+  • All custom functionality is maintained
+  • Adds missing features like --help support
+```
 
 ## 🔍 Initial Validation
 
@@ -78,6 +78,11 @@ Parse arguments to extract command name and any additional update requirements.
 </Task>
 
 !echo "=== ARGUMENT PARSING ==="; \
+# First check for --help \
+if [ "$ARGUMENTS" = "--help" ]; then \
+  echo "HELP_REQUESTED: true"; \
+  exit 0; \
+fi; \
 if [ -z "$ARGUMENTS" ]; then \
   echo "=== Available Commands ==="; \
   find .claude/commands -follow -name "*.md" -type f 2>/dev/null | grep -v "command/create.md" | grep -v "command/update.md" | sed 's|.claude/commands/||' | sed 's|\.md$||' | sed 's|/|:|g' | sort | nl -w2 -s". "; \

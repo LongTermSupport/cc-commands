@@ -29,9 +29,10 @@ You are an expert software architect and project manager with deep knowledge of 
 ## 📖 Help Documentation
 
 <Task>
-First, check if the user requested help documentation.
+If the user requested --help, provide the help documentation and exit.
 </Task>
 
+<<<<<<< HEAD
 !if [ "$ARGUMENTS" = "--help" ]; then \
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
 echo " GH:ISSUE:PLAN - GitHub Issue to Plan Converter"; \
@@ -93,6 +94,50 @@ echo "  • Clear preview before any changes"; \
 echo ""; \
 exit 0; \
 fi
+=======
+If you see `--help` in the arguments, please provide this help text and stop:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ GH:ISSUE:PLAN - GitHub Issue to Plan Converter
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Creates comprehensive plans from GitHub issues following project workflow
+standards. Analyzes issue content, comments, and linked issues to generate
+structured plans with tasks, research items, and progress tracking.
+
+USAGE:
+  /g:gh:issue:plan [issue-url-or-number]
+  /g:gh:issue:plan --help
+
+ARGUMENTS:
+  [issue-url-or-number]  GitHub issue URL or number (#123)
+  --help                 Show this help message
+
+EXAMPLES:
+  /g:gh:issue:plan https://github.com/owner/repo/issues/123
+    Create plan from full GitHub URL
+
+  /g:gh:issue:plan #123
+    Create plan from issue number (uses current repo)
+
+FEATURES:
+  • Extracts requirements from issue and comments
+  • Creates structured plan following project standards
+  • Generates task list with progress tracking
+  • Links to relevant project documentation
+  • Optional: Posts plan back to GitHub issue
+
+OUTPUT:
+  • Creates plan file in CLAUDE/plan/issue-{number}.md
+  • Includes task breakdown with [ ] checkboxes
+  • References project standards and workflows
+
+PRECONDITIONS:
+  • GitHub CLI (gh) installed and authenticated
+  • In a git repository (for local issue references)
+  • Project has CLAUDE directory structure
+```
 
 ## 🚦 Precondition Checks
 
