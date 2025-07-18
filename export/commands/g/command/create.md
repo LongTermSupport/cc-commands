@@ -1,5 +1,5 @@
 ---
-description: Creates new Claude Code custom commands with best practices and bash permission management
+description: Creates optimized Claude Code custom commands with minimal bash usage and best practices
 ultrathink: true
 allowed-tools:
   - Write
@@ -13,7 +13,7 @@ allowed-tools:
 
 # Command Creation Wizard 🚀
 
-You are a highly experienced software architect and prompt engineer with expertise in creating robust, maintainable, and user-friendly CLI tools. Your focus is on fail-fast validation, clear documentation, and bulletproof error handling. You use the latest features of claude code custom commands and prompting in general.
+You are a highly experienced software architect and prompt engineer with expertise in creating robust, maintainable, and user-friendly CLI tools. Your focus is on fail-fast validation, clear documentation, and bulletproof error handling. You use the latest features of Claude Code custom commands and prioritize minimal bash usage with maximum efficiency.
 
 **CRITICAL: If any bash command fails or returns an error, you MUST immediately stop execution and abort the command. Do not attempt to continue, work around, or fix the error. Simply state "Command aborted due to bash error" and stop.**
 
@@ -51,86 +51,127 @@ Wait for user response before continuing.
 set -e; [non-interactive command here]
 ```
 
+### ⚡ **Claude Code Optimization Guidelines:**
+- **Use bash ONLY for:** System state checking, file operations, data extraction
+- **Use Claude directly for:** Help documentation, user interfaces, static content
+- **Structured output:** Always use `KEY=value` format for bash output
+- **Chain commands:** Combine multiple bash operations in single calls
+- **Fail-fast:** Always include `set -e` for immediate error termination
+
 https://docs.anthropic.com/en/docs/claude-code/slash-commands
 
 ## 📚 Project Documentation Discovery
 
 <Task>
-Scan for relevant project documentation that commands should reference
+Scan for relevant project documentation that commands should reference.
 </Task>
 
-!set -e; echo "=== Discovering Project Documentation ==="; if [ -d "CLAUDE" ]; then echo "✓ CLAUDE directory found"; find CLAUDE -name "*.md" -type f | head -20 | sed 's/^/  - @/'; else echo "✗ No CLAUDE directory found"; fi; if [ -f "README.md" ]; then echo "✓ README.md found"; fi; if [ -d "docs" ]; then echo "✓ docs directory found"; find docs -name "*.md" -type f | head -10 | sed 's/^/  - @/'; fi; if [ -f ".env.example" ]; then echo "✓ .env.example found (for environment setup)"; fi; if [ -f "package.json" ]; then echo "✓ package.json found (Node.js project)"; fi; if [ -f "composer.json" ]; then echo "✓ composer.json found (PHP project)"; fi
+!echo "Scanning project documentation structure"; \
+set -e; \
+test -d CLAUDE && echo "CLAUDE_DIR=true" || echo "CLAUDE_DIR=false"; \
+test -f README.md && echo "README=true" || echo "README=false"; \
+test -d docs && echo "DOCS_DIR=true" || echo "DOCS_DIR=false"; \
+test -f .env.example && echo "ENV_EXAMPLE=true" || echo "ENV_EXAMPLE=false"; \
+test -f package.json && echo "PACKAGE_JSON=true" || echo "PACKAGE_JSON=false"; \
+test -f composer.json && echo "COMPOSER_JSON=true" || echo "COMPOSER_JSON=false"
 
-### Key Documentation Files
+### Project Structure Analysis
+
+**Documentation Status:**
+- **CLAUDE Directory:** [Found/Not found] - Command documentation and workflows
+- **README.md:** [Found/Not found] - Project overview and setup instructions
+- **docs/ Directory:** [Found/Not found] - Additional documentation
+- **Environment Config:** [Found/Not found] - Environment setup guidance
+- **Package Manager:** [Node.js/PHP/Other] - Technology stack indicators
 
 <Task>
-Based on the project structure, I'll identify key documentation that should be referenced in commands:
-- Workflow documents (e.g., CLAUDE/PlanWorkflow.md)
-- Code standards (e.g., CLAUDE/Core/CodeStandards.md)
-- Testing guidelines (e.g., CLAUDE/Core/TestingStandards.md)
-- Tool documentation (e.g., CLAUDE/Tools/Commands.md)
+Based on the project structure, identify key documentation that should be referenced in commands, such as:
+- Workflow documents
+- Code standards
+- Testing guidelines
+- Tool documentation
 </Task>
 
 ## 📖 Help Documentation
 
 <Task>
-First, check if the user requested help documentation.
+Check if the user requested help documentation and show it if requested.
 </Task>
 
 !if [ "$ARGUMENTS" = "--help" ]; then \
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
-echo " COMMAND:CREATE - Create New Claude Code Commands"; \
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
-echo ""; \
-echo "Creates new Claude Code custom commands with best practices, including:"; \
-echo "  • Comprehensive error handling and fail-fast validation"; \
-echo "  • Bash command permission management"; \
-echo "  • Non-interactive command patterns"; \
-echo "  • Progress tracking and user confirmations"; \
-echo "  • Automatic --help documentation"; \
-echo ""; \
-echo "USAGE:"; \
-echo "  /g:command:create"; \
-echo "  /g:command:create [command-name]"; \
-echo "  /g:command:create --help"; \
-echo ""; \
-echo "ARGUMENTS:"; \
-echo "  [command-name]  Optional. Pre-fill the command name (e.g., 'db:migrate')"; \
-echo "  --help          Show this help message"; \
-echo ""; \
-echo "INTERACTIVE PROMPTS:"; \
-echo "  1. Command name (use : for namespacing)"; \
-echo "  2. Primary purpose"; \
-echo "  3. Whether it makes changes (yes/no)"; \
-echo "  4. Detailed requirements gathering"; \
-echo "  5. Bash permission approval"; \
-echo ""; \
-echo "EXAMPLES:"; \
-echo "  /g:command:create"; \
-echo "    Start interactive command creation wizard"; \
-echo ""; \
-echo "  /g:command:create test:integration"; \
-echo "    Create a command named 'test:integration' (skips name prompt)"; \
-echo ""; \
-echo "FEATURES:"; \
-echo "  • Enforces non-interactive bash commands"; \
-echo "  • Generates comprehensive help documentation"; \
-echo "  • Creates folder structure for namespaced commands"; \
-echo "  • Includes project documentation discovery"; \
-echo "  • Implements safety patterns and confirmations"; \
-echo ""; \
-echo "SAFETY:"; \
-echo "  • Won't overwrite existing commands"; \
-echo "  • Validates all inputs before proceeding"; \
-echo "  • Requires explicit permission for bash commands"; \
-echo "  • All created commands include --help support"; \
-echo ""; \
+echo "SHOW_HELP=true"; \
 exit 0; \
 fi
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ **COMMAND:CREATE - Create New Claude Code Commands**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Creates new Claude Code custom commands with best practices, including:
+• Comprehensive error handling and fail-fast validation
+• Bash command permission management
+• Non-interactive command patterns
+• Progress tracking and user confirmations
+• Automatic --help documentation
+
+**USAGE:**
+```
+/g:command:create
+/g:command:create [command-name]
+/g:command:create --help
+```
+
+**ARGUMENTS:**
+- `[command-name]` - Optional. Pre-fill the command name (e.g., 'db:migrate')
+- `--help` - Show this help message
+
+**INTERACTIVE PROMPTS:**
+1. Command name (use : for namespacing)
+2. Primary purpose
+3. Whether it makes changes (yes/no)
+4. Detailed requirements gathering
+5. Bash permission approval
+
+**EXAMPLES:**
+```
+/g:command:create
+  Start interactive command creation wizard
+
+/g:command:create test:integration
+  Create a command named 'test:integration' (skips name prompt)
+```
+
+**FEATURES:**
+• Enforces non-interactive bash commands
+• Generates comprehensive help documentation
+• Creates folder structure for namespaced commands
+• Includes project documentation discovery
+• Implements safety patterns and confirmations
+
+**SAFETY:**
+• Won't overwrite existing commands
+• Validates all inputs before proceeding
+• Requires explicit permission for bash commands
+• All created commands include --help support
+
 ## 🔍 Initial Validation & Preconditions
 
-!set -e; echo "=== Command Creation Environment Check ==="; echo "Working Directory: $(pwd)"; echo "Claude Commands Directory: $(ls -la .claude/commands 2>/dev/null || echo 'Not found - will create')"; which jq >/dev/null 2>&1 && echo "✓ jq available" || echo "✗ jq not found (optional)"; which gh >/dev/null 2>&1 && echo "✓ gh CLI available" || echo "✗ gh CLI not found (needed for GitHub commands)"; gh auth status >/dev/null 2>&1 && echo "✓ gh authenticated" || echo "✗ gh not authenticated"
+!echo "Checking system requirements and environment"; \
+set -e; \
+echo "WORKING_DIR=$(pwd)"; \
+test -d .claude/commands && echo "COMMANDS_DIR=exists" || echo "COMMANDS_DIR=missing"; \
+which jq >/dev/null 2>&1 && echo "JQ_AVAILABLE=true" || echo "JQ_AVAILABLE=false"; \
+which gh >/dev/null 2>&1 && echo "GH_AVAILABLE=true" || echo "GH_AVAILABLE=false"; \
+gh auth status >/dev/null 2>&1 && echo "GH_AUTHENTICATED=true" || echo "GH_AUTHENTICATED=false"
+
+### System Requirements Check
+
+**Environment Status:**
+- **Working Directory:** [Current directory path]
+- **Commands Directory:** [Exists/Will be created]
+- **JQ Tool:** [Available/Not available] (optional for enhanced features)
+- **GitHub CLI:** [Available/Not available] (needed for GitHub commands)
+- **GitHub Auth:** [Authenticated/Not authenticated]
 
 ### 📊 Comprehensive Argument Parsing & Validation
 
@@ -139,79 +180,84 @@ Parse all arguments once and perform all validations in a single bash execution.
 This outputs structured data that Claude will use throughout the command.
 </Task>
 
-!echo "=== ARGUMENT PARSING & VALIDATION ==="; \
+!echo "Parsing arguments and validating command setup"; \
+set -e; \
 if [ -n "$ARGUMENTS" ]; then \
-  # Extract first word as command name \
   COMMAND_NAME=$(echo "$ARGUMENTS" | awk '{print $1}'); \
-  # Extract everything after first word as requirements \
   FULL_REQUIREMENTS=$(echo "$ARGUMENTS" | cut -d' ' -f2-); \
-  # If there's only one word, no requirements were provided \
   if [ "$COMMAND_NAME" = "$FULL_REQUIREMENTS" ]; then \
     FULL_REQUIREMENTS=""; \
   fi; \
-  \
-  # Check for overwrite protection \
   if [[ "$COMMAND_NAME" == *:* ]]; then \
     FOLDER_PATH="${COMMAND_NAME//:://}.md"; \
     COMMAND_PATH=".claude/commands/${FOLDER_PATH}"; \
   else \
     COMMAND_PATH=".claude/commands/${COMMAND_NAME}.md"; \
   fi; \
-  \
   if [ -f "$COMMAND_PATH" ]; then \
-    echo "ERROR: Command already exists at $COMMAND_PATH"; \
-    echo "To update an existing command, use: /g:command:update $COMMAND_NAME"; \
+    echo "ERROR_EXISTS=true"; \
+    echo "EXISTING_PATH=$COMMAND_PATH"; \
+    echo "COMMAND_NAME=$COMMAND_NAME"; \
     exit 1; \
   fi; \
-  \
-  # Determine mode based on whether full requirements were provided \
   if [ -n "$FULL_REQUIREMENTS" ]; then \
     MODE="FULL"; \
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
-    echo " Full Argument Mode Detected"; \
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
   else \
     MODE="INTERACTIVE"; \
   fi; \
-  \
-  # Output all parsed values for Claude to use \
-  echo "COMMAND_NAME: \"$COMMAND_NAME\""; \
-  echo "COMMAND_PATH: \"$COMMAND_PATH\""; \
-  echo "FULL_REQUIREMENTS: \"$FULL_REQUIREMENTS\""; \
-  echo "MODE: \"$MODE\""; \
+  echo "COMMAND_NAME=$COMMAND_NAME"; \
+  echo "COMMAND_PATH=$COMMAND_PATH"; \
+  echo "FULL_REQUIREMENTS=$FULL_REQUIREMENTS"; \
+  echo "MODE=$MODE"; \
 else \
-  # No arguments provided - full interactive mode \
-  echo "COMMAND_NAME: \"\""; \
-  echo "COMMAND_PATH: \"\""; \
-  echo "FULL_REQUIREMENTS: \"\""; \
-  echo "MODE: \"INTERACTIVE\""; \
+  echo "COMMAND_NAME="; \
+  echo "COMMAND_PATH="; \
+  echo "FULL_REQUIREMENTS="; \
+  echo "MODE=INTERACTIVE"; \
 fi
+
+### Argument Analysis
+
+**Parsing Results:**
+- **Mode:** [Interactive/Full argument mode]
+- **Command Name:** [Extracted from arguments or will be requested]
+- **Requirements:** [Full requirements provided or will be gathered interactively]
+- **Target Path:** [Where the command will be created]
+
+**Validation Status:**
+- **Command Exists:** [Checked for existing command conflicts]
+- **Path Availability:** [Confirmed target location is available]
 
 ### ⚡ Requirements Gathering
 
 <Task>
-Based on the parsed MODE from above, either extract requirements from FULL_REQUIREMENTS or gather them interactively.
+Based on the parsed MODE from the bash output above, either extract requirements from FULL_REQUIREMENTS or gather them interactively.
 </Task>
 
-Based on the parsed arguments:
-- **Mode**: [I'll use the MODE value from the parsing output]
-- **Command Name**: [I'll use COMMAND_NAME from the parsing output]
-- **Requirements**: [I'll use FULL_REQUIREMENTS from the parsing output if MODE is FULL]
+Based on the parsed arguments from the bash output above, I'll proceed with the appropriate workflow:
 
-If full requirements were provided (MODE: "FULL"), I'll analyze them to extract:
-- Primary purpose
-- Whether it makes changes
+**If MODE = "FULL":** I'll analyze the provided requirements to extract:
+- Primary purpose and functionality
+- Whether the command makes changes to the system
 - Required tools and preconditions
 - Input/output specifications
 - Any specific features requested
+- Bash usage requirements (minimal system operations only)
 
-Otherwise (MODE: "INTERACTIVE"), I need the following information:
+**If MODE = "INTERACTIVE":** I'll gather the following information:
+1. **Command name** (if not provided in arguments)
+2. **Primary purpose** (clear, concise description)
+3. **Makes changes?** (yes/no - affects permission requirements)
+4. **Detailed requirements** (functionality, inputs, outputs, special features)
+5. **System operations needed** (what bash commands are required)
 
-1. **Command name** (required): [Use COMMAND_NAME from parsing, or ask if empty]
-2. **Primary purpose** (required): 
-3. **Makes changes?** (yes/no - required):
+**Claude Code Optimization Applied:**
+- Help documentation will be direct Claude output (not bash)
+- System checks will use minimal bash with structured output
+- User interfaces will use Task blocks and Claude presentation
+- Static content will be native markdown
 
-I'll proceed based on the MODE determined during parsing.
+I'll then proceed with the command creation workflow based on the determined mode.
 
 ## 📋 Comprehensive Requirements Gathering
 
@@ -273,111 +319,92 @@ Once basic requirements are confirmed, I'll gather detailed specifications:
 ## 🔒 Bash Command Permission Analysis
 
 <Task>
-I'll analyze your command for bash commands that need permissions. This ensures transparency and security by categorizing commands by risk level and requiring explicit approval for potentially dangerous operations.
+Analyze the user's command requirements and categorize needed bash permissions by risk level.
+Present the permissions clearly and request explicit approval.
 </Task>
 
-### 🛡️ Permission Approval Process
+### 🛡️ Permission Analysis
 
-Based on the detected commands, I'll present:
+Based on your command requirements, I'll analyze the needed bash permissions and categorize them by risk level:
 
-```
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚠️  BASH COMMAND PERMISSIONS REQUIRED  ⚠️
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+**🟢 LOW RISK Commands:**
+- `echo` - Display output messages
+- `which` - Check command availability
+- `pwd` - Show current directory
+- `test` - Check file/directory existence
 
-Your command requires permission to execute:
+**🟡 MEDIUM RISK Commands:**
+- `gh auth status` - Check authentication
+- `git status` - Check repository state
+- File system reads and directory listing
 
-🟢 LOW RISK (4 commands):
-  • echo - Display output messages
-  • which - Check command availability
-  • pwd - Show current directory
-  • test - Check file/directory existence
+**🔴 HIGH RISK Commands:**
+- File creation and modification
+- `git` commands that modify repository
+- `gh` commands that make API calls
+- Network operations
 
-🟡 MEDIUM RISK (2 commands):
-  • gh issue list - Read GitHub issues
-  • gh auth status - Check authentication
+**POTENTIAL IMPACTS:**
+- Read access to file system and repositories
+- Network requests to external APIs
+- File and directory modifications
+- Repository state changes
 
-🟠 HIGH RISK (1 command):
-  • gh issue comment - Post to GitHub
-
-POTENTIAL IMPACTS:
-✓ Read access to GitHub repository
-✓ Network requests to GitHub API
-⚠️ Can post public comments to issues
-
-Do you approve these permissions? (yes/no)
-```
+**SAFETY MEASURES:**
+- All commands include confirmation prompts
+- Detailed progress feedback and validation
+- Comprehensive error handling and recovery
+- No destructive operations without explicit approval
 
 ### Permission Implementation
 
-Once approved, I'll add to the command's frontmatter:
-
-```yaml
----
-description: [Your description]
-ultrathink: true
-allowed-tools:
-  - Write
-  - Read
-  - Task
-  - Bash(set -e*), Bash(echo *), Bash(test *), Bash(if *)
-  - Bash(gh auth status)  # If GitHub authentication check needed
-  - Bash(gh issue list*)  # If GitHub issue listing needed
-  - [Other tools as needed based on command requirements]
----
-```
+Once you approve the permissions, I'll add the appropriate bash command permissions to the command's frontmatter based on the specific requirements of your command.
 
 ## 🔧 Bash Command Optimization Best Practices
 
-### ❌ BAD: Multiple separate bash commands (slow, multiple approvals)
+### ❌ **Avoid: Multiple Separate Bash Commands**
 ```bash
 !set -e; echo "=== Environment Check ==="
 !set -e; test -d .git && echo "✓ Git repo found" || exit 1
 !set -e; which gh >/dev/null 2>&1 && echo "✓ gh CLI available" || exit 1
-!set -e; gh auth status >/dev/null 2>&1 && echo "✓ GitHub authenticated" || exit 1
 ```
+*Problems: Multiple subprocess calls, repetitive approvals, slow execution*
 
-### ✅ GOOD: Chained bash commands with human-friendly descriptions
+### ✅ **Best Practice: Chained Commands with Structured Output**
 ```bash
 !echo "Validating GitHub environment and tools"; \
-set -e; echo "=== Environment Check ==="; \
-test -d .git && echo "✓ Git repo found" || exit 1; \
-which gh >/dev/null 2>&1 && echo "✓ gh CLI available" || exit 1; \
-gh auth status >/dev/null 2>&1 && echo "✓ GitHub authenticated" || exit 1
+set -e; \
+test -d .git && echo "GIT_REPO=true" || echo "GIT_REPO=false"; \
+which gh >/dev/null 2>&1 && echo "GH_AVAILABLE=true" || echo "GH_AVAILABLE=false"; \
+gh auth status >/dev/null 2>&1 && echo "GH_AUTH=true" || echo "GH_AUTH=false"
 ```
+*Benefits: Single subprocess, structured output, efficient execution*
 
-### 🎯 Command Chaining Strategy
+### 🎯 **Optimization Principles**
 
-#### Single Comprehensive Parsing Pattern
-Parse ALL arguments and perform ALL validations in ONE bash call at the start:
-```bash
-!echo "=== COMPREHENSIVE PARSING ==="; \
-# Parse command name \
-CMD=$(echo "$ARGUMENTS" | awk '{print $1}'); \
-# Parse requirements \
-REQS=$(echo "$ARGUMENTS" | cut -d' ' -f2-); \
-# Validate and check paths \
-if [ -f ".claude/commands/${CMD}.md" ]; then \
-  echo "ERROR: Command exists"; \
-  exit 1; \
-fi; \
-# Output all parsed data for Claude \
-echo "COMMAND_NAME: \"$CMD\""; \
-echo "REQUIREMENTS: \"$REQS\""; \
-echo "MODE: \"$([ -n "$REQS" ] && echo "FULL" || echo "INTERACTIVE")\""
-```
+**1. Parse Once, Use Everywhere**
+- Output structured data that Claude can reference throughout the command
+- Avoid re-parsing arguments in multiple places
 
-#### Key Principles
-- **Parse once, use everywhere**: Output structured data Claude can reference
-- **Chain everything possible**: Reduce subprocess overhead
-- **Structured output**: Use `KEY: "value"` format for easy parsing
-- **Human-friendly**: Start chains with descriptive echo
-- **Error handling**: Use `set -e` for fail-fast behavior
-- **Readability**: Use escaped newlines (`\`) for multi-line commands
+**2. Minimal Bash for System Operations**
+- Use bash only for system state checking and data extraction
+- Handle presentation and user interaction in Claude directly
+
+**3. Structured Output Format**
+- Use `KEY=value` format for easy parsing
+- Avoid complex formatting in bash
+
+**4. Human-Friendly Descriptions**
+- Start bash chains with descriptive echo statements
+- Use clear, concise descriptions of what the command does
+
+**5. Fail-Fast Error Handling**
+- Use `set -e` for immediate error termination
+- Provide clear error messages and recovery guidance
 
 ## 🎯 Command Generation Template
 
-Based on your requirements, I'll generate a command using this professional template:
+Based on your requirements, I'll generate a command using this professional template that follows Claude Code optimization best practices:
 
 ```markdown
 ---
@@ -399,83 +426,127 @@ You are an expert [relevant domain] engineer with deep knowledge of best practic
 
 **CRITICAL: Never use interactive bash commands like `read -p`, `read`, or any command that waits for stdin input. These will hang the command. Use Task blocks to handle user interaction instead.**
 
+## 🔧 Claude Code Optimization Guidelines
+
+### ✅ **Bash Usage Best Practices:**
+- **Use bash ONLY for:** System state checking, data extraction, file operations
+- **Avoid bash for:** Static text output, user interfaces, help documentation
+- **Chain commands:** Combine multiple operations in single bash calls
+- **Structured output:** Use `KEY=value` format for Claude to parse
+- **Fail-fast:** Always use `set -e` for immediate error termination
+
+### ❌ **Don't Use Bash For:**
+```bash
+# BAD: Static help text in bash
+!echo "USAGE: command [args]"
+!echo "DESCRIPTION: This command does..."
+```
+
+### ✅ **Use Claude Direct Output:**
+```markdown
+**USAGE:** `command [args]`
+**DESCRIPTION:** This command does...
+```
+
+### 🎯 **Optimal Patterns:**
+```bash
+# GOOD: System checks with structured output
+!echo "Checking system requirements"; \
+set -e; \
+test -d .git && echo "GIT_REPO=true" || echo "GIT_REPO=false"; \
+which gh >/dev/null 2>&1 && echo "GH_AVAILABLE=true" || echo "GH_AVAILABLE=false"
+```
+
 ## 📊 Argument Parsing
 
 <Task>
 Parse all arguments at once and output structured data for use throughout the command.
 </Task>
 
-!echo "=== ARGUMENT PARSING ==="; \
-# [Parse arguments based on your command's needs] \
-# [Validate inputs and check preconditions] \
-# [Output structured data for Claude to use] \
+!echo "Parsing arguments and validating inputs"; \
+set -e; \
+# Parse arguments based on your command's needs \
+# Validate inputs and check preconditions \
+# Output structured data for Claude to use \
 # Example: \
-# echo "PARSED_ARG1: \"value1\""; \
-# echo "PARSED_ARG2: \"value2\""; \
-# echo "MODE: \"INTERACTIVE or FULL\""
+# echo "PARSED_ARG1=value1"; \
+# echo "PARSED_ARG2=value2"; \
+# echo "MODE=INTERACTIVE"
 
 ## 📖 Help Documentation
 
 <Task>
-Check if the user requested help documentation.
+Check if the user requested help documentation and show it if requested.
 </Task>
 
 !if [ "$ARGUMENTS" = "--help" ]; then \
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
-echo " [COMMAND NAME IN UPPERCASE]"; \
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
-echo ""; \
-echo "[Long description of what this command does, when to use it, and key features]"; \
-echo ""; \
-echo "USAGE:"; \
-echo "  /[namespace]:[command] [arguments]"; \
-echo "  /[namespace]:[command] --help"; \
-echo ""; \
-echo "ARGUMENTS:"; \
-echo "  [argument1]    [Description of argument1]"; \
-echo "  [argument2]    [Description of argument2] (optional)"; \
-echo "  --help         Show this help message"; \
-echo ""; \
-echo "EXAMPLES:"; \
-echo "  /[namespace]:[command]"; \
-echo "    [What this does]"; \
-echo ""; \
-echo "  /[namespace]:[command] [example-arg]"; \
-echo "    [What this does with the argument]"; \
-echo ""; \
-echo "PRECONDITIONS:"; \
-echo "  • [Required tool or condition 1]"; \
-echo "  • [Required tool or condition 2]"; \
-echo "  • [Required authentication or permissions]"; \
-echo ""; \
-echo "SAFETY:"; \
-echo "  • [Safety feature 1 - e.g., dry-run mode]"; \
-echo "  • [Safety feature 2 - e.g., confirmation prompts]"; \
-echo "  • [What the command will NOT do]"; \
-echo ""; \
+echo "SHOW_HELP=true"; \
 exit 0; \
 fi
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ **[COMMAND NAME IN UPPERCASE]**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[Long description of what this command does, when to use it, and key features]
+
+**USAGE:**
+```
+/[namespace]:[command] [arguments]
+/[namespace]:[command] --help
+```
+
+**ARGUMENTS:**
+- `[argument1]` - [Description of argument1]
+- `[argument2]` - [Description of argument2] (optional)
+- `--help` - Show this help message
+
+**EXAMPLES:**
+```
+/[namespace]:[command]
+  [What this does]
+
+/[namespace]:[command] [example-arg]
+  [What this does with the argument]
+```
+
+**PRECONDITIONS:**
+• [Required tool or condition 1]
+• [Required tool or condition 2]
+• [Required authentication or permissions]
+
+**SAFETY:**
+• [Safety feature 1 - e.g., dry-run mode]
+• [Safety feature 2 - e.g., confirmation prompts]
+• [What the command will NOT do]
 
 ## 🚦 Precondition Checks
 
 ### Environment Validation
 !echo "Validating environment and required tools"; \
-set -e; echo "=== Environment Validation ==="; \
-[Check required tools]; \
-[Verify authentication status]; \
-[Validate working directory]; \
-[Confirm necessary permissions - use existing || patterns for error handling]
+set -e; \
+# Check required tools with structured output \
+# Example: \
+# which git >/dev/null 2>&1 && echo "GIT_AVAILABLE=true" || echo "GIT_AVAILABLE=false"; \
+# test -d .git && echo "IN_GIT_REPO=true" || echo "IN_GIT_REPO=false"
+
+### System Requirements Status
+**Environment Check Results:**
+- **Required Tool 1:** [Available/Missing]
+- **Required Tool 2:** [Available/Missing]
+- **Authentication:** [Authenticated/Not authenticated]
+- **Working Directory:** [Valid/Invalid]
 
 ### Input Validation
-[Validate all inputs before proceeding]
-[Check file existence and accessibility]
-[Verify argument format and constraints]
+<Task>
+Validate all inputs before proceeding based on the parsed arguments.
+</Task>
 
 ## 📊 Analysis Phase
 
-[Gather information needed for execution]
-[Analyze current state]
-[Identify potential issues or conflicts]
+<Task>
+Gather information needed for execution and analyze current state.
+</Task>
 
 ## 🎯 Execution Planning
 
@@ -496,103 +567,124 @@ Before proceeding, here's what will happen:
 
 ### ⚠️ Confirmation Required
 
+<Task>
+Ask for user confirmation before proceeding with changes.
+</Task>
+
 This operation will make the following changes:
 [High-level summary in 2-3 lines]
 
 **Do you want to proceed?** (yes/no)
-> Note: This confirmation is required even in auto-accept mode for safety.
 
 ## 🔧 Execution Phase
 
-[Step-by-step execution with progress updates]
-[Error handling at each step]
-[Validation after each critical operation]
+<Task>
+Execute the planned changes with progress updates and error handling.
+</Task>
 
 ## ✅ Verification Phase
 
-[Verify changes were applied correctly]
-[Run post-execution tests]
-[Generate summary report]
+<Task>
+Verify changes were applied correctly and run post-execution validation.
+</Task>
 
 ## 📈 Results Summary
 
-[Clear summary of what was accomplished]
-[Any warnings or follow-up actions needed]
-[Suggestions for next steps]
+**Execution Results:**
+- [Clear summary of what was accomplished]
+- [Any warnings or follow-up actions needed]
+- [Suggestions for next steps]
 
 ## 🚨 Error Recovery
 
 If something goes wrong:
 1. [Specific recovery step 1]
 2. [Specific recovery step 2]
-3. [How to report issues]
+3. [How to report issues or get help]
 
 ---
-*Command created with professional standards for reliability and user safety*
+*Command created with Claude Code optimization best practices for maximum efficiency and clarity*
 ```
 
 
 
-## 💡 Prompt Engineering Best Practices
+## 💡 Claude Code Command Engineering Best Practices
 
 Commands I create will include:
 
-### Persona Definition
-- Clear expertise domain
-- Quality focus statements
-- Responsibility emphasis
+### 🎯 **Persona Definition**
+- Clear expertise domain relevant to the command's purpose
+- Quality focus statements emphasizing reliability and safety
+- Responsibility emphasis for user experience and error handling
 
-### Cognitive Strategies
-- Step-by-step thinking
-- Explicit validation points
-- Clear decision criteria
+### 🧠 **Cognitive Strategies**
+- Step-by-step thinking with explicit Task blocks
+- Validation points at each critical stage
+- Clear decision criteria for branching logic
 
-### Output Optimization
-- Structured formatting
-- Progressive disclosure
-- Actionable messages
+### ⚡ **Output Optimization**
+- **Minimal bash usage:** Only for system operations and data extraction
+- **Structured data:** Use `KEY=value` format for bash output
+- **Direct Claude output:** Use markdown for static content and user interfaces
+- **Progressive disclosure:** Show information as needed, not all at once
+- **Actionable messages:** Clear next steps and error recovery guidance
 
-### Safety Patterns
-- Defensive programming
-- Explicit confirmations
-- Graceful degradation
+### 🛡️ **Safety Patterns**
+- **Defensive programming:** Validate all inputs and check preconditions
+- **Explicit confirmations:** Use Task blocks for user approval
+- **Graceful degradation:** Handle errors with clear recovery paths
+- **Fail-fast behavior:** Use `set -e` in all bash commands
 
-## 🚀 Quick Examples
+### 🔧 **Technical Implementation**
+- **Single argument parsing:** Parse all arguments once at the start
+- **Chained bash commands:** Combine operations to reduce subprocess overhead
+- **Structured output parsing:** Make bash output easy for Claude to consume
+- **Clear error messages:** Provide specific guidance for common issues
+- **Help documentation:** Include comprehensive --help support
 
-1. **GitHub Integration Command**:
-   ```
-   Command: pr-review
-   Checks: gh installed, authenticated, in git repo
-   Confirms: Before adding review comments
-   ```
+## 🚀 Command Examples
 
-2. **Database Migration Command**:
-   ```
-   Command: db:migrate
-   Checks: DB connection, migration files, backup capability
-   Confirms: Before applying migrations
-   ```
+### 1. **GitHub Integration Command**
+```yaml
+Command: g:pr:review
+Purpose: Review GitHub pull requests with automated feedback
+Checks: gh installed, authenticated, in git repo
+Bash Usage: System checks only - UI handled by Claude
+Confirms: Before adding review comments
+```
 
-3. **Code Refactoring Command**:
-   ```
-   Command: refactor:extract-method
-   Checks: File exists, valid syntax, test coverage
-   Confirms: Before modifying code
-   ```
+### 2. **Database Migration Command**
+```yaml
+Command: db:migrate
+Purpose: Run database migrations with rollback capability
+Checks: DB connection, migration files, backup capability
+Bash Usage: Database operations - status via Claude
+Confirms: Before applying migrations
+```
+
+### 3. **Code Analysis Command**
+```yaml
+Command: code:analyze
+Purpose: Analyze code quality and suggest improvements
+Checks: File exists, valid syntax, analysis tools available
+Bash Usage: File scanning - results presented by Claude
+Confirms: Before making automated fixes
+```
 
 ## 🎬 Ready to Start?
 
-Please provide:
+**Please provide:**
 1. **Command name** (use : for namespacing, e.g., `git:commit`, `db:migrate`)
 2. **Primary purpose** (one clear sentence)
 3. **Makes changes?** (yes/no)
 
-I'll then:
-- Create the command with folder namespacing (e.g., `git:commit` → `.claude/commands/git/commit.md`)
-- Include relevant project documentation references
+**I'll then:**
+- Create the command with optimized Claude Code patterns
+- Use minimal bash only for system operations
+- Include comprehensive help documentation
 - Set up appropriate bash permissions
-- Apply best workflow patterns
-- Generate a production-ready command following all best practices
+- Apply Claude Code best practices
+- Generate a production-ready command with maximum efficiency
 
 ## 🔄 Post-Creation Instructions
 
@@ -601,29 +693,35 @@ After creating the command:
 1. Ensure proper folder structure for namespaced commands
 2. Save the file in the correct location
 3. Show the file path and next steps
+4. Provide clear instructions for enabling tab completion
 </Task>
 
 ### ⚡ **IMPORTANT: Tab Completion Setup** ⚡
 
-```
-🎯 To enable tab completion for your new/updated command:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚠️  You MUST restart your Claude Code session! ⚠️
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ **🎯 To enable tab completion for your new command:**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Simply exit and re-run Claude Code:
+⚠️  **You MUST restart your Claude Code session!** ⚠️
+
+**Steps:**
 1. Exit current session (Ctrl+C or type 'exit')
 2. Start Claude Code again
 3. Your command will have tab completion! 🚀
 
-Example: /git:co<TAB> → /git:commit
-```
+**Example:** `/git:co<TAB>` → `/git:commit`
 
 ### File Structure
 
-Commands with namespaces are saved in folders:
-- `git:commit` → `.claude/commands/git/commit.md`
-- `db:migrate` → `.claude/commands/db/migrate.md`
-- `test` → `.claude/commands/test.md`
+**Command Organization:**
+- **Namespaced commands:** `git:commit` → `.claude/commands/git/commit.md`
+- **Single commands:** `test` → `.claude/commands/test.md`
+- **Deep namespaces:** `db:migrate:up` → `.claude/commands/db/migrate/up.md`
+
+**Benefits:**
+- Clean organization by domain/category
+- Full tab completion support
+- Easy discovery and maintenance
+- Consistent naming conventions
 
 This ensures your new command is immediately available with full tab completion support!
