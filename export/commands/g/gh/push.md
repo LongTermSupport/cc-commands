@@ -124,85 +124,130 @@ else \
   echo "Total files affected: $CHANGE_COUNT"; \
 fi; \
 echo ""; \
+echo "=== Push Status Check ==="; \
+LOCAL_COMMIT=$(git rev-parse HEAD); \
+REMOTE_COMMIT=$(git rev-parse origin/$BRANCH 2>/dev/null || echo "unknown"); \
+if [ "$LOCAL_COMMIT" = "$REMOTE_COMMIT" ]; then \
+  echo "✓ Local and remote branches are in sync"; \
+  PUSH_NEEDED="false"; \
+else \
+  echo "⚠️  Local branch is ahead of remote - push needed"; \
+  PUSH_NEEDED="true"; \
+  echo ""; \
+  echo "=== Unpushed Commits ==="; \
+  git log --oneline origin/$BRANCH..HEAD | head -5; \
+fi; \
+echo ""; \
 echo "CHANGES_EXIST: $CHANGES_EXIST"; \
+echo "PUSH_NEEDED: $PUSH_NEEDED"; \
 echo "BRANCH: $BRANCH"; \
 echo "REPO_NAME: $REPO_NAME"
 
-## 🎯 Commit Decision Point
+## 🎯 Decision Point
 
 <Task>
-Based on the repository analysis, determine if we need to create a commit.
-If CHANGES_EXIST is "true", ask the user for confirmation to proceed with committing the changes.
-If CHANGES_EXIST is "false", we can skip directly to push (if there are unpushed commits) or inform the user that everything is up to date.
+Based on the repository analysis, determine what action to take:
+1. If CHANGES_EXIST is "true", ask the user for confirmation to proceed with committing the changes.
+2. If CHANGES_EXIST is "false" but PUSH_NEEDED is "true", proceed directly to push existing commits.
+3. If both are "false", inform the user that everything is up to date and exit.
 </Task>
 
-Let me check if there are any changes that need to be committed and get your confirmation.
+!echo "Determining required actions based on repository state"; \
+set -e; echo "=== Action Decision ==="; \
+if [ "$CHANGES_EXIST" = "true" ]; then \
+  echo "📝 Uncommitted changes detected - commit needed"; \
+  ACTION="commit_and_push"; \
+elif [ "$PUSH_NEEDED" = "true" ]; then \
+  echo "🚀 Existing commits ready to push"; \
+  ACTION="push_only"; \
+else \
+  echo "✅ Repository is up to date - no action needed"; \
+  ACTION="none"; \
+fi; \
+echo "ACTION: $ACTION"; \
+echo ""; \
+if [ "$ACTION" = "none" ]; then \
+  echo "✅ Everything is up to date. No push or commit needed."; \
+  exit 0; \
+fi
 
 ## 📝 Smart Commit Message Generation
 
 <Task>
-If user confirmed to proceed with commit, generate an intelligent commit message based on the actual changes detected.
+If ACTION is "commit_and_push", generate an intelligent commit message based on the actual changes detected.
 </Task>
 
-!echo "Generating intelligent commit message from changes"; \
-set -e; echo "=== Smart Commit Message Generation ==="; \
-echo "Analyzing changes to create meaningful commit message..."; \
-echo ""; \
-echo "=== Detailed Change Analysis ==="; \
-git diff --name-status HEAD | head -10; \
-echo ""; \
-echo "=== Recent Commit Context ==="; \
-git log --oneline -n 3; \
-echo ""; \
-echo "=== Generating Commit Message ==="; \
-ADDED_FILES=$(git diff --cached --name-only --diff-filter=A | wc -l); \
-MODIFIED_FILES=$(git diff --cached --name-only --diff-filter=M | wc -l); \
-DELETED_FILES=$(git diff --cached --name-only --diff-filter=D | wc -l); \
-TOTAL_FILES=$(git diff --cached --name-only | wc -l); \
-echo "Files: +$ADDED_FILES ~$MODIFIED_FILES -$DELETED_FILES (total: $TOTAL_FILES)"; \
-echo ""; \
-echo "Commit message will be generated based on file patterns and changes..."
+!if [ "$ACTION" = "commit_and_push" ]; then \
+  echo "Generating intelligent commit message from changes"; \
+  set -e; echo "=== Smart Commit Message Generation ==="; \
+  echo "Analyzing changes to create meaningful commit message..."; \
+  echo ""; \
+  echo "=== Detailed Change Analysis ==="; \
+  git diff --name-status HEAD | head -10; \
+  echo ""; \
+  echo "=== Recent Commit Context ==="; \
+  git log --oneline -n 3; \
+  echo ""; \
+  echo "=== Generating Commit Message ==="; \
+  ADDED_FILES=$(git diff --cached --name-only --diff-filter=A | wc -l); \
+  MODIFIED_FILES=$(git diff --cached --name-only --diff-filter=M | wc -l); \
+  DELETED_FILES=$(git diff --cached --name-only --diff-filter=D | wc -l); \
+  TOTAL_FILES=$(git diff --cached --name-only | wc -l); \
+  echo "Files: +$ADDED_FILES ~$MODIFIED_FILES -$DELETED_FILES (total: $TOTAL_FILES)"; \
+  echo ""; \
+  echo "Commit message will be generated based on file patterns and changes..."; \
+else \
+  echo "Skipping commit message generation - no commit needed"; \
+fi
 
 ## 🔧 Commit and Push Execution
 
 ### Staging Changes
-!echo "Staging all changes for commit"; \
-set -e; echo "=== Staging Changes ==="; \
-git add .; \
-echo "✓ All changes staged"; \
-echo ""; \
-echo "=== Final Staged Changes Summary ==="; \
-git diff --cached --stat; \
-echo ""; \
-echo "Ready for commit..."
+!if [ "$ACTION" = "commit_and_push" ]; then \
+  echo "Staging all changes for commit"; \
+  set -e; echo "=== Staging Changes ==="; \
+  git add .; \
+  echo "✓ All changes staged"; \
+  echo ""; \
+  echo "=== Final Staged Changes Summary ==="; \
+  git diff --cached --stat; \
+  echo ""; \
+  echo "Ready for commit..."; \
+else \
+  echo "Skipping staging - no commit needed"; \
+fi
 
 ### Commit Creation
-!echo "Creating commit with generated message"; \
-set -e; echo "=== Creating Commit ==="; \
-TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S'); \
-BRANCH=$(git branch --show-current); \
-MODIFIED_COUNT=$(git diff --cached --name-only | wc -l); \
-if [ $MODIFIED_COUNT -gt 0 ]; then \
-  MAIN_FILES=$(git diff --cached --name-only | head -3 | tr '\n' ' '); \
-  if [ $MODIFIED_COUNT -eq 1 ]; then \
-    COMMIT_MSG="Update $(git diff --cached --name-only)"; \
-  elif [ $MODIFIED_COUNT -le 3 ]; then \
-    COMMIT_MSG="Update multiple files: $MAIN_FILES"; \
-  else \
-    COMMIT_MSG="Update $MODIFIED_COUNT files across project"; \
-  fi; \
-  echo "Generated commit message: $COMMIT_MSG"; \
-  echo ""; \
-  git commit -m "$COMMIT_MSG
+!if [ "$ACTION" = "commit_and_push" ]; then \
+  echo "Creating commit with generated message"; \
+  set -e; echo "=== Creating Commit ==="; \
+  TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S'); \
+  BRANCH=$(git branch --show-current); \
+  MODIFIED_COUNT=$(git diff --cached --name-only | wc -l); \
+  if [ $MODIFIED_COUNT -gt 0 ]; then \
+    MAIN_FILES=$(git diff --cached --name-only | head -3 | tr '\n' ' '); \
+    if [ $MODIFIED_COUNT -eq 1 ]; then \
+      COMMIT_MSG="Update $(git diff --cached --name-only)"; \
+    elif [ $MODIFIED_COUNT -le 3 ]; then \
+      COMMIT_MSG="Update multiple files: $MAIN_FILES"; \
+    else \
+      COMMIT_MSG="Update $MODIFIED_COUNT files across project"; \
+    fi; \
+    echo "Generated commit message: $COMMIT_MSG"; \
+    echo ""; \
+    git commit -m "$COMMIT_MSG
 
 🤖 Generated with [Claude Code](https://claude.ai/code)
 
 Co-Authored-By: Claude <noreply@anthropic.com>"; \
-  echo "✓ Commit created successfully"; \
-  COMMIT_HASH=$(git rev-parse HEAD); \
-  echo "Commit hash: $COMMIT_HASH"; \
+    echo "✓ Commit created successfully"; \
+    COMMIT_HASH=$(git rev-parse HEAD); \
+    echo "Commit hash: $COMMIT_HASH"; \
+  else \
+    echo "No changes to commit"; \
+  fi; \
 else \
-  echo "No changes to commit"; \
+  echo "Skipping commit creation - no commit needed"; \
 fi
 
 ### Push to Remote
@@ -210,41 +255,61 @@ fi
 set -e; echo "=== Pushing to Remote ==="; \
 BRANCH=$(git branch --show-current); \
 echo "Pushing branch '$BRANCH' to origin..."; \
-git push origin $BRANCH; \
-echo "✓ Push completed successfully"; \
+PUSH_COMMIT_BEFORE=$(git rev-parse HEAD); \
+if git push origin $BRANCH; then \
+  echo "✓ Push completed successfully"; \
+  PUSH_SUCCESSFUL="true"; \
+  PUSHED_COMMIT="$PUSH_COMMIT_BEFORE"; \
+else \
+  echo "❌ Push failed"; \
+  PUSH_SUCCESSFUL="false"; \
+  exit 1; \
+fi; \
 echo ""; \
 echo "=== Push Summary ==="; \
 LATEST_COMMIT=$(git log --oneline -n 1); \
 echo "Latest commit: $LATEST_COMMIT"; \
 REMOTE_URL=$(git remote get-url origin); \
 echo "Remote URL: $REMOTE_URL"; \
-echo "Branch: $BRANCH"
+echo "Branch: $BRANCH"; \
+echo "PUSH_SUCCESSFUL: $PUSH_SUCCESSFUL"; \
+echo "PUSHED_COMMIT: $PUSHED_COMMIT"
 
 ## 🔍 GitHub Actions Detection
 
 ### Workflow Discovery
-!echo "Detecting GitHub Actions workflows"; \
-set -e; echo "=== GitHub Actions Detection ==="; \
-echo "Scanning for triggered workflows..."; \
-sleep 2; \
-REPO_NAME=$(gh repo view --json nameWithOwner --jq '.nameWithOwner'); \
-echo "Repository: $REPO_NAME"; \
-echo ""; \
-echo "=== Active Workflows ==="; \
-WORKFLOW_COUNT=$(gh workflow list --json name,state | jq -r '.[] | select(.state == "active") | .name' | wc -l); \
-if [ $WORKFLOW_COUNT -gt 0 ]; then \
-  echo "Active workflows detected:"; \
-  gh workflow list --json name,state | jq -r '.[] | select(.state == "active") | "  • " + .name'; \
+!if [ "$PUSH_SUCCESSFUL" = "true" ]; then \
+  echo "Detecting GitHub Actions workflows triggered by push"; \
+  set -e; echo "=== GitHub Actions Detection ==="; \
+  echo "Scanning for workflows triggered by commit: $PUSHED_COMMIT"; \
+  sleep 3; \
+  REPO_NAME=$(gh repo view --json nameWithOwner --jq '.nameWithOwner'); \
+  echo "Repository: $REPO_NAME"; \
   echo ""; \
-  echo "=== Recent Workflow Runs ==="; \
-  gh run list --limit 5 --json status,conclusion,workflowName,createdAt,url | jq -r '.[] | "  \(.status) | \(.workflowName) | \(.createdAt) | \(.url)"'; \
-  MONITORING_NEEDED="true"; \
+  echo "=== Workflows for This Push ==="; \
+  PUSH_WORKFLOWS=$(gh run list --json headSha,status,conclusion,workflowName,createdAt,url | jq -r --arg sha "$PUSHED_COMMIT" '.[] | select(.headSha == $sha) | "\(.status)/\(.conclusion // "null") | \(.workflowName) | \(.createdAt) | \(.url)"'); \
+  if [ -n "$PUSH_WORKFLOWS" ]; then \
+    echo "Workflows triggered by this push:"; \
+    echo "$PUSH_WORKFLOWS" | sed 's/^/  \u2022 /'; \
+    echo ""; \
+    RUNNING_COUNT=$(echo "$PUSH_WORKFLOWS" | grep -c "in_progress\|queued" || echo "0"); \
+    if [ "$RUNNING_COUNT" -gt 0 ]; then \
+      echo "$RUNNING_COUNT workflows are still running"; \
+      MONITORING_NEEDED="true"; \
+    else \
+      echo "All workflows for this push have completed"; \
+      MONITORING_NEEDED="false"; \
+    fi; \
+  else \
+    echo "No workflows found for this push yet (may still be starting...)"; \
+    MONITORING_NEEDED="true"; \
+  fi; \
+  echo ""; \
+  echo "MONITORING_NEEDED: $MONITORING_NEEDED"; \
 else \
-  echo "No active workflows found"; \
+  echo "No push occurred - skipping workflow detection"; \
   MONITORING_NEEDED="false"; \
-fi; \
-echo ""; \
-echo "MONITORING_NEEDED: $MONITORING_NEEDED"
+fi
 
 ## 📊 Real-time Workflow Monitoring
 
@@ -254,29 +319,29 @@ This involves periodic checking of workflow run status and providing real-time u
 </Task>
 
 !if [ "$MONITORING_NEEDED" = "true" ]; then \
-echo "Starting real-time workflow monitoring"; \
-set -e; echo "=== Real-time Workflow Monitoring ==="; \
-echo "Monitoring GitHub Actions workflows..."; \
-echo ""; \
-MAX_WAIT=300; \
-WAIT_COUNT=0; \
-while [ $WAIT_COUNT -lt $MAX_WAIT ]; do \
-  echo "⏳ Checking workflow status... (${WAIT_COUNT}s elapsed)"; \
-  RUNNING_WORKFLOWS=$(gh run list --limit 10 --json status,workflowName,conclusion | jq -r '.[] | select(.status == "in_progress" or .status == "queued") | .workflowName' | wc -l); \
-  if [ $RUNNING_WORKFLOWS -eq 0 ]; then \
-    echo "✓ All workflows completed"; \
-    break; \
-  fi; \
-  echo "  Still running: $RUNNING_WORKFLOWS workflows"; \
-  gh run list --limit 5 --json status,workflowName,conclusion | jq -r '.[] | select(.status == "in_progress" or .status == "queued") | "    • \(.workflowName) - \(.status)"'; \
-  sleep 10; \
-  WAIT_COUNT=$((WAIT_COUNT + 10)); \
-done; \
-echo ""; \
-echo "=== Final Workflow Status ==="; \
-gh run list --limit 5 --json status,conclusion,workflowName,url | jq -r '.[] | "\(.conclusion // .status) | \(.workflowName) | \(.url)"'; \
+  echo "Starting real-time workflow monitoring for pushed commit"; \
+  set -e; echo "=== Real-time Workflow Monitoring ==="; \
+  echo "Monitoring workflows for commit: $PUSHED_COMMIT"; \
+  echo ""; \
+  MAX_WAIT=300; \
+  WAIT_COUNT=0; \
+  while [ $WAIT_COUNT -lt $MAX_WAIT ]; do \
+    echo "⏳ Checking workflow status... (${WAIT_COUNT}s elapsed)"; \
+    RUNNING_FOR_COMMIT=$(gh run list --json headSha,status,workflowName | jq -r --arg sha "$PUSHED_COMMIT" '.[] | select(.headSha == $sha and (.status == "in_progress" or .status == "queued")) | .workflowName' | wc -l); \
+    if [ $RUNNING_FOR_COMMIT -eq 0 ]; then \
+      echo "✓ All workflows for this commit completed"; \
+      break; \
+    fi; \
+    echo "  Still running for this commit: $RUNNING_FOR_COMMIT workflows"; \
+    gh run list --json headSha,status,workflowName | jq -r --arg sha "$PUSHED_COMMIT" '.[] | select(.headSha == $sha and (.status == "in_progress" or .status == "queued")) | "    • \(.workflowName) - \(.status)"'; \
+    sleep 10; \
+    WAIT_COUNT=$((WAIT_COUNT + 10)); \
+  done; \
+  echo ""; \
+  echo "=== Final Workflow Status for This Push ==="; \
+  gh run list --json headSha,status,conclusion,workflowName,url | jq -r --arg sha "$PUSHED_COMMIT" '.[] | select(.headSha == $sha) | "\(.conclusion // .status) | \(.workflowName) | \(.url)"'; \
 else \
-echo "No workflow monitoring needed - no active workflows detected"; \
+  echo "No workflow monitoring needed"; \
 fi
 
 ## ✅ Results Analysis and Verification
@@ -298,16 +363,21 @@ echo "Local commit:  $LOCAL_COMMIT"; \
 echo "Remote commit: $REMOTE_COMMIT"; \
 echo ""; \
 echo "=== Workflow Results Summary ==="; \
-FAILED_WORKFLOWS=$(gh run list --limit 10 --json conclusion,workflowName | jq -r '.[] | select(.conclusion == "failure") | .workflowName' | wc -l); \
-SUCCESS_WORKFLOWS=$(gh run list --limit 10 --json conclusion,workflowName | jq -r '.[] | select(.conclusion == "success") | .workflowName' | wc -l); \
-echo "✓ Successful workflows: $SUCCESS_WORKFLOWS"; \
-echo "✗ Failed workflows: $FAILED_WORKFLOWS"; \
-if [ $FAILED_WORKFLOWS -gt 0 ]; then \
-  echo ""; \
-  echo "=== Failed Workflows ==="; \
-  gh run list --limit 5 --json conclusion,workflowName,url | jq -r '.[] | select(.conclusion == "failure") | "  ❌ \(.workflowName) - \(.url)"'; \
-  OVERALL_SUCCESS="false"; \
+if [ "$PUSH_SUCCESSFUL" = "true" ]; then \
+  FAILED_FOR_COMMIT=$(gh run list --json headSha,conclusion,workflowName | jq -r --arg sha "$PUSHED_COMMIT" '.[] | select(.headSha == $sha and .conclusion == "failure") | .workflowName' | wc -l); \
+  SUCCESS_FOR_COMMIT=$(gh run list --json headSha,conclusion,workflowName | jq -r --arg sha "$PUSHED_COMMIT" '.[] | select(.headSha == $sha and .conclusion == "success") | .workflowName' | wc -l); \
+  echo "✓ Successful workflows for this push: $SUCCESS_FOR_COMMIT"; \
+  echo "✗ Failed workflows for this push: $FAILED_FOR_COMMIT"; \
+  if [ $FAILED_FOR_COMMIT -gt 0 ]; then \
+    echo ""; \
+    echo "=== Failed Workflows for This Push ==="; \
+    gh run list --json headSha,conclusion,workflowName,url | jq -r --arg sha "$PUSHED_COMMIT" '.[] | select(.headSha == $sha and .conclusion == "failure") | "  ❌ \(.workflowName) - \(.url)"'; \
+    OVERALL_SUCCESS="false"; \
+  else \
+    OVERALL_SUCCESS="true"; \
+  fi; \
 else \
+  echo "No push occurred - no workflows to check"; \
   OVERALL_SUCCESS="true"; \
 fi; \
 echo ""; \
