@@ -95,13 +95,59 @@ Based on the project structure, identify key documentation that should be refere
 ## 📖 Help Documentation
 
 <Task>
-Check if the user requested help documentation and show it if requested.
+If the user requested --help, provide the help documentation and exit.
 </Task>
 
-!if [ "$ARGUMENTS" = "--help" ]; then \
-echo "SHOW_HELP=true"; \
-exit 0; \
-fi
+If you see `--help` in the arguments, please provide this help text and stop:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ COMMAND:CREATE - Create New Claude Code Commands
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Creates new Claude Code custom commands with best practices, including:
+  • Comprehensive error handling and fail-fast validation
+  • Bash command permission management
+  • Non-interactive command patterns
+  • Progress tracking and user confirmations
+  • Automatic --help documentation
+
+USAGE:
+  /g:command:create
+  /g:command:create [command-name]
+  /g:command:create --help
+
+ARGUMENTS:
+  [command-name]  Optional. Pre-fill the command name (e.g., 'db:migrate')
+  --help          Show this help message
+
+INTERACTIVE PROMPTS:
+  1. Command name (use : for namespacing)
+  2. Primary purpose
+  3. Whether it makes changes (yes/no)
+  4. Detailed requirements gathering
+  5. Bash permission approval
+
+EXAMPLES:
+  /g:command:create
+    Start interactive command creation wizard
+
+  /g:command:create test:integration
+    Create a command named 'test:integration' (skips name prompt)
+
+FEATURES:
+  • Enforces non-interactive bash commands
+  • Generates comprehensive help documentation
+  • Creates folder structure for namespaced commands
+  • Includes project documentation discovery
+  • Implements safety patterns and confirmations
+
+SAFETY:
+  • Won't overwrite existing commands
+  • Validates all inputs before proceeding
+  • Requires explicit permission for bash commands
+  • All created commands include --help support
+```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  **COMMAND:CREATE - Create New Claude Code Commands**
@@ -180,7 +226,12 @@ Parse all arguments once and perform all validations in a single bash execution.
 This outputs structured data that Claude will use throughout the command.
 </Task>
 
-!echo "Parsing arguments and validating command setup"; \
+!echo "=== ARGUMENT PARSING & VALIDATION ==="; \
+# First check for --help \
+if [ "$ARGUMENTS" = "--help" ]; then \
+  echo "HELP_REQUESTED: true"; \
+  exit 0; \
+fi; \
 set -e; \
 if [ -n "$ARGUMENTS" ]; then \
   COMMAND_NAME=$(echo "$ARGUMENTS" | awk '{print $1}'); \
@@ -463,7 +514,12 @@ which gh >/dev/null 2>&1 && echo "GH_AVAILABLE=true" || echo "GH_AVAILABLE=false
 Parse all arguments at once and output structured data for use throughout the command.
 </Task>
 
-!echo "Parsing arguments and validating inputs"; \
+!echo "=== ARGUMENT PARSING ==="; \
+# First check for --help \
+if [ "$ARGUMENTS" = "--help" ]; then \
+  echo "HELP_REQUESTED: true"; \
+  exit 0; \
+fi; \
 set -e; \
 # Parse arguments based on your command's needs \
 # Validate inputs and check preconditions \
@@ -476,13 +532,44 @@ set -e; \
 ## 📖 Help Documentation
 
 <Task>
-Check if the user requested help documentation and show it if requested.
+If the user requested --help, provide the help documentation and exit.
 </Task>
 
-!if [ "$ARGUMENTS" = "--help" ]; then \
-echo "SHOW_HELP=true"; \
-exit 0; \
-fi
+If you see `--help` in the arguments, please provide this help text and stop:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ [COMMAND NAME IN UPPERCASE]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[Long description of what this command does, when to use it, and key features]
+
+USAGE:
+  /[namespace]:[command] [arguments]
+  /[namespace]:[command] --help
+
+ARGUMENTS:
+  [argument1]    [Description of argument1]
+  [argument2]    [Description of argument2] (optional)
+  --help         Show this help message
+
+EXAMPLES:
+  /[namespace]:[command]
+    [What this does]
+
+  /[namespace]:[command] [example-arg]
+    [What this does with the argument]
+
+PRECONDITIONS:
+  • [Required tool or condition 1]
+  • [Required tool or condition 2]
+  • [Required authentication or permissions]
+
+SAFETY:
+  • [Safety feature 1 - e.g., dry-run mode]
+  • [Safety feature 2 - e.g., confirmation prompts]
+  • [What the command will NOT do]
+```
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  **[COMMAND NAME IN UPPERCASE]**

@@ -46,52 +46,52 @@ You are an expert software architect and project manager with deep knowledge of 
 ## 📖 Help Documentation
 
 <Task>
-First, check if the user requested help documentation.
+If the user requested --help, provide the help documentation and exit.
 </Task>
 
-!if [ "$ARGUMENTS" = "--help" ]; then \
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
-echo " GH:ISSUE:PLAN - GitHub Issue to Plan Converter"; \
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
-echo ""; \
-echo "Creates comprehensive plans from GitHub issues following project workflow"; \
-echo "standards. Analyzes issue content, comments, and linked issues to generate"; \
-echo "structured plans with tasks, research items, and progress tracking."; \
-echo ""; \
-echo "USAGE:"; \
-echo "  /g:gh:issue:plan [issue-url-or-number]"; \
-echo "  /g:gh:issue:plan --help"; \
-echo ""; \
-echo "ARGUMENTS:"; \
-echo "  [issue-url-or-number]  GitHub issue URL or number (#123)"; \
-echo "  --help                 Show this help message"; \
-echo ""; \
-echo "EXAMPLES:"; \
-echo "  /g:gh:issue:plan https://github.com/owner/repo/issues/123"; \
-echo "    Create plan from full GitHub URL"; \
-echo ""; \
-echo "  /g:gh:issue:plan #123"; \
-echo "    Create plan from issue number (uses current repo)"; \
-echo ""; \
-echo "FEATURES:"; \
-echo "  • Extracts requirements from issue and comments"; \
-echo "  • Creates structured plan following project standards"; \
-echo "  • Generates task list with progress tracking"; \
-echo "  • Links to relevant project documentation"; \
-echo "  • Optional: Posts plan back to GitHub issue"; \
-echo ""; \
-echo "OUTPUT:"; \
-echo "  • Creates plan file in CLAUDE/plan/issue-{number}.md"; \
-echo "  • Includes task breakdown with [ ] checkboxes"; \
-echo "  • References project standards and workflows"; \
-echo ""; \
-echo "PRECONDITIONS:"; \
-echo "  • GitHub CLI (gh) installed and authenticated"; \
-echo "  • In a git repository (for local issue references)"; \
-echo "  • Project has CLAUDE directory structure"; \
-echo ""; \
-exit 0; \
-fi
+If you see `--help` in the arguments, please provide this help text and stop:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ GH:ISSUE:PLAN - GitHub Issue to Plan Converter
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Creates comprehensive plans from GitHub issues following project workflow
+standards. Analyzes issue content, comments, and linked issues to generate
+structured plans with tasks, research items, and progress tracking.
+
+USAGE:
+  /g:gh:issue:plan [issue-url-or-number]
+  /g:gh:issue:plan --help
+
+ARGUMENTS:
+  [issue-url-or-number]  GitHub issue URL or number (#123)
+  --help                 Show this help message
+
+EXAMPLES:
+  /g:gh:issue:plan https://github.com/owner/repo/issues/123
+    Create plan from full GitHub URL
+
+  /g:gh:issue:plan #123
+    Create plan from issue number (uses current repo)
+
+FEATURES:
+  • Extracts requirements from issue and comments
+  • Creates structured plan following project standards
+  • Generates task list with progress tracking
+  • Links to relevant project documentation
+  • Optional: Posts plan back to GitHub issue
+
+OUTPUT:
+  • Creates plan file in CLAUDE/plan/issue-{number}.md
+  • Includes task breakdown with [ ] checkboxes
+  • References project standards and workflows
+
+PRECONDITIONS:
+  • GitHub CLI (gh) installed and authenticated
+  • In a git repository (for local issue references)
+  • Project has CLAUDE directory structure
+```
 
 ## 🚦 Precondition Checks
 
@@ -104,6 +104,17 @@ gh auth status >/dev/null 2>&1 && echo "✓ GitHub authenticated" || (echo "✗ 
 test -d CLAUDE && echo "✓ CLAUDE directory exists" || (echo "✗ CLAUDE directory not found" && exit 1); \
 test -d CLAUDE/plan && echo "✓ CLAUDE/plan directory exists" || (echo "⚠ CLAUDE/plan directory not found - will create" && mkdir -p CLAUDE/plan); \
 test -f CLAUDE/PlanWorkflow.md && echo "✓ PlanWorkflow.md found" || echo "⚠ PlanWorkflow.md not found - will use defaults"
+
+### Argument Parsing
+
+!echo "=== ARGUMENT PARSING ==="; \
+# First check for --help \
+if [ "$ARGUMENTS" = "--help" ]; then \
+  echo "HELP_REQUESTED: true"; \
+  exit 0; \
+fi; \
+# Output parsed arguments for use \
+echo "ISSUE_SPEC: \"$ARGUMENTS\""
 
 ### Input Validation and Processing
 
