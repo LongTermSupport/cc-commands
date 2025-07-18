@@ -1,0 +1,186 @@
+name: CC Commands Check
+
+on:
+  push:
+    paths:
+      - '.claude/cc-commands/**'
+      - '.github/workflows/cc-commands-check.yml'
+  pull_request:
+    paths:
+      - '.claude/cc-commands/**'
+      - '.github/workflows/cc-commands-check.yml'
+
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        run: |
+          echo "::group::Installing ShellCheck"
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          echo "::endgroup::"
+          
+          echo "::group::Finding bash scripts"
+          scripts=$(find .claude/cc-commands/scripts -name "*.bash" -type f)
+          echo "Found $(echo "$scripts" | wc -l) bash scripts"
+          echo "$scripts"
+          echo "::endgroup::"
+          
+          echo "::group::Running ShellCheck"
+          failed=0
+          for script in $scripts; do
+            echo "Checking: $script"
+            if ! shellcheck "$script"; then
+              failed=$((failed + 1))
+            fi
+          done
+          echo "::endgroup::"
+          
+          if [ $failed -gt 0 ]; then
+            echo "::error::ShellCheck found issues in $failed scripts"
+            exit 1
+          else
+            echo "✅ All scripts passed ShellCheck"
+          fi
+
+  script-standards:
+    name: Script Standards Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check script standards
+        run: |
+          echo "::group::Checking shebangs"
+          failed=0
+          while IFS= read -r script; do
+            first_line=$(head -n1 "$script")
+            if [[ "$first_line" != "#!/usr/bin/env bash" ]]; then
+              echo "::error file=$script,line=1::Incorrect shebang: $first_line (expected: #!/usr/bin/env bash)"
+              failed=$((failed + 1))
+            fi
+          done < <(find .claude/cc-commands/scripts -name "*.bash" -type f)
+          
+          if [ $failed -gt 0 ]; then
+            echo "::error::Found $failed scripts with incorrect shebangs"
+            exit 1
+          else
+            echo "✅ All scripts have correct shebangs"
+          fi
+          echo "::endgroup::"
+          
+          echo "::group::Checking file naming convention"
+          failed=0
+          while IFS= read -r script; do
+            basename=$(basename "$script")
+            # Check if filename follows pattern: name_name.bash
+            if ! [[ "$basename" =~ ^[a-z]+(_[a-z]+)*\.bash$ ]]; then
+              echo "::error file=$script::Incorrect naming convention: $basename (expected: lowercase_with_underscores.bash)"
+              failed=$((failed + 1))
+            fi
+          done < <(find .claude/cc-commands/scripts -name "*.bash" -type f)
+          
+          if [ $failed -gt 0 ]; then
+            echo "::error::Found $failed scripts with incorrect naming"
+            exit 1
+          else
+            echo "✅ All scripts follow naming convention"
+          fi
+          echo "::endgroup::"
+          
+          echo "::group::Checking for required patterns"
+          failed=0
+          while IFS= read -r script; do
+            # Check for set -euo pipefail
+            if ! grep -q "^set -euo pipefail" "$script"; then
+              echo "::error file=$script::Missing 'set -euo pipefail'"
+              failed=$((failed + 1))
+            fi
+            
+            # Check for Script success message
+            if ! grep -q 'echo "Script success: ${0##\*/}"' "$script"; then
+              echo "::warning file=$script::Missing success message at end of script"
+            fi
+          done < <(find .claude/cc-commands/scripts -name "*.bash" -type f)
+          
+          if [ $failed -gt 0 ]; then
+            echo "::error::Found $failed scripts missing required patterns"
+            exit 1
+          else
+            echo "✅ All scripts have required patterns"
+          fi
+          echo "::endgroup::"
+
+  command-validation:
+    name: Command Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate command files
+        run: |
+          echo "::group::Finding command files"
+          commands=$(find .claude/cc-commands -name "*.md" -type f | grep -v -E "(CLAUDE|README|CONVERSION|EXAMPLE)" || true)
+          echo "Found $(echo "$commands" | wc -l) command files"
+          echo "$commands"
+          echo "::endgroup::"
+          
+          echo "::group::Checking command structure"
+          failed=0
+          for cmd in $commands; do
+            # Check for frontmatter
+            if ! head -n1 "$cmd" | grep -q "^---$"; then
+              echo "::warning file=$cmd,line=1::Missing YAML frontmatter"
+            fi
+            
+            # Check for bash script references
+            if grep -q "!bash.*\.sh" "$cmd"; then
+              echo "::error file=$cmd::References .sh files instead of .bash"
+              failed=$((failed + 1))
+            fi
+          done
+          
+          if [ $failed -gt 0 ]; then
+            echo "::error::Found $failed commands with issues"
+            exit 1
+          else
+            echo "✅ All commands validated"
+          fi
+          echo "::endgroup::"
+
+  documentation-check:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check documentation
+        run: |
+          echo "::group::Checking required documentation"
+          required_docs=(
+            ".claude/cc-commands/scripts/CLAUDE.md"
+            ".claude/cc-commands/scripts/_common/CLAUDE.md"
+          )
+          
+          failed=0
+          for doc in "${required_docs[@]}"; do
+            if [ ! -f "$doc" ]; then
+              echo "::error::Missing required documentation: $doc"
+              failed=$((failed + 1))
+            else
+              echo "✅ Found: $doc"
+            fi
+          done
+          
+          if [ $failed -gt 0 ]; then
+            exit 1
+          fi
+          echo "::endgroup::"

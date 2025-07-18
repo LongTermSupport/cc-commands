@@ -249,13 +249,11 @@ From the issue data, I'll:
 
 <Task>
 Read the relevant project documentation to ensure the plan follows established standards.
-</Task>
 
-@CLAUDE/PlanWorkflow.md
-@CLAUDE/Core/CodeStandards.md  
-@CLAUDE/Core/TestingStandards.md
-@CLAUDE/Tools/Commands.md
-@CLAUDE/Tools/PHPStan.md
+Look in the project CLAUDE folder for plan workflow, coding standards, testing and any other documentation.
+
+Look for documentation relevant to this specific issue and for general coding/workflow/standards
+</Task>
 
 ### Generate Plan Content
 
@@ -267,6 +265,8 @@ Based on the issue analysis and project standards, I'll create a comprehensive p
 4. Has proper progress tracking with checkboxes
 5. NEVER includes any time estimates or effort predictions
 6. Focuses on WHAT needs to be done, not HOW LONG it will take
+7. As this is a github issue - the plan must also include adding comments to the github issue with links to relevant commits made to any repository. Remember you can only add comments AFTER the commits have been pushed to github.
+8. When the issue is resolved, add a comment to that effect with a summary. Do not update issue status.
 </Task>
 
 ### Plan Preview
