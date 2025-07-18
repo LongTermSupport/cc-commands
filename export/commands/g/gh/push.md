@@ -111,7 +111,7 @@ REPO_NAME=$(gh repo view --json nameWithOwner --jq '.nameWithOwner' 2>/dev/null 
 echo "Repository: $REPO_NAME"; \
 echo ""; \
 echo "=== Change Detection ==="; \
-if git diff --quiet && git diff --cached --quiet; then \
+if git diff --quiet && git diff --cached --quiet && [ -z "$(git status --porcelain)" ]; then \
   echo "✓ No uncommitted changes detected"; \
   CHANGES_EXIST="false"; \
 else \
