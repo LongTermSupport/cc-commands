@@ -30,7 +30,10 @@ From your project root (where `.claude` directory exists):
 curl -fsSL https://raw.githubusercontent.com/LongTermSupport/cc-commands/main/setup.sh | bash
 ```
 
-This installs the command system including the `/g:command:create` and `/g:command:update` commands.
+This installs the complete command system including:
+- Command management tools (`/g:command:create`, `/g:command:update`, `/g:command:sync`)
+- GitHub integration tools (`/g:gh:issue:plan`, `/g:gh:push`)
+- Workflow planning tools (`/g:w:plan`)
 
 ### Manual Install
 
@@ -102,9 +105,17 @@ The update process:
 
 Pre-installed commands available to all projects:
 
-- `/g:command:create` - Create new commands with best practices
-- `/g:command:update` - Update existing commands to latest standards
-- `/g:gh:issue:plan` - Create detailed GitHub issue plans
+#### Command Management (`g:command:*`)
+- `/g:command:create` - Create new commands with best practices and safety features
+- `/g:command:update` - Update existing commands to latest standards while preserving functionality
+- `/g:command:sync` - Synchronize cc-commands repository with intelligent commit generation
+
+#### GitHub Integration (`g:gh:*`)
+- `/g:gh:issue:plan` - Create comprehensive plans from GitHub issues
+- `/g:gh:push` - Smart Git push with GitHub Actions monitoring and failure diagnosis
+
+#### Workflow Tools (`g:w:*`)
+- `/g:w:plan` - Generate comprehensive project plans with progress tracking
 
 ### Project Commands (custom namespaces)
 
@@ -117,26 +128,30 @@ Organize your commands with meaningful namespaces:
 
 ## Command Features
 
-Commands created with `/g:command:create` include:
+All commands in the cc-commands repository include:
 
 ### Safety Features
-- **Bash permission system** - Commands declare what bash commands they need
-- **Fail-fast validation** - Comprehensive precondition checks
-- **User confirmations** - For any destructive operations
-- **Non-interactive commands only** - Prevents hanging on user input
+- **Bash permission system** - Commands declare what bash commands they need with risk categorization
+- **Fail-fast validation** - Comprehensive precondition checks with clear error messages
+- **User confirmations** - For any destructive operations with detailed impact explanations
+- **Non-interactive commands only** - Prevents hanging on user input with Task blocks for interaction
+- **Error recovery guidance** - Specific instructions for common failure scenarios
 
 ### Best Practices
-- **Progress tracking** - Clear status updates
-- **Error handling** - Graceful failures with recovery instructions
-- **Documentation** - Each command is self-documenting with `--help`
-- **Project integration** - Commands can reference your project's documentation
-- **Flexible invocation** - Support both interactive and full argument modes
+- **Progress tracking** - Clear status updates with structured output formats
+- **Error handling** - Graceful failures with recovery instructions and troubleshooting steps
+- **Documentation** - Each command is self-documenting with comprehensive `--help` support
+- **Project integration** - Commands can reference and analyze your project's documentation
+- **Flexible invocation** - Support both interactive and full argument modes for efficiency
+- **GitHub integration** - Native support for GitHub CLI and Actions monitoring
 
 ### Advanced Capabilities
-- **Full argument support** - Pass all requirements at invocation time
-- **Interactive fallback** - Prompts for missing information
-- **Tool restrictions** - Commands only get access to tools they need
-- **Workflow patterns** - Dry-run modes, progressive execution, etc.
+- **Full argument support** - Pass all requirements at invocation time for automation
+- **Interactive fallback** - Prompts for missing information with intelligent defaults
+- **Tool restrictions** - Commands only get access to tools they need for security
+- **Workflow patterns** - Dry-run modes, progressive execution, real-time monitoring
+- **Smart commit generation** - Automatic commit message creation based on actual changes
+- **Repository synchronization** - Built-in sync capabilities for sharing commands across projects
 
 ## The --help Convention
 
@@ -207,23 +222,58 @@ Learn more:
 4. **Test thoroughly** - Run your commands in different scenarios
 5. **Share useful ones** - Submit PRs to add helpful commands to the global namespace
 
+## Keeping Commands Updated
+
+### Synchronizing with Latest Changes
+
+The cc-commands repository is actively maintained. To get the latest updates:
+
+```bash
+/g:command:sync
+```
+
+This command:
+1. Commits any local changes you've made
+2. Pulls the latest updates from the repository
+3. Pushes your changes to share with other projects
+4. Handles merge conflicts gracefully
+
+### Available Commands
+
+To see all available commands:
+
+```bash
+find .claude/commands -name "*.md" | sed 's|.claude/commands/||' | sed 's|\.md$||' | sed 's|/|:|g'
+```
+
 ## Troubleshooting
 
 ### Commands not working?
 
-1. Check syntax - use colons: `/g:command:create` not `/g/command/create`
-2. Verify installation:
+1. **Check syntax** - use colons: `/g:command:create` not `/g/command/create`
+2. **Verify installation**:
    ```bash
    ls -la .claude/commands/g
    ```
-3. Check available commands:
-   ```bash
-   find .claude/commands -name "*.md" | sed 's|.claude/commands/||' | sed 's|\.md$||' | sed 's|/|:|g'
-   ```
+3. **Check permissions** - ensure your `.claude/settings.local.json` allows required bash commands
+4. **Restart Claude Code** - new commands need session restart for tab completion
 
-### Tab completion
+### Common Issues
 
-After creating a new command, restart your Claude Code session to enable tab completion for it.
+- **Permission denied**: Check bash permissions in `.claude/settings.local.json`
+- **Command not found**: Verify symlink exists: `ls -la .claude/commands/g`
+- **Git issues**: Ensure you have push access to the cc-commands repository
+- **Sync failures**: Check network connection and GitHub authentication
+
+### Getting Help
+
+Every command supports detailed help:
+
+```bash
+/g:command:create --help
+/g:command:sync --help
+/g:gh:push --help
+```
 
 ## Contributing
 
@@ -235,11 +285,32 @@ To contribute global commands:
 4. Copy it to the appropriate location in `export/commands/g/`
 5. Submit a PR
 
+## Repository
+
+**GitHub**: https://github.com/LongTermSupport/cc-commands
+
 ## License
 
-[Add appropriate license]
+MIT License - Feel free to use, modify, and share!
 
 ## Support
 
-- Issues: [GitHub Issues](https://github.com/LongTermSupport/cc-commands/issues)
-- Claude Code Docs: [docs.anthropic.com](https://docs.anthropic.com/en/docs/claude-code)
+- **Issues**: [GitHub Issues](https://github.com/LongTermSupport/cc-commands/issues)
+- **Claude Code Docs**: [docs.anthropic.com](https://docs.anthropic.com/en/docs/claude-code)
+- **Slash Commands Guide**: [Claude Code Slash Commands](https://docs.anthropic.com/en/docs/claude-code/slash-commands)
+
+## Contributing
+
+To contribute global commands:
+
+1. Fork this repository
+2. Use `/g:command:create` to create your command locally
+3. Test it thoroughly in different scenarios
+4. Use `/g:command:sync` to commit and share your changes
+5. Submit a PR with your new command
+
+All contributions should follow the established patterns and include comprehensive help documentation.
+
+---
+
+*Building better Claude Code workflows, one command at a time.* 🚀
