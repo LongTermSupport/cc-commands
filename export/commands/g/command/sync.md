@@ -38,19 +38,14 @@ Synchronizes the shared cc-commands repository by:
 
 USAGE:
   /g:command:sync
-  /g:command:sync [commit-message]
   /g:command:sync --help
 
 ARGUMENTS:
-  [commit-message]  Optional custom commit message
   --help            Show this help message
 
 EXAMPLES:
   /g:command:sync
-    Sync with auto-generated commit message
-
-  /g:command:sync "fix: updated db:migrate command for better error handling"
-    Sync with custom commit message
+    Sync with intelligently generated commit message based on actual changes
 
 WORKFLOW:
   1. Shows current repository status
@@ -74,7 +69,7 @@ PREREQUISITES:
 ## 📊 Argument Parsing
 
 <Task>
-Parse the arguments to determine if help was requested or if a commit message was provided.
+Parse the arguments to determine if help was requested.
 </Task>
 
 !echo "=== ARGUMENT PARSING ==="; \
@@ -84,13 +79,6 @@ if [ "$ARGUMENTS" = "--help" ]; then \
   exit 0; \
 else \
   echo "HELP_REQUESTED: false"; \
-  # Parse optional commit message if provided \
-  if [ -n "$ARGUMENTS" ]; then \
-    COMMIT_MSG="$ARGUMENTS"; \
-  else \
-    COMMIT_MSG=""; \
-  fi; \
-  echo "COMMIT_MSG: \"$COMMIT_MSG\""; \
 fi
 
 ## 🚦 Precondition Checks
@@ -156,8 +144,29 @@ git fetch --dry-run 2>&1 | grep -q "up to date" && echo "✓ Remote is up to dat
 ### Detailed Change Analysis
 
 <Task>
-If changes exist, show detailed diff for user review.
+If changes exist, show detailed diff for user review and analyze the changes to understand what was modified.
 </Task>
+
+!if [ "$CHANGES_EXIST" = "true" ]; then \
+  echo "=== Change Details ==="; \
+  cd "$CC_DIR"; \
+  # Show diff statistics \
+  git diff --stat; \
+  echo ""; \
+  # Show list of changed files with their status \
+  git status --porcelain | while read line; do \
+    STATUS=$(echo "$line" | cut -c1-2); \
+    FILE=$(echo "$line" | cut -c4-); \
+    case "$STATUS" in \
+      "M ") echo "Modified: $FILE" ;; \
+      "A ") echo "Added: $FILE" ;; \
+      "D ") echo "Deleted: $FILE" ;; \
+      "R ") echo "Renamed: $FILE" ;; \
+      "??") echo "New file: $FILE" ;; \
+      *) echo "$STATUS: $FILE" ;; \
+    esac; \
+  done; \
+fi
 
 <Task>
 Based on the repository status, determine the sync strategy and show the user what will happen.
@@ -167,14 +176,28 @@ Based on the repository status, determine the sync strategy and show the user wh
 
 Based on the repository analysis, here's the sync plan:
 
-### 📝 Step 1: Handle Local Changes
+### 📝 Step 1: Analyze Changes and Generate Commit Message
 
 <Task>
-If there are uncommitted changes, prepare to commit them.
-</Task>
+If there are uncommitted changes:
+1. Use git diff to see what actually changed in the files
+2. For new files, read them to understand their purpose
+3. For modified files, analyze the diff to understand what was changed
+4. Generate a meaningful commit message following conventional commit format
 
-<Task>
-If changes need to be committed, generate an appropriate commit message.
+The commit message should:
+- Use conventional commit format (feat:, fix:, docs:, refactor:, etc.)
+- Clearly describe WHAT changed (list specific commands if multiple)
+- Be specific about the nature of changes
+- Be concise but informative
+
+Examples of good commit messages:
+- "feat: add sync command for repository synchronization"
+- "fix: improve error handling in create and update commands"
+- "refactor: simplify command argument parsing logic"
+- "feat: add plan command and update create/update commands"
+
+After analyzing, display the commit message that will be used.
 </Task>
 
 ### ⚠️ Confirmation Required
@@ -195,31 +218,8 @@ This sync operation will:
 ### Step 1: Commit Local Changes
 
 <Task>
-If there are changes to commit, execute the git add and commit operations.
+If there are changes to commit, execute the git add and commit operations using the commit message you generated in the previous step.
 </Task>
-
-!if [ "$CHANGES_EXIST" = "true" ]; then \
-  echo "Committing local changes"; \
-  set -e; cd "$CC_DIR"; \
-  # Stage all changes \
-  git add -A; \
-  # Generate commit message if not provided \
-  if [ -z "$COMMIT_MSG" ]; then \
-    # Auto-generate descriptive commit message \
-    TIMESTAMP=$(date +"%Y-%m-%d %H:%M"); \
-    HOSTNAME=$(hostname); \
-    PROJECT_NAME=$(basename $(dirname $(dirname $(pwd)))); \
-    AUTO_MSG="sync: updates from $PROJECT_NAME on $HOSTNAME at $TIMESTAMP"; \
-    echo "Using auto-generated commit message: $AUTO_MSG"; \
-    git commit -m "$AUTO_MSG" || { echo "ERROR: Commit failed"; exit 1; }; \
-  else \
-    echo "Using provided commit message: $COMMIT_MSG"; \
-    git commit -m "$COMMIT_MSG" || { echo "ERROR: Commit failed"; exit 1; }; \
-  fi; \
-  echo "✓ Changes committed successfully"; \
-else \
-  echo "✓ No changes to commit"; \
-fi
 
 ### Step 2: Pull Remote Changes
 
