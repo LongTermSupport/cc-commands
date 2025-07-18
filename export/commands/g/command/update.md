@@ -1,25 +1,13 @@
 ---
 description: Updates existing Claude Code commands to latest standards by regenerating them with command:create
+ultrathink: true
 allowed-tools:
   - Read
   - Write
-  - Bash
+  - Bash(set -e*), Bash(echo*), Bash(test*), Bash(if*), Bash(find*), Bash(cp*)
   - Task
   - LS
   - Glob
-allowed-bash-commands:
-  low-risk:
-    - echo
-    - test
-    - find
-    - sed
-    - sort
-    - cp
-    - mv
-    - grep
-    - nl
-    - exit
-    - set
 ---
 
 # Command Update Wizard 🔄
@@ -92,7 +80,7 @@ Parse arguments to extract command name and any additional update requirements.
 !echo "=== ARGUMENT PARSING ==="; \
 if [ -z "$ARGUMENTS" ]; then \
   echo "=== Available Commands ==="; \
-  find .claude/commands -name "*.md" -type f 2>/dev/null | grep -v "command/create.md" | grep -v "command/update.md" | sed 's|.claude/commands/||' | sed 's|\.md$||' | sed 's|/|:|g' | sort | nl -w2 -s". "; \
+  find .claude/commands -follow -name "*.md" -type f 2>/dev/null | grep -v "command/create.md" | grep -v "command/update.md" | sed 's|.claude/commands/||' | sed 's|\.md$||' | sed 's|/|:|g' | sort | nl -w2 -s". "; \
   echo ""; \
   echo "Usage: /g:command:update <command-name> [additional-requirements]"; \
   echo ""; \
@@ -140,7 +128,7 @@ if [[ "$COMMAND_NAME" == *:* ]]; then \
   else \
     echo "✗ Command not found: ${COMMAND_NAME}"; \
     echo "Available commands:"; \
-    find .claude/commands -name "*.md" -type f 2>/dev/null | sed 's|.claude/commands/||' | sed 's|\.md$||' | sed 's|/|:|g' | sort; \
+    find .claude/commands -follow -name "*.md" -type f 2>/dev/null | sed 's|.claude/commands/||' | sed 's|\.md$||' | sed 's|/|:|g' | sort; \
     exit 1; \
   fi; \
 else \
@@ -186,12 +174,15 @@ Based on the analysis and the UPDATE_MODE from parsing:
 - If UPDATE_MODE is "ENHANCE": Include ADDITIONAL_REQUIREMENTS in the update
 - If UPDATE_MODE is "REFRESH": Just update to latest standards
 
-Prepare a summary to feed to command:create:
-1. Command name (maintaining namespace)
-2. Clear one-sentence purpose
-3. Makes changes: yes/no
-4. Key features to preserve
-5. New features to add (if UPDATE_MODE is "ENHANCE")
+I need to extract ACTUAL values from the command file, not placeholders:
+1. Extract the exact command name from the file path
+2. Extract the exact description from the frontmatter
+3. Extract the exact purpose from the command content
+4. List all actual bash commands used (by finding ! prefixed lines)
+5. List all actual tools from allowed-tools
+6. Build a complete, ready-to-use command string with all details
+
+The output must be self-contained - the user should be able to copy and run it directly without any editing or context from this analysis.
 </Task>
 
 ### Preview Update Plan
@@ -239,35 +230,55 @@ fi
 
 **CRITICAL: DO NOT attempt to call command:create directly! This command only provides analysis and instructions.**
 
-Based on my analysis, here's the summary for updating this command:
+<Task>
+Based on my analysis of the command, I'll provide a complete, self-contained command that can be run to recreate it with the latest standards.
+</Task>
 
-### Command Information
-- **Name**: [Extracted from COMMAND_NAME]
-- **Purpose**: [Extracted purpose, enhanced if UPDATE_MODE is "ENHANCE"]
-- **Makes changes**: [yes/no based on analysis]
-- **Current features**: [List of existing features]
-- **New features requested**: [From ADDITIONAL_REQUIREMENTS if provided]
+### Extracted Command Details
 
-### Update Instructions
+From my analysis of the existing command:
+- **Command name**: [I'll extract the actual command name]
+- **Current description**: [I'll extract from the frontmatter]
+- **Current purpose**: [I'll extract from the command content]
+- **Makes changes**: [I'll determine yes/no based on tools used]
+- **Key functionality**: [I'll list the main features]
+- **Bash commands used**: [I'll list actual bash commands found]
+- **Tools required**: [I'll list the allowed-tools]
 
-To update this command, the user should run:
 
+
+### Detailed Requirements for command:create
+
+When prompted by command:create, here are the complete requirements to provide:
+
+**Full Requirements Description:**
 ```
-/g:command:create [command-name] "[combined purpose and requirements]"
+[A comprehensive paragraph that includes:
+- The exact purpose and description from the original command
+- All functionality that must be preserved
+- Specific tools and bash commands used
+- Any project-specific patterns or workflows
+- Documentation references that should be included
+- Error handling patterns used
+- User interaction patterns
+- Any additional features requested]
 ```
 
-The full requirements should include:
-1. The original purpose and functionality
-2. All existing features that need to be preserved
-3. Any new features from ADDITIONAL_REQUIREMENTS
-4. Specific mentions of patterns to maintain
+**Makes changes**: [yes/no - with explanation of what changes are made]
 
-### Example Command
+**Key Features to Preserve**:
+1. [Specific feature with details]
+2. [Specific feature with details]
+3. [Specific feature with details]
 
-Based on this analysis, run:
-```
-/g:command:create [specific-command] "[specific combined requirements]"
-```
+**Bash Commands Required**:
+- [List each bash command pattern found in the original]
+- [With explanations of what they do]
+
+**Additional Context**:
+- [Any project-specific conventions]
+- [Special error handling requirements]
+- [Workflow patterns to maintain]
 
 ## ✅ Update Analysis Complete
 
@@ -278,6 +289,14 @@ I've:
 4. Provided the exact command:create invocation needed
 
 The next step is for you to run the command:create command with the requirements shown above.
+
+### Complete Update Command
+
+Copy and run this exact command:
+
+```
+/g:command:create [actual-command-name] "Read the detailed requirements from the command:update analysis"
+```
 
 **This command is now complete.** No further action will be taken.
 

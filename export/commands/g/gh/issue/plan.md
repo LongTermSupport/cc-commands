@@ -1,47 +1,30 @@
 ---
-description: Creates a comprehensive plan from GitHub issue following project workflow standards
+description: Creates a comprehensive plan from GitHub issue following project workflow standards without time estimates
 allowed-tools:
   - Read
   - Write
-  - Bash
+  - Bash(set -e*), Bash(echo*), Bash(printf*), Bash(test*), Bash(if*), Bash([*)
+  - Bash(pwd*), Bash(which*), Bash(head*), Bash(tail*), Bash(find*)
+  - Bash(mkdir*), Bash(date*), Bash(sed*), Bash(grep*), Bash(awk*)
+  - Bash(cut*), Bash(sort*), Bash(wc*), Bash(exit*), Bash(jq*)
+  - Bash(gh auth status*), Bash(gh issue list*), Bash(gh issue view*), Bash(gh issue comment*)
+  - Bash(git add*), Bash(git commit*), Bash(git log*)
   - Task
   - TodoWrite
   - LS
   - Glob
   - WebFetch
-allowed-bash-commands:
-  low-risk:
-    - echo
-    - printf
-    - test
-    - pwd
-    - which
-    - head
-    - tail
-    - find
-    - mkdir
-    - date
-    - sed
-    - grep
-    - awk
-    - cut
-    - sort
-    - wc
-  medium-risk:
-    - gh  # GitHub CLI for issue operations and auth checks
-    - git  # Repository status checks
-  high-risk:
-    - gh  # Issue commenting (optional)
-    - git  # Repository commits (optional)
 ---
 
 # GitHub Issue to Plan Converter 📋
 
-You are an expert software architect and project manager with deep knowledge of issue analysis, requirement extraction, and strategic planning. You excel at understanding complex technical issues, following discussion threads, and creating actionable plans that follow established workflows.
+You are an expert software architect and project manager with deep knowledge of issue analysis, requirement extraction, and strategic planning. You excel at understanding complex technical issues, following discussion threads, and creating actionable plans that follow established workflows. You NEVER include time estimates in plans or communications.
 
 **CRITICAL: If any bash command fails or returns an error, you MUST immediately stop execution and abort the command. Do not attempt to continue, work around, or fix the error. Simply state "Command aborted due to bash error" and stop.**
 
 **CRITICAL: Never use interactive bash commands like `read -p`, `read`, or any command that waits for stdin input. These will hang the command. Use Task blocks to handle user interaction instead.**
+
+**CRITICAL: Never include time estimates, effort estimates, or duration predictions in the generated plan or GitHub comments. Focus on task breakdown and dependencies only.**
 
 ## 📖 Help Documentation
 
@@ -54,9 +37,10 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo " GH:ISSUE:PLAN - GitHub Issue to Plan Converter"; \
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
 echo ""; \
-echo "Creates comprehensive plans from GitHub issues following project workflow"; \
+echo "Creates a comprehensive plan from a GitHub issue following project workflow"; \
 echo "standards. Analyzes issue content, comments, and linked issues to generate"; \
-echo "structured plans with tasks, research items, and progress tracking."; \
+echo "a structured plan with tasks and progress tracking. Never includes time"; \
+echo "estimates in the generated plan or GitHub comments."; \
 echo ""; \
 echo "USAGE:"; \
 echo "  /g:gh:issue:plan [issue-url-or-number]"; \
@@ -73,22 +57,39 @@ echo ""; \
 echo "  /g:gh:issue:plan #123"; \
 echo "    Create plan from issue number (uses current repo)"; \
 echo ""; \
+echo "  /g:gh:issue:plan"; \
+echo "    Show recent issues and select interactively"; \
+echo ""; \
 echo "FEATURES:"; \
 echo "  • Extracts requirements from issue and comments"; \
 echo "  • Creates structured plan following project standards"; \
 echo "  • Generates task list with progress tracking"; \
 echo "  • Links to relevant project documentation"; \
-echo "  • Optional: Posts plan back to GitHub issue"; \
+echo "  • Prompts to commit and post to GitHub after creation"; \
+echo "  • Never includes time estimates in plans"; \
 echo ""; \
 echo "OUTPUT:"; \
-echo "  • Creates plan file in CLAUDE/plan/issue-{number}.md"; \
+echo "  • Creates plan file in CLAUDE/plan/issue-{number}-{title}.md"; \
 echo "  • Includes task breakdown with [ ] checkboxes"; \
 echo "  • References project standards and workflows"; \
+echo "  • Focuses on what needs to be done, not how long"; \
+echo ""; \
+echo "WORKFLOW:"; \
+echo "  1. Analyze issue and create plan"; \
+echo "  2. Prompt: 'Commit plan and add comment to issue?'"; \
+echo "  3. If yes: commit to git and post GitHub comment"; \
+echo "  4. Prompt: 'Would you like to execute the plan now?'"; \
 echo ""; \
 echo "PRECONDITIONS:"; \
 echo "  • GitHub CLI (gh) installed and authenticated"; \
 echo "  • In a git repository (for local issue references)"; \
 echo "  • Project has CLAUDE directory structure"; \
+echo ""; \
+echo "SAFETY:"; \
+echo "  • Won't overwrite existing plan files"; \
+echo "  • All git operations require confirmation"; \
+echo "  • GitHub comment posting requires approval"; \
+echo "  • Clear preview before any changes"; \
 echo ""; \
 exit 0; \
 fi
@@ -105,92 +106,96 @@ test -d CLAUDE && echo "✓ CLAUDE directory exists" || (echo "✗ CLAUDE direct
 test -d CLAUDE/plan && echo "✓ CLAUDE/plan directory exists" || (echo "⚠ CLAUDE/plan directory not found - will create" && mkdir -p CLAUDE/plan); \
 test -f CLAUDE/PlanWorkflow.md && echo "✓ PlanWorkflow.md found" || echo "⚠ PlanWorkflow.md not found - will use defaults"
 
-### Input Validation and Processing
+## 📊 Argument Parsing
 
 <Task>
-Let me analyze the provided input: "$ARGUMENTS"
-
-If no argument is provided, I'll show recent issues for easy selection.
-If an argument is provided, I'll validate it as either:
-- A numeric issue ID (e.g., "123")
-- A full GitHub URL (e.g., "https://github.com/owner/repo/issues/123")
-
-I'll then extract the issue number and proceed with analysis.
+Parse the issue argument and determine the mode of operation.
 </Task>
+
+!echo "=== ARGUMENT PARSING ==="; \
+if [ -z "$ARGUMENTS" ]; then \
+  echo "MODE: \"INTERACTIVE\""; \
+  echo "ISSUE_NUMBER: \"\""; \
+  echo "Need to show issue list for selection"; \
+elif [[ "$ARGUMENTS" =~ ^https://github.com/.*/issues/([0-9]+) ]]; then \
+  ISSUE_NUM="${BASH_REMATCH[1]}"; \
+  echo "MODE: \"URL\""; \
+  echo "ISSUE_NUMBER: \"$ISSUE_NUM\""; \
+  echo "Parsed issue number from GitHub URL"; \
+elif [[ "$ARGUMENTS" =~ ^#?([0-9]+)$ ]]; then \
+  ISSUE_NUM="${BASH_REMATCH[1]}"; \
+  echo "MODE: \"NUMBER\""; \
+  echo "ISSUE_NUMBER: \"$ISSUE_NUM\""; \
+  echo "Using issue number directly"; \
+else \
+  echo "ERROR: Invalid argument format"; \
+  echo "Expected: issue number (#123) or GitHub URL"; \
+  exit 1; \
+fi
 
 ### Issue Selection Interface
 
-!echo "Listing recent GitHub issues for selection"; \
-set -e; if [ -z "$ARGUMENTS" ]; then \
-    echo "=== No issue specified. Showing recent open issues ==="; \
-    echo ""; \
-    gh issue list --state open --limit 10 --json number,title,author,createdAt,labels --jq '.[] | "\(.number)\t\(.createdAt[0:10])\t\(.author.login)\t\(.title[0:60])\(.title[60:] | if . != "" then "..." else "" end)\t\(if .labels then (.labels | map(.name) | join(", ")) else "" end)"' | awk 'BEGIN {printf "%-6s %-12s %-15s %-63s %s\n", "#", "Created", "Author", "Title", "Labels"; print "────── ──────────── ─────────────── ─────────────────────────────────────────────────────────────── ─────────"} {printf "%-6s %-12s %-15s %-63s %s\n", $1, $2, $3, $4, $5}'; \
-    echo ""; \
-fi
-
 <Task>
-If no argument was provided, I've shown the 10 most recent open issues above.
-
-Please provide an issue number from the list above, or specify:
-- An issue number (e.g., 123)
-- A full GitHub URL (e.g., https://github.com/owner/repo/issues/123)
-
-If an argument was provided, I'll validate it and proceed with the analysis.
+If no issue was specified, show recent issues for selection.
 </Task>
+
+!if [ -z "$ARGUMENTS" ]; then \
+  echo "=== Recent Open Issues ==="; \
+  echo ""; \
+  gh issue list --state open --limit 10 --json number,title,author,createdAt,labels --jq '.[] | "\(.number)\t\(.createdAt[0:10])\t\(.author.login)\t\(.title[0:60])\(.title[60:] | if . != "" then "..." else "" end)\t\(if .labels then (.labels | map(.name) | join(", "))[0:30] else "" end)"' | awk 'BEGIN {printf "%-6s %-12s %-15s %-63s %s\n", "#", "Created", "Author", "Title", "Labels"; print "────── ──────────── ─────────────── ─────────────────────────────────────────────────────────────── ─────────"} {printf "%-6s %-12s %-15s %-63s %s\n", $1, $2, $3, $4, $5}'; \
+  echo ""; \
+  echo "Please specify an issue number from the list above."; \
+  echo "Example: /g:gh:issue:plan 123"; \
+  exit 0; \
+fi
 
 ## 📊 Issue Analysis Phase
 
-<Task>
-Now I'll proceed with comprehensive issue analysis:
-
-1. **Issue Data Extraction**: Fetch complete issue information including title, body, metadata, and all comments
-2. **Link Discovery**: Identify and analyze all URLs mentioned in the issue thread
-3. **Context Gathering**: Follow relevant links to gather additional context from documentation, code, or related issues
-4. **Requirement Analysis**: Extract technical requirements, constraints, and stakeholder concerns
-5. **Decision Tracking**: Note any agreements or decisions made in the discussion thread
-</Task>
-
 ### Fetch Complete Issue Information
 
+<Task>
+Fetch the issue data from GitHub including all comments and metadata.
+</Task>
+
 !echo "Fetching detailed issue data from GitHub"; \
-set -e; if [ -n "$ARGUMENTS" ]; then \
-    echo "=== Fetching Issue Data for #$ARGUMENTS ==="; \
-    gh issue view "$ARGUMENTS" --json title,body,author,createdAt,updatedAt,labels,assignees,milestone,state,comments --jq '.'; \
-fi
+ISSUE_ARG="$ARGUMENTS"; \
+if [[ "$ISSUE_ARG" =~ ^https://github.com/.*/issues/([0-9]+) ]]; then \
+  ISSUE_NUM="${BASH_REMATCH[1]}"; \
+elif [[ "$ISSUE_ARG" =~ ^#?([0-9]+)$ ]]; then \
+  ISSUE_NUM="${BASH_REMATCH[1]}"; \
+fi; \
+echo "=== Fetching Issue Data for #$ISSUE_NUM ==="; \
+gh issue view "$ISSUE_NUM" --json number,title,body,author,createdAt,updatedAt,labels,assignees,milestone,state,comments > /tmp/issue-$ISSUE_NUM.json 2>&1 || (echo "Failed to fetch issue #$ISSUE_NUM" && exit 1); \
+echo "✓ Issue data fetched successfully"; \
+echo "Title: $(jq -r '.title' /tmp/issue-$ISSUE_NUM.json)"; \
+echo "Author: $(jq -r '.author.login' /tmp/issue-$ISSUE_NUM.json)"; \
+echo "State: $(jq -r '.state' /tmp/issue-$ISSUE_NUM.json)"; \
+echo "Comments: $(jq '.comments | length' /tmp/issue-$ISSUE_NUM.json)"; \
+echo "Labels: $(jq -r '.labels | map(.name) | join(", ")' /tmp/issue-$ISSUE_NUM.json || echo "none")"
+
+### Issue Content Analysis
+
+<Task>
+Analyze the issue content to extract requirements and understand the context.
+I'll read the issue data and analyze:
+1. The main issue description
+2. All comments and discussions
+3. Any linked issues or documentation
+4. Technical requirements and constraints
+</Task>
+
+<Read>
+/tmp/issue-$ISSUE_NUM.json
+</Read>
 
 ### Link Analysis and Context Gathering
 
 <Task>
 From the issue data, I'll:
-
-1. **Extract all URLs** mentioned in the issue body and comments
-2. **Categorize links** by type:
-   - Documentation references
-   - Code files or repositories
-   - Related issues or pull requests
-   - External resources or APIs
-   - Design documents or specifications
-
-3. **Follow relevant links** to gather additional context:
-   - Read referenced documentation
-   - Analyze mentioned code files
-   - Review related issues for context
-   - Examine external resources for requirements
-
-4. **Synthesize findings** into a comprehensive understanding of the issue
-</Task>
-
-### Technical Requirements Extraction
-
-<Task>
-Based on the gathered information, I'll analyze:
-
-1. **Core Problem**: What is the fundamental issue or feature request?
-2. **Technical Constraints**: What limitations or requirements must be considered?
-3. **Stakeholder Concerns**: What are the different perspectives and priorities?
-4. **Success Criteria**: How will we know when this is resolved?
-5. **Dependencies**: What other work or decisions does this depend on?
-6. **Risks and Considerations**: What potential issues should be anticipated?
+1. Extract all URLs mentioned in the issue body and comments
+2. Identify related issues, pull requests, and documentation
+3. Gather context from project documentation
+4. Synthesize a comprehensive understanding of the requirements
 </Task>
 
 ## 📝 Plan Generation Phase
@@ -198,203 +203,198 @@ Based on the gathered information, I'll analyze:
 ### Project Standards Integration
 
 <Task>
-I'll read the relevant project documentation to ensure the plan follows established standards:
+Read the relevant project documentation to ensure the plan follows established standards.
 </Task>
 
 @CLAUDE/PlanWorkflow.md
-@CLAUDE/Core/CodeStandards.md
+@CLAUDE/Core/CodeStandards.md  
 @CLAUDE/Core/TestingStandards.md
 @CLAUDE/Tools/Commands.md
 @CLAUDE/Tools/PHPStan.md
 
-### Plan Document Creation
+### Generate Plan Content
 
 <Task>
-I'll generate a comprehensive plan document with:
-
-1. **Filename**: `issue-{number}-{kebab-case-title}.md` in the CLAUDE/plan/ directory
-2. **Structure**: Following the PlanWorkflow.md template with:
-   - Required documentation references
-   - Progress tracking section with checkboxes
-   - Summary of the issue and requirements
-   - Detailed breakdown of tasks and subtasks
-   - Technical implementation notes
-   - Testing requirements
-   - Success criteria and validation steps
-
-3. **Content Quality**: Ensuring the plan is:
-   - Actionable with clear, specific tasks
-   - Well-organized with logical task sequencing
-   - Comprehensive covering all aspects of the issue
-   - Aligned with project standards and workflows
-   - Testable with clear validation criteria
+Based on the issue analysis and project standards, I'll create a comprehensive plan that:
+1. Follows the PlanWorkflow.md template structure
+2. Breaks down the work into clear, actionable tasks
+3. Includes all necessary documentation references
+4. Has proper progress tracking with checkboxes
+5. NEVER includes any time estimates or effort predictions
+6. Focuses on WHAT needs to be done, not HOW LONG it will take
 </Task>
 
-### Plan Preview and Validation
+### Plan Preview
 
 <Task>
-Before creating the file, I'll show you a preview of the generated plan including:
-
-- **Plan filename** and location
-- **Task summary** (number of tasks and major categories)
-- **Key requirements** extracted from the issue
-- **Implementation approach** and major decisions
-- **Testing strategy** and validation criteria
-- **Estimated complexity** and potential risks
-
-This preview allows you to review the plan before it's written to disk.
+Before creating the file, I'll show you a preview of the plan structure and key elements.
+This allows you to review before committing to disk.
 </Task>
 
 ## ⚠️ Plan Creation Confirmation
 
 <Task>
-I'll present the plan creation details:
+Present the plan details and ask for confirmation before creating the file.
 
 **Plan Details:**
-- **File**: `CLAUDE/plan/issue-{number}-{title}.md`
+- **File**: `CLAUDE/plan/issue-{number}-{kebab-title}.md`
 - **Based on**: Issue #{number} - {title}
-- **Tasks**: {count} tasks across {categories} categories
-- **Complexity**: {assessment}
-- **Estimated effort**: {estimate}
+- **Tasks**: {count} tasks organized by category
+- **Structure**: Following PlanWorkflow.md standards
+- **Content**: Requirements, implementation tasks, testing needs
 
-**Plan Contents:**
-- ✓ Requirements analysis and context
-- ✓ Technical implementation tasks
+**Plan will include:**
+- ✓ Task breakdown with progress tracking
+- ✓ Technical implementation details
 - ✓ Testing and validation requirements
-- ✓ Documentation and standards compliance
-- ✓ Success criteria and acceptance tests
+- ✓ Documentation references
+- ✓ Success criteria
+- ✗ NO time estimates or duration predictions
 
-**Do you want to create this plan?** (yes/no)
-
-Note: You can review and modify the plan after creation before executing it.
+Do you want to create this plan? (yes/no)
 </Task>
 
 ## 🔧 Plan File Creation
 
 <Task>
-Upon confirmation, I'll:
-
-1. **Create the plan file** in the CLAUDE/plan/ directory
-2. **Validate the file** was created successfully
-3. **Show the file path** and basic statistics
-4. **Prepare for optional operations** (git commit, GitHub comment)
-
-The plan will include all the standard elements from PlanWorkflow.md:
-- Required documentation references at the top
-- Progress section with task tracking
-- Summary of the issue and goals
-- Detailed implementation breakdown
-- Testing and validation requirements
+Upon confirmation, create the plan file in CLAUDE/plan/ directory.
 </Task>
 
-## 📤 Optional Git Integration
+!echo "Creating plan file"; \
+ISSUE_NUM="[extracted from above]"; \
+ISSUE_TITLE="[extracted and kebab-cased]"; \
+PLAN_FILE="CLAUDE/plan/issue-${ISSUE_NUM}-${ISSUE_TITLE}.md"; \
+if [ -f "$PLAN_FILE" ]; then \
+  echo "WARNING: Plan file already exists: $PLAN_FILE"; \
+  echo "Please remove or rename the existing file first"; \
+  exit 1; \
+fi; \
+echo "✓ Plan file path validated: $PLAN_FILE"
+
+<Write>
+[Plan content will be written here based on the issue analysis]
+</Write>
+
+### Verify Plan Creation
+
+!echo "Verifying plan file creation"; \
+PLAN_FILE="[path from above]"; \
+if [ -f "$PLAN_FILE" ]; then \
+  echo "✓ Plan file created successfully"; \
+  echo "Location: $PLAN_FILE"; \
+  echo "Size: $(wc -l < "$PLAN_FILE") lines"; \
+  echo ""; \
+  echo "Tasks in plan:"; \
+  grep -E "^(\[ \]|\[✓\]|\[⏳\])" "$PLAN_FILE" | head -10; \
+else \
+  echo "✗ Failed to create plan file"; \
+  exit 1; \
+fi
+
+## 📤 Enhanced Post-Creation Workflow
 
 <Task>
-I'll ask if you want to commit the plan to the repository:
+After successfully creating the plan, immediately prompt the user for the next actions.
 
-**Git Operations Available:**
-- ✓ Add the plan file to git staging
-- ✓ Create a descriptive commit message
-- ✓ Show commit preview for approval
-- ✓ Execute the commit
+**Enhanced Workflow:**
+Would you like to commit the plan and add a comment to the issue? (yes/no)
 
-**Commit Details:**
-- **Files**: `CLAUDE/plan/{filename}.md`
-- **Message**: `"Add plan for issue #{number}: {title}"`
-- **Impact**: New plan file tracked in repository
+If yes:
+- Commit the plan file to git
+- Post a summary comment to the GitHub issue
+- Then ask about execution
 
-**Would you like to commit this plan?** (yes/no)
+If no:
+- Skip directly to execution question
 </Task>
 
-## 💬 Optional GitHub Integration
+### Execute Combined Actions
+
+!if [ "$USER_WANTS_COMMIT_AND_COMMENT" = "yes" ]; then \
+  echo "=== Executing Git Commit and GitHub Comment ==="; \
+  PLAN_FILE="[path from above]"; \
+  ISSUE_NUM="[number]"; \
+  ISSUE_TITLE="[title]"; \
+  set -e; \
+  \
+  echo "[1/2] Committing plan to git..."; \
+  git add "$PLAN_FILE" && echo "✓ Plan file staged"; \
+  git commit -m "Add plan for issue #${ISSUE_NUM}: ${ISSUE_TITLE}" && echo "✓ Commit created"; \
+  git log --oneline -1; \
+  \
+  echo ""; \
+  echo "[2/2] Posting comment to GitHub issue..."; \
+  COMMENT="📋 **Plan Created**\n\nI've analyzed this issue and created a comprehensive plan following the project's workflow standards.\n\n**Plan Summary:**\n- Total tasks: [count]\n- Categories: [list]\n- Key areas: [areas]\n\n**Next Steps:**\n1. Review the plan for completeness\n2. Execute tasks following the progress tracking\n3. Update task status as work progresses\n\nPlan committed to repository: \`CLAUDE/plan/issue-${ISSUE_NUM}-${ISSUE_TITLE}.md\`\n\n*Plan generated without time estimates per project standards*"; \
+  gh issue comment "$ISSUE_NUM" --body "$COMMENT" && echo "✓ Comment posted successfully" || echo "✗ Failed to post comment"; \
+  echo ""; \
+  echo "✓ Both actions completed successfully!"; \
+else \
+  echo "Skipping commit and GitHub comment"; \
+fi
+
+## 🚀 Execution Prompt
 
 <Task>
-I'll offer to post a progress comment to the original GitHub issue:
+After handling the commit/comment decision, ask about plan execution.
 
-**Comment Features:**
-- ✓ Link to the committed plan (if committed)
-- ✓ Summary of analysis findings
-- ✓ High-level task breakdown
-- ✓ Next steps and timeline
-- ✓ Professional formatting
+**Ready to Execute?**
+Would you like to execute the plan now? (yes/no)
 
-**Comment Preview:**
-I'll show you exactly what will be posted before posting it.
+If yes:
+- Provide guidance on starting execution
+- Reference the plan file location
+- Suggest opening the plan and beginning with first task
 
-**Would you like to post a progress comment to the issue?** (yes/no)
-
-Note: This will be visible to all issue participants and cannot be easily undone.
+If no:
+- Provide summary of what was created
+- Remind user how to execute later
 </Task>
 
 ## ✅ Completion Summary
 
+### Actions Completed
+
 <Task>
-I'll provide a comprehensive summary of what was accomplished:
-
-**Actions Completed:**
-- ✓ Issue #{number} analyzed and understood
-- ✓ Plan created: `CLAUDE/plan/{filename}.md`
-- ✓ Git operations: {status}
-- ✓ GitHub updates: {status}
-
-**Plan Details:**
-- **Tasks**: {count} actionable items
-- **Categories**: {list of major areas}
-- **Next Steps**: Execute plan using PlanWorkflow.md process
-
-**Recommendations:**
-- Review the plan for completeness
-- Execute tasks following the Progress section
-- Run quality tools (allCs, allStatic) during implementation
-- Update Progress section as tasks are completed
-
-**Ready to Execute:**
-To begin implementing this plan, use the execution workflow defined in PlanWorkflow.md.
+Provide a comprehensive summary of what was accomplished.
 </Task>
+
+**Summary of Actions:**
+- ✓ Issue #{number} analyzed successfully
+- ✓ Plan created: `CLAUDE/plan/{filename}.md`
+- [✓/✗] Git commit: {status}
+- [✓/✗] GitHub comment: {status}
+- [✓/✗] Execution started: {status}
+
+**Plan Overview:**
+- **Total Tasks**: {count} actionable items
+- **Structure**: Following PlanWorkflow.md standards
+- **Focus**: Task breakdown without time estimates
+
+**Next Steps:**
+1. Review the plan in detail
+2. Begin execution following the Progress section
+3. Mark tasks as [⏳] when starting, [✓] when complete
+4. Run quality tools (allCs, allStatic) during implementation
+
+**To begin implementing:**
+Open the plan file and start with the first uncompleted task in the Progress section.
 
 ## 🚨 Error Recovery
 
 If any operation fails:
 
-**Common Issues and Solutions:**
-- **Invalid issue number**: Verify the issue exists and is accessible
-- **Authentication failure**: Run `gh auth login` to re-authenticate
-- **Network connectivity**: Check internet connection and GitHub status
-- **Permission errors**: Ensure you have access to the repository
-- **File system issues**: Check disk space and directory permissions
-- **Git conflicts**: Resolve any uncommitted changes before committing plan
+**Common Issues:**
+- **Invalid issue**: Verify the issue number exists and is accessible
+- **Auth failure**: Run `gh auth login` to re-authenticate  
+- **Network issues**: Check connection and GitHub status
+- **Git conflicts**: Resolve uncommitted changes before committing
+- **Existing plan**: Remove or rename existing plan file
 
-**Recovery Actions:**
-1. **Check preconditions**: Re-run environment validation
-2. **Verify inputs**: Confirm issue number and repository access
-3. **Retry operations**: Most failures are transient
-4. **Manual fallback**: Create plan file manually if needed
-5. **Report issues**: Document any persistent problems
-
-## 💡 Advanced Usage
-
-### Batch Planning
-Process multiple issues by running the command multiple times:
-```bash
-/gh:issue:plan 123
-/gh:issue:plan 124
-/gh:issue:plan 125
-```
-
-### Integration with Existing Plans
-- **Related issues**: Plans can reference each other
-- **Dependencies**: Note cross-plan dependencies in the summary
-- **Coordination**: Use consistent naming and structure
-
-### Customization Options
-- **Plan templates**: Modify PlanWorkflow.md to customize plan structure
-- **Naming conventions**: Adjust filename format as needed
-- **Integration points**: Extend with project-specific requirements
-
-### Performance Optimization
-- **Link following**: Automatically limited to prevent infinite loops
-- **Context gathering**: Prioritizes most relevant information
-- **Plan generation**: Optimized for actionable, specific tasks
+**Recovery Steps:**
+1. Check error message for specific issue
+2. Verify all preconditions are met
+3. Retry the operation
+4. If persistent, check GitHub permissions
 
 ---
-*This command creates production-ready plans that integrate seamlessly with your project workflow*
+*This command creates a structured plan from a GitHub issue following project standards without time estimates*
