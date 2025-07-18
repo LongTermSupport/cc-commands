@@ -21,14 +21,12 @@ You are an expert git workflow engineer with deep knowledge of repository synchr
 ## 📖 Help Documentation
 
 <Task>
-If the user requested --help, provide the help documentation and exit.
+If the user's arguments are "--help", output the help documentation below (everything between the <help> tags) and stop. Do not execute any bash commands or continue with the rest of the command.
 </Task>
 
-If you see `--help` in the arguments, please provide this help text and stop:
-
-```
+<help>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- COMMAND:SYNC - Synchronize CC-Commands Repository
+ **g:command:sync - Synchronize CC-Commands Repository**
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Synchronizes the shared cc-commands repository by:
@@ -64,52 +62,18 @@ PREREQUISITES:
   • cc-commands directory must exist at .claude/cc-commands
   • Must be a valid git repository
   • Must have push access to the remote repository
-```
+</help>
 
 ## 📊 Argument Parsing
 
 <Task>
-Parse the arguments to determine if help was requested.
+Parse the arguments to determine if help was requested. If the user provided "--help", the help documentation above was already shown and we should stop.
 </Task>
-
-!echo "=== ARGUMENT PARSING ==="; \
-# Check for help flag \
-if [ "$ARGUMENTS" = "--help" ]; then \
-  echo "HELP_REQUESTED: true"; \
-  exit 0; \
-else \
-  echo "HELP_REQUESTED: false"; \
-fi
 
 ## 🚦 Precondition Checks
 
 ### Environment Validation
-!echo "Validating cc-commands repository environment"; \
-set -e; echo "=== Environment Validation ==="; \
-# Check if cc-commands directory exists \
-if [ ! -d ".claude/cc-commands" ]; then \
-  echo "ERROR: cc-commands directory not found at .claude/cc-commands"; \
-  echo "This command requires the cc-commands repository to be present."; \
-  exit 1; \
-fi; \
-echo "✓ cc-commands directory found"; \
-# Change to cc-commands directory and verify it's a git repo \
-cd .claude/cc-commands; \
-if [ ! -d ".git" ]; then \
-  echo "ERROR: .claude/cc-commands is not a git repository"; \
-  exit 1; \
-fi; \
-echo "✓ Valid git repository"; \
-# Check remote configuration \
-if ! git remote -v | grep -q origin; then \
-  echo "ERROR: No 'origin' remote configured"; \
-  exit 1; \
-fi; \
-echo "✓ Remote 'origin' configured:"; \
-git remote -v | grep origin | head -1; \
-# Store current directory for reference \
-CC_DIR=$(pwd); \
-echo "CC_DIR: \"$CC_DIR\""
+!bash .claude/cc-commands/scripts/g/command/sync_env_validate.bash
 
 ## 📊 Repository Status Analysis
 
@@ -117,29 +81,7 @@ echo "CC_DIR: \"$CC_DIR\""
 Analyze the current state of the repository to understand what needs to be synced.
 </Task>
 
-!echo "Analyzing repository status"; \
-set -e; cd "$CC_DIR"; \
-echo "=== Git Status ==="; \
-git status --porcelain > /tmp/git_status_$$.txt; \
-if [ -s /tmp/git_status_$$.txt ]; then \
-  echo "✓ Uncommitted changes found:"; \
-  cat /tmp/git_status_$$.txt; \
-  CHANGES_EXIST=true; \
-else \
-  echo "✓ Working directory clean"; \
-  CHANGES_EXIST=false; \
-fi; \
-rm -f /tmp/git_status_$$.txt; \
-echo "CHANGES_EXIST: $CHANGES_EXIST"; \
-echo ""; \
-echo "=== Recent Commits ==="; \
-git log --oneline -5 || echo "No commits yet"; \
-echo ""; \
-echo "=== Branch Information ==="; \
-CURRENT_BRANCH=$(git branch --show-current); \
-echo "Current branch: $CURRENT_BRANCH"; \
-# Check if we're ahead or behind remote \
-git fetch --dry-run 2>&1 | grep -q "up to date" && echo "✓ Remote is up to date" || echo "⚠️  Remote has updates"
+!bash .claude/cc-commands/scripts/g/command/sync_status_analysis.bash
 
 ### Detailed Change Analysis
 
@@ -147,26 +89,7 @@ git fetch --dry-run 2>&1 | grep -q "up to date" && echo "✓ Remote is up to dat
 If changes exist, show detailed diff for user review and analyze the changes to understand what was modified.
 </Task>
 
-!if [ "$CHANGES_EXIST" = "true" ]; then \
-  echo "=== Change Details ==="; \
-  cd "$CC_DIR"; \
-  # Show diff statistics \
-  git diff --stat; \
-  echo ""; \
-  # Show list of changed files with their status \
-  git status --porcelain | while read line; do \
-    STATUS=$(echo "$line" | cut -c1-2); \
-    FILE=$(echo "$line" | cut -c4-); \
-    case "$STATUS" in \
-      "M ") echo "Modified: $FILE" ;; \
-      "A ") echo "Added: $FILE" ;; \
-      "D ") echo "Deleted: $FILE" ;; \
-      "R ") echo "Renamed: $FILE" ;; \
-      "??") echo "New file: $FILE" ;; \
-      *) echo "$STATUS: $FILE" ;; \
-    esac; \
-  done; \
-fi
+!bash .claude/cc-commands/scripts/g/command/sync_change_analysis.bash
 
 <Task>
 Based on the repository status, determine the sync strategy and show the user what will happen.
@@ -221,29 +144,11 @@ This sync operation will:
 If there are changes to commit, execute the git add and commit operations using the commit message you generated in the previous step.
 </Task>
 
+!bash .claude/cc-commands/scripts/g/command/sync_commit_execute.bash "$COMMIT_MESSAGE"
+
 ### Step 2: Pull Remote Changes
 
-!echo "Pulling latest changes from remote"; \
-set -e; cd "$CC_DIR"; \
-echo "=== Git Pull ==="; \
-# Attempt to pull with rebase to keep history clean \
-if git pull --rebase origin "$CURRENT_BRANCH" 2>&1; then \
-  echo "✓ Successfully pulled and rebased changes"; \
-else \
-  # If rebase fails, fall back to merge \
-  echo "⚠️  Rebase failed, attempting merge..."; \
-  git rebase --abort 2>/dev/null || true; \
-  if git pull origin "$CURRENT_BRANCH"; then \
-    echo "✓ Successfully pulled and merged changes"; \
-  else \
-    echo "ERROR: Pull failed. Manual intervention required."; \
-    echo "Hints:"; \
-    echo "  1. Check for merge conflicts with: git status"; \
-    echo "  2. Resolve conflicts manually"; \
-    echo "  3. Complete merge with: git add . && git commit"; \
-    exit 1; \
-  fi; \
-fi
+!bash .claude/cc-commands/scripts/g/command/sync_pull_execute.bash "$CURRENT_BRANCH"
 
 ### Step 3: Update README.md
 
@@ -251,38 +156,11 @@ fi
 Check if the README.md file needs updates based on the current state of commands and repository structure. If updates are needed, update the README.md to reflect the current available commands, features, and documentation, then commit those changes.
 </Task>
 
-!echo "Checking README.md currency"; \
-set -e; cd "$CC_DIR"; \
-echo "=== README Update Check ==="; \
-# Check if README is current by comparing last modified time with recent commits \
-if [ -f "README.md" ]; then \
-  README_MODIFIED=$(stat -c %Y README.md 2>/dev/null || echo "0"); \
-  LAST_COMMAND_CHANGE=$(find export/commands -name "*.md" -printf "%T@\n" | sort -n | tail -1 | cut -d. -f1); \
-  if [ "$README_MODIFIED" -lt "$LAST_COMMAND_CHANGE" ]; then \
-    echo "⚠️  README.md appears outdated compared to command changes"; \
-    echo "📝 Consider updating README.md to reflect current command structure"; \
-  else \
-    echo "✓ README.md appears current"; \
-  fi; \
-else \
-  echo "⚠️  README.md not found"; \
-fi
+!bash .claude/cc-commands/scripts/g/command/sync_readme_check.bash
 
 ### Step 4: Push to Remote
 
-!echo "Pushing changes to remote"; \
-set -e; cd "$CC_DIR"; \
-echo "=== Git Push ==="; \
-if git push origin "$CURRENT_BRANCH"; then \
-  echo "✓ Successfully pushed changes to remote"; \
-else \
-  echo "ERROR: Push failed"; \
-  echo "Possible reasons:"; \
-  echo "  - You don't have push access to the repository"; \
-  echo "  - The remote has diverged (try pulling again)"; \
-  echo "  - Network connectivity issues"; \
-  exit 1; \
-fi
+!bash .claude/cc-commands/scripts/g/command/sync_push_execute.bash "$CURRENT_BRANCH"
 
 ## ✅ Sync Complete
 
@@ -290,19 +168,7 @@ fi
 Show a summary of what was accomplished during the sync.
 </Task>
 
-!echo "=== Sync Summary ==="; \
-set -e; cd "$CC_DIR"; \
-echo "✓ Repository synchronized successfully"; \
-echo ""; \
-echo "Current status:"; \
-git log --oneline -3; \
-echo ""; \
-echo "Remote status:"; \
-git status -sb; \
-echo ""; \
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
-echo "✓ CC-Commands repository is now in sync!"; \
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+!bash .claude/cc-commands/scripts/g/command/sync_summary.bash
 
 ### 🚀 Next Steps
 

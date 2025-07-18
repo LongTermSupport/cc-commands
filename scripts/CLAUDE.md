@@ -29,6 +29,11 @@ Scripts MUST follow this naming pattern:
 - **Common scripts**: `{function_group}_{operation}.bash`
   - Example: `env_validate.bash`, `git_operations.bash`
 
+**File Permissions**: All `.bash` scripts MUST be executable:
+```bash
+chmod +x script_name.bash
+```
+
 ### 2. Script Header
 
 Every script MUST begin with:
@@ -151,6 +156,8 @@ echo "GIT_REPO=true"
 echo "BRANCH=main"
 echo "CHANGES_COUNT=5"
 ```
+
+**IMPORTANT**: These outputs are for Claude Code (the LLM) to read and understand, not for other bash scripts to parse. Claude Code will read these values and use them in subsequent Task blocks or decisions.
 
 ### 9. Non-Interactive
 
@@ -313,6 +320,94 @@ Or for multiple operations:
 ```markdown
 !bash .claude/cc-commands/scripts/_common/env/env_validate.bash all
 !bash .claude/cc-commands/scripts/g/command/command_execute.bash "$REQUIREMENTS"
+```
+
+### KEY=value Output Pattern
+
+**CRITICAL**: Scripts output `KEY=value` pairs that Claude Code reads directly. Do NOT parse these in bash - they're for the LLM.
+
+```markdown
+# In command file:
+!bash .claude/cc-commands/scripts/_common/git/git_state_analysis.bash summary
+
+# Script outputs:
+# CHANGES_EXIST=true
+# PUSH_NEEDED=false
+# BRANCH=main
+
+<Task>
+Based on the output above, I can see that CHANGES_EXIST is true, so we need to commit.
+</Task>
+
+# Then use values in subsequent bash calls:
+!bash .claude/cc-commands/scripts/g/gh/push_decision.bash "$CHANGES_EXIST" "$PUSH_NEEDED"
+```
+
+**WRONG**: Trying to parse output in bash
+```bash
+# DON'T DO THIS:
+CHANGES=$(bash script.bash | grep "CHANGES_EXIST" | cut -d= -f2)
+```
+
+**RIGHT**: Let Claude Code read the output
+```bash
+# DO THIS:
+bash script.bash  # Claude Code reads the KEY=value output
+```
+
+### Help Documentation Pattern
+
+**CRITICAL**: Help documentation is ALWAYS provided by Claude Code (the LLM), never by bash scripts.
+
+```markdown
+<Task>
+If the user's arguments are "--help", output the help documentation below (everything between the <help> tags) and stop. Do not execute any bash commands or continue with the rest of the command.
+</Task>
+
+<help>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ **COMMAND NAME - Brief Description**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[Help content here...]
+</help>
+```
+
+**BEST PRACTICE**: Claude Code checks `$ARGUMENTS` directly
+```markdown
+# No bash needed - LLM checks arguments directly:
+<Task>
+If the user's arguments are "--help", provide help and stop.
+</Task>
+```
+
+**ACCEPTABLE**: For complex argument parsing
+```bash
+# Only use bash when parsing complex arguments:
+!echo "=== ARGUMENT PARSING ==="; \
+if [ "$ARGUMENTS" = "--help" ]; then \
+  echo "HELP_REQUESTED=true"; \
+  exit 0; \
+fi; \
+# Parse other complex arguments...
+echo "MODE=$MODE"
+echo "TARGET=$TARGET"
+```
+
+**WRONG**: Using bash just to check help
+```bash
+# DON'T DO THIS - unnecessary bash call:
+!bash check_help.bash "$ARGUMENTS"
+```
+
+**WRONG**: Outputting help text from bash
+```bash
+# DON'T DO THIS - help should come from LLM:
+if [ "$ARGUMENTS" = "--help" ]; then
+  echo "Usage: command [options]"
+  echo "Options:"
+  # ... lots of echo statements
+fi
 ```
 
 ## Best Practices

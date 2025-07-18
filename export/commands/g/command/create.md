@@ -19,6 +19,30 @@ You are a highly experienced software architect and prompt engineer with experti
 
 **CRITICAL: Never use interactive bash commands like `read -p`, `read`, or any command that waits for stdin input. These will hang the command. Use Task blocks to handle user interaction instead.**
 
+## 📚 Required Documentation Reading
+
+**IMPORTANT: Before proceeding, you MUST read and understand the following cc-commands documentation:**
+
+<Task>
+Read the following cc-commands documentation files to understand the current standards and best practices:
+
+1. `.claude/cc-commands/README.md` - Main cc-commands documentation
+2. `.claude/cc-commands/scripts/CLAUDE.md` - Script coding standards
+3. `.claude/cc-commands/scripts/CONVERSION-GUIDE.md` - How to convert inline bash to scripts
+4. `.claude/cc-commands/scripts/LESSONS-LEARNED.md` - Best practices from conversions
+5. `.claude/cc-commands/scripts/_common/CLAUDE.md` - Common scripts documentation
+
+These documents contain critical information about:
+- Script-based architecture patterns
+- LLM-based help system implementation
+- Common script usage and availability
+- Output formatting standards
+- Error handling patterns
+- Noise suppression techniques
+
+You MUST apply these standards when creating new commands.
+</Task>
+
 ## ⚠️ Non-Interactive Bash Commands ONLY
 
 **ALL bash commands MUST be completely non-interactive. Commands that require user input will hang indefinitely.**
@@ -95,62 +119,12 @@ Based on the project structure, identify key documentation that should be refere
 ## 📖 Help Documentation
 
 <Task>
-If the user requested --help, provide the help documentation and exit.
+If the user's arguments are "--help", output the help documentation below (everything between the <help> tags) and stop. Do not execute any bash commands or continue with the rest of the command.
 </Task>
 
-If you see `--help` in the arguments, please provide this help text and stop:
-
-```
+<help>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- COMMAND:CREATE - Create New Claude Code Commands
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Creates new Claude Code custom commands with best practices, including:
-  • Comprehensive error handling and fail-fast validation
-  • Bash command permission management
-  • Non-interactive command patterns
-  • Progress tracking and user confirmations
-  • Automatic --help documentation
-
-USAGE:
-  /g:command:create
-  /g:command:create [command-name]
-  /g:command:create --help
-
-ARGUMENTS:
-  [command-name]  Optional. Pre-fill the command name (e.g., 'db:migrate')
-  --help          Show this help message
-
-INTERACTIVE PROMPTS:
-  1. Command name (use : for namespacing)
-  2. Primary purpose
-  3. Whether it makes changes (yes/no)
-  4. Detailed requirements gathering
-  5. Bash permission approval
-
-EXAMPLES:
-  /g:command:create
-    Start interactive command creation wizard
-
-  /g:command:create test:integration
-    Create a command named 'test:integration' (skips name prompt)
-
-FEATURES:
-  • Enforces non-interactive bash commands
-  • Generates comprehensive help documentation
-  • Creates folder structure for namespaced commands
-  • Includes project documentation discovery
-  • Implements safety patterns and confirmations
-
-SAFETY:
-  • Won't overwrite existing commands
-  • Validates all inputs before proceeding
-  • Requires explicit permission for bash commands
-  • All created commands include --help support
-```
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- **COMMAND:CREATE - Create New Claude Code Commands**
+ **g:command:create - Create New Claude Code Commands**
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Creates new Claude Code custom commands with best practices, including:
@@ -199,16 +173,15 @@ Creates new Claude Code custom commands with best practices, including:
 • Validates all inputs before proceeding
 • Requires explicit permission for bash commands
 • All created commands include --help support
+</help>
+
+<Task>
+If the user's arguments are "--help", output the comprehensive help documentation above and stop. Do not execute any bash commands.
+</Task>
 
 ## 🔍 Initial Validation & Preconditions
 
-!echo "Checking system requirements and environment"; \
-set -e; \
-echo "WORKING_DIR=$(pwd)"; \
-test -d .claude/commands && echo "COMMANDS_DIR=exists" || echo "COMMANDS_DIR=missing"; \
-which jq >/dev/null 2>&1 && echo "JQ_AVAILABLE=true" || echo "JQ_AVAILABLE=false"; \
-which gh >/dev/null 2>&1 && echo "GH_AVAILABLE=true" || echo "GH_AVAILABLE=false"; \
-gh auth status >/dev/null 2>&1 && echo "GH_AUTHENTICATED=true" || echo "GH_AUTHENTICATED=false"
+!bash .claude/cc-commands/scripts/_common/env/env_check_tools.bash jq gh
 
 ### System Requirements Check
 
@@ -219,53 +192,9 @@ gh auth status >/dev/null 2>&1 && echo "GH_AUTHENTICATED=true" || echo "GH_AUTHE
 - **GitHub CLI:** [Available/Not available] (needed for GitHub commands)
 - **GitHub Auth:** [Authenticated/Not authenticated]
 
-### 📊 Comprehensive Argument Parsing & Validation
+### 📊 Argument Parsing & Validation
 
-<Task>
-Parse all arguments once and perform all validations in a single bash execution.
-This outputs structured data that Claude will use throughout the command.
-</Task>
-
-!echo "=== ARGUMENT PARSING & VALIDATION ==="; \
-# First check for --help \
-if [ "$ARGUMENTS" = "--help" ]; then \
-  echo "HELP_REQUESTED: true"; \
-  exit 0; \
-fi; \
-set -e; \
-if [ -n "$ARGUMENTS" ]; then \
-  COMMAND_NAME=$(echo "$ARGUMENTS" | awk '{print $1}'); \
-  FULL_REQUIREMENTS=$(echo "$ARGUMENTS" | cut -d' ' -f2-); \
-  if [ "$COMMAND_NAME" = "$FULL_REQUIREMENTS" ]; then \
-    FULL_REQUIREMENTS=""; \
-  fi; \
-  if [[ "$COMMAND_NAME" == *:* ]]; then \
-    FOLDER_PATH="${COMMAND_NAME//:://}.md"; \
-    COMMAND_PATH=".claude/commands/${FOLDER_PATH}"; \
-  else \
-    COMMAND_PATH=".claude/commands/${COMMAND_NAME}.md"; \
-  fi; \
-  if [ -f "$COMMAND_PATH" ]; then \
-    echo "ERROR_EXISTS=true"; \
-    echo "EXISTING_PATH=$COMMAND_PATH"; \
-    echo "COMMAND_NAME=$COMMAND_NAME"; \
-    exit 1; \
-  fi; \
-  if [ -n "$FULL_REQUIREMENTS" ]; then \
-    MODE="FULL"; \
-  else \
-    MODE="INTERACTIVE"; \
-  fi; \
-  echo "COMMAND_NAME=$COMMAND_NAME"; \
-  echo "COMMAND_PATH=$COMMAND_PATH"; \
-  echo "FULL_REQUIREMENTS=$FULL_REQUIREMENTS"; \
-  echo "MODE=$MODE"; \
-else \
-  echo "COMMAND_NAME="; \
-  echo "COMMAND_PATH="; \
-  echo "FULL_REQUIREMENTS="; \
-  echo "MODE=INTERACTIVE"; \
-fi
+!bash .claude/cc-commands/scripts/g/command/create_arg_parse.bash "$ARGUMENTS"
 
 ### Argument Analysis
 
@@ -326,7 +255,6 @@ Once basic requirements are confirmed, I'll gather detailed specifications:
   - [ ] File paths via `$ARGUMENTS`
   - [ ] Specific parameters (list them)
   - [ ] Interactive prompts
-  - [ ] Piped input support
 
 - **Preconditions to check**:
   - [ ] Required tools installed
@@ -411,53 +339,66 @@ Based on your command requirements, I'll analyze the needed bash permissions and
 
 Once you approve the permissions, I'll add the appropriate bash command permissions to the command's frontmatter based on the specific requirements of your command.
 
+<Task>
+You need to confirm user approves the permissions
+</Task>
+
 ## 🔧 Bash Command Optimization Best Practices
 
-### ❌ **Avoid: Multiple Separate Bash Commands**
-```bash
-!set -e; echo "=== Environment Check ==="
-!set -e; test -d .git && echo "✓ Git repo found" || exit 1
-!set -e; which gh >/dev/null 2>&1 && echo "✓ gh CLI available" || exit 1
-```
-*Problems: Multiple subprocess calls, repetitive approvals, slow execution*
+NO Inline bash
+ONLY command or _common scripts. Create command scripts as required, search for _common scripts that could be used.
+IF the task is something that is likely to be reusable in other claude code commands, consider creating a new _common script
 
-### ✅ **Best Practice: Chained Commands with Structured Output**
+### ✅ **Best Practice: Script-Based Approach**
 ```bash
-!echo "Validating GitHub environment and tools"; \
-set -e; \
-test -d .git && echo "GIT_REPO=true" || echo "GIT_REPO=false"; \
-which gh >/dev/null 2>&1 && echo "GH_AVAILABLE=true" || echo "GH_AVAILABLE=false"; \
-gh auth status >/dev/null 2>&1 && echo "GH_AUTH=true" || echo "GH_AUTH=false"
+!bash .claude/cc-commands/scripts/_common/env/env_check_tools.bash git gh
 ```
-*Benefits: Single subprocess, structured output, efficient execution*
+*Benefits: Reusable, testable, maintainable, follows DRY principle*
 
 ### 🎯 **Optimization Principles**
 
-**1. Parse Once, Use Everywhere**
-- Output structured data that Claude can reference throughout the command
-- Avoid re-parsing arguments in multiple places
+**1. Script-Based Architecture**
+- Use dedicated bash scripts in `.claude/cc-commands/scripts/` directory
+- Leverage existing common scripts in `_common/` for reusable operations
+- Create command-specific scripts only when needed
 
-**2. Minimal Bash for System Operations**
-- Use bash only for system state checking and data extraction
-- Handle presentation and user interaction in Claude directly
+**2. Reusable Components**
+- Environment validation: `env_check_tools.bash`, `env_validate.bash`
+- Git operations: `git_operations.bash`, `git_state_analysis.bash`
+- Argument parsing: Use common patterns or create focused scripts
 
 **3. Structured Output Format**
-- Use `KEY=value` format for easy parsing
-- Avoid complex formatting in bash
+- Scripts output `KEY=value` format for Claude to parse
+- Avoid complex formatting in bash scripts
+- Use consistent naming conventions
 
-**4. Human-Friendly Descriptions**
-- Start bash chains with descriptive echo statements
-- Use clear, concise descriptions of what the command does
+**4. LLM-Based Help System**
+- Use `<Task>` blocks to check for `--help` arguments
+- Provide help content directly in markdown, not bash
+- Never use bash to output help text
 
 **5. Fail-Fast Error Handling**
-- Use `set -e` for immediate error termination
+- Scripts use `set -euo pipefail` for immediate error termination
 - Provide clear error messages and recovery guidance
+- Use common error handling functions
 
 ## 🎯 Command Generation Template
 
+<Task>
+Before generating any command, ensure you have read and understood the cc-commands documentation as specified in the "Required Documentation Reading" section above. The generated command MUST follow the current standards for:
+
+1. **Script-based architecture** - Use existing common scripts when possible
+2. **LLM-based help system** - Help content in markdown, not bash
+3. **Structured output** - Scripts output KEY=value pairs
+4. **Error handling** - Use common error handling patterns
+5. **Noise suppression** - Follow established patterns for clean output
+
+Verify you understand these patterns before proceeding with command generation.
+</Task>
+
 Based on your requirements, I'll generate a command using this professional template that follows Claude Code optimization best practices:
 
-```markdown
+<template>
 ---
 description: [Concise description]
 ultrathink: true
@@ -477,102 +418,15 @@ You are an expert [relevant domain] engineer with deep knowledge of best practic
 
 **CRITICAL: Never use interactive bash commands like `read -p`, `read`, or any command that waits for stdin input. These will hang the command. Use Task blocks to handle user interaction instead.**
 
-## 🔧 Claude Code Optimization Guidelines
-
-### ✅ **Bash Usage Best Practices:**
-- **Use bash ONLY for:** System state checking, data extraction, file operations
-- **Avoid bash for:** Static text output, user interfaces, help documentation
-- **Chain commands:** Combine multiple operations in single bash calls
-- **Structured output:** Use `KEY=value` format for Claude to parse
-- **Fail-fast:** Always use `set -e` for immediate error termination
-
-### ❌ **Don't Use Bash For:**
-```bash
-# BAD: Static help text in bash
-!echo "USAGE: command [args]"
-!echo "DESCRIPTION: This command does..."
-```
-
-### ✅ **Use Claude Direct Output:**
-```markdown
-**USAGE:** `command [args]`
-**DESCRIPTION:** This command does...
-```
-
-### 🎯 **Optimal Patterns:**
-```bash
-# GOOD: System checks with structured output
-!echo "Checking system requirements"; \
-set -e; \
-test -d .git && echo "GIT_REPO=true" || echo "GIT_REPO=false"; \
-which gh >/dev/null 2>&1 && echo "GH_AVAILABLE=true" || echo "GH_AVAILABLE=false"
-```
-
-## 📊 Argument Parsing
-
-<Task>
-Parse all arguments at once and output structured data for use throughout the command.
-</Task>
-
-!echo "=== ARGUMENT PARSING ==="; \
-# First check for --help \
-if [ "$ARGUMENTS" = "--help" ]; then \
-  echo "HELP_REQUESTED: true"; \
-  exit 0; \
-fi; \
-set -e; \
-# Parse arguments based on your command's needs \
-# Validate inputs and check preconditions \
-# Output structured data for Claude to use \
-# Example: \
-# echo "PARSED_ARG1=value1"; \
-# echo "PARSED_ARG2=value2"; \
-# echo "MODE=INTERACTIVE"
-
 ## 📖 Help Documentation
 
 <Task>
-If the user requested --help, provide the help documentation and exit.
+If the user's arguments are "--help", output the help documentation below and stop. Do not execute any bash commands.
 </Task>
 
-If you see `--help` in the arguments, please provide this help text and stop:
-
-```
+<help>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- [COMMAND NAME IN UPPERCASE]
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-[Long description of what this command does, when to use it, and key features]
-
-USAGE:
-  /[namespace]:[command] [arguments]
-  /[namespace]:[command] --help
-
-ARGUMENTS:
-  [argument1]    [Description of argument1]
-  [argument2]    [Description of argument2] (optional)
-  --help         Show this help message
-
-EXAMPLES:
-  /[namespace]:[command]
-    [What this does]
-
-  /[namespace]:[command] [example-arg]
-    [What this does with the argument]
-
-PRECONDITIONS:
-  • [Required tool or condition 1]
-  • [Required tool or condition 2]
-  • [Required authentication or permissions]
-
-SAFETY:
-  • [Safety feature 1 - e.g., dry-run mode]
-  • [Safety feature 2 - e.g., confirmation prompts]
-  • [What the command will NOT do]
-```
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- **[COMMAND NAME IN UPPERCASE]**
+ **the:command:name** The Command Title
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 [Long description of what this command does, when to use it, and key features]
@@ -606,16 +460,23 @@ SAFETY:
 • [Safety feature 1 - e.g., dry-run mode]
 • [Safety feature 2 - e.g., confirmation prompts]
 • [What the command will NOT do]
+</help>
 
-## 🚦 Precondition Checks
+## 🔧 Script-Based Implementation
 
 ### Environment Validation
-!echo "Validating environment and required tools"; \
-set -e; \
-# Check required tools with structured output \
-# Example: \
-# which git >/dev/null 2>&1 && echo "GIT_AVAILABLE=true" || echo "GIT_AVAILABLE=false"; \
-# test -d .git && echo "IN_GIT_REPO=true" || echo "IN_GIT_REPO=false"
+!bash .claude/cc-commands/scripts/_common/env/env_check_tools.bash [required-tools]
+
+### Argument Parsing (if complex)
+!bash .claude/cc-commands/scripts/g/[namespace]/[command]_arg_parse.bash "$ARGUMENTS"
+
+### Other Operations
+!bash .claude/cc-commands/scripts/g/[namespace]/[command]_execute.bash "$ARGUMENTS"
+
+
+### Environment Validation
+!bash .claude/cc-commands/scripts/_common/env/env_check_tools.bash [required-tools]
+!bash .claude/cc-commands/scripts/_common/env/env_validate.bash
 
 ### System Requirements Status
 **Environment Check Results:**
@@ -626,6 +487,7 @@ set -e; \
 
 ### Input Validation
 <Task>
+Preparation, research, user interaction
 Validate all inputs before proceeding based on the parsed arguments.
 </Task>
 
@@ -691,7 +553,7 @@ If something goes wrong:
 
 ---
 *Command created with Claude Code optimization best practices for maximum efficiency and clarity*
-```
+</template>
 
 
 

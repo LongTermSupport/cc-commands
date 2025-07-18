@@ -19,14 +19,12 @@ You are an expert project planner and software architect with deep knowledge of 
 ## 📖 Help Documentation
 
 <Task>
-If the user requested --help, provide the help documentation and exit.
+If the user's arguments are "--help", output the help documentation below (everything between the <help> tags) and stop. Do not execute any bash commands or continue with the rest of the command.
 </Task>
 
-If you see `--help` in the arguments, please provide this help text and stop:
-
-```
+<help>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- PLAN GENERATOR - Two-Mode Planning Workflow
+ **g:w:plan - Two-Mode Planning Workflow**
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Creates structured project plans following the two-mode workflow:
@@ -73,77 +71,24 @@ MODES:
     - Implements the approved plan
     - Updates progress tracking
     - Makes actual code changes
-```
+</help>
 
 ## 📊 Argument Parsing
 
 <Task>
 Parse all arguments at once and output structured data for use throughout the command.
+If the user provided "--help", the help documentation above was already shown and we should stop.
 </Task>
 
-!echo "=== ARGUMENT PARSING ==="; \
-# First check for --help \
-if [ "$ARGUMENTS" = "--help" ]; then \
-  echo "HELP_REQUESTED: true"; \
-  exit 0; \
-fi; \
-# Parse task name from arguments \
-if [ -n "$ARGUMENTS" ]; then \
-  # Use entire arguments as task name \
-  TASK_NAME="$ARGUMENTS"; \
-  # Convert to kebab-case for filename \
-  FILENAME=$(echo "$TASK_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//'); \
-  echo "TASK_NAME: \"$TASK_NAME\""; \
-  echo "FILENAME: \"$FILENAME\""; \
-else \
-  echo "TASK_NAME: \"\""; \
-  echo "FILENAME: \"\""; \
-fi
+!bash .claude/cc-commands/scripts/g/w/plan_arg_parse.bash "$ARGUMENTS"
 
 ## 🚦 Precondition Checks
 
 ### Workflow Documentation Discovery
-!echo "Discovering project planning workflow"; \
-set -e; echo "=== Workflow Documentation Check ==="; \
-# Check multiple possible locations for planning workflow \
-WORKFLOW_FOUND=false; \
-WORKFLOW_PATH=""; \
-PROJECT_ROOT=$(pwd); \
-if [ -f "CLAUDE/PlanWorkflow.md" ]; then \
-  echo "✓ Found project workflow at CLAUDE/PlanWorkflow.md"; \
-  WORKFLOW_FOUND=true; \
-  WORKFLOW_PATH="CLAUDE/PlanWorkflow.md"; \
-elif [ -f ".claude/PlanWorkflow.md" ]; then \
-  echo "✓ Found project workflow at .claude/PlanWorkflow.md"; \
-  WORKFLOW_FOUND=true; \
-  WORKFLOW_PATH=".claude/PlanWorkflow.md"; \
-elif [ -f "docs/planning-workflow.md" ]; then \
-  echo "✓ Found project workflow at docs/planning-workflow.md"; \
-  WORKFLOW_FOUND=true; \
-  WORKFLOW_PATH="docs/planning-workflow.md"; \
-else \
-  echo "✗ No project-specific planning workflow found"; \
-  echo "  Will use embedded generic planning template"; \
-fi; \
-echo "WORKFLOW_FOUND: $WORKFLOW_FOUND"; \
-echo "WORKFLOW_PATH: \"$WORKFLOW_PATH\""; \
-echo "PROJECT_ROOT: \"$PROJECT_ROOT\""; \
-# Check for existing CLAUDE documentation \
-echo ""; \
-echo "=== Project Documentation Discovery ==="; \
-DOCS_TO_REFERENCE=""; \
-if [ -d "CLAUDE" ]; then \
-  echo "✓ CLAUDE directory exists"; \
-  # Build list of documentation to reference \
-  if [ -f "CLAUDE/PlanWorkflow.md" ]; then DOCS_TO_REFERENCE="$DOCS_TO_REFERENCE- @CLAUDE/PlanWorkflow.md\n"; fi; \
-  if [ -f "CLAUDE/Core/CodeStandards.md" ]; then DOCS_TO_REFERENCE="$DOCS_TO_REFERENCE- @CLAUDE/Core/CodeStandards.md\n"; fi; \
-  if [ -f "CLAUDE/Core/TestingStandards.md" ]; then DOCS_TO_REFERENCE="$DOCS_TO_REFERENCE- @CLAUDE/Core/TestingStandards.md\n"; fi; \
-  if [ -f "CLAUDE/Tools/PHPStan.md" ]; then DOCS_TO_REFERENCE="$DOCS_TO_REFERENCE- @CLAUDE/Tools/PHPStan.md\n"; fi; \
-  if [ -f "CLAUDE/Tools/Commands.md" ]; then DOCS_TO_REFERENCE="$DOCS_TO_REFERENCE- @CLAUDE/Tools/Commands.md\n"; fi; \
-else \
-  echo "✗ No CLAUDE directory found"; \
-fi; \
-echo "DOCS_TO_REFERENCE: \"$DOCS_TO_REFERENCE\""
+!bash .claude/cc-commands/scripts/g/w/plan_workflow_discover.bash
+<Task>
+Based on the workflow discovery results, analyze the project structure and identify available documentation to reference in the plan.
+</Task>
 
 ## 📋 Task Information Gathering
 
@@ -174,22 +119,7 @@ Based on the workflow documentation status and task details, analyze the project
 
 ### Checking Existing Plans
 
-!echo "Checking for existing plans"; \
-set -e; \
-# Determine plan directory based on project structure \
-if [ -d "CLAUDE/Plan" ]; then \
-  PLAN_DIR="CLAUDE/Plan"; \
-elif [ -d "CLAUDE" ]; then \
-  PLAN_DIR="CLAUDE/Plan"; \
-else \
-  PLAN_DIR="plans"; \
-fi; \
-echo "PLAN_DIR: \"$PLAN_DIR\""; \
-# Check if plan already exists \
-if [ -n "$FILENAME" ] && [ -f "$PLAN_DIR/$FILENAME.md" ]; then \
-  echo "WARNING: Plan already exists at $PLAN_DIR/$FILENAME.md"; \
-  echo "Consider updating the existing plan or choosing a different name"; \
-fi
+!bash .claude/cc-commands/scripts/g/w/plan_check_existing.bash "$FILENAME"
 
 ## 📝 Plan Generation
 
@@ -278,15 +208,7 @@ I'll now create a plan following the discovered workflow structure.
 Create the plan directory if it doesn't exist and prepare the plan content.
 </Task>
 
-!echo "Creating plan directory structure"; \
-set -e; \
-# Create plan directory if needed \
-if [ ! -d "$PLAN_DIR" ]; then \
-  mkdir -p "$PLAN_DIR"; \
-  echo "✓ Created $PLAN_DIR directory"; \
-else \
-  echo "✓ Plan directory already exists: $PLAN_DIR"; \
-fi
+!bash .claude/cc-commands/scripts/g/w/plan_create_directory.bash "$PLAN_DIR"
 
 ### Plan Template Structure
 

@@ -155,6 +155,11 @@ jobs:
           fi
           echo "::endgroup::"
 
+      - name: Run comprehensive CI checks
+        run: |
+          cd .claude/cc-commands
+          bash .github/ci.bash
+
   documentation-check:
     name: Documentation Check
     runs-on: ubuntu-latest

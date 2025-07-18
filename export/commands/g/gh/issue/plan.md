@@ -29,82 +29,18 @@ You are an expert software architect and project manager with deep knowledge of 
 ## 📖 Help Documentation
 
 <Task>
-If the user requested --help, provide the help documentation and exit.
+If the user's arguments are "--help", output the help documentation below (everything between the <help> tags) and stop. Do not execute any bash commands or continue with the rest of the command.
 </Task>
 
-<<<<<<< HEAD
-!if [ "$ARGUMENTS" = "--help" ]; then \
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
-echo " GH:ISSUE:PLAN - GitHub Issue to Plan Converter"; \
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
-echo ""; \
-echo "Creates a comprehensive plan from a GitHub issue following project workflow"; \
-echo "standards. Analyzes issue content, comments, and linked issues to generate"; \
-echo "a structured plan with tasks and progress tracking. Never includes time"; \
-echo "estimates in the generated plan or GitHub comments."; \
-echo ""; \
-echo "USAGE:"; \
-echo "  /g:gh:issue:plan [issue-url-or-number]"; \
-echo "  /g:gh:issue:plan --help"; \
-echo ""; \
-echo "ARGUMENTS:"; \
-echo "  [issue-url-or-number]  GitHub issue URL or number (#123)"; \
-echo "  --help                 Show this help message"; \
-echo ""; \
-echo "EXAMPLES:"; \
-echo "  /g:gh:issue:plan https://github.com/owner/repo/issues/123"; \
-echo "    Create plan from full GitHub URL"; \
-echo ""; \
-echo "  /g:gh:issue:plan #123"; \
-echo "    Create plan from issue number (uses current repo)"; \
-echo ""; \
-echo "  /g:gh:issue:plan"; \
-echo "    Show recent issues and select interactively"; \
-echo ""; \
-echo "FEATURES:"; \
-echo "  • Extracts requirements from issue and comments"; \
-echo "  • Creates structured plan following project standards"; \
-echo "  • Generates task list with progress tracking"; \
-echo "  • Links to relevant project documentation"; \
-echo "  • Prompts to commit and post to GitHub after creation"; \
-echo "  • Never includes time estimates in plans"; \
-echo ""; \
-echo "OUTPUT:"; \
-echo "  • Creates plan file in CLAUDE/plan/issue-{number}-{title}.md"; \
-echo "  • Includes task breakdown with [ ] checkboxes"; \
-echo "  • References project standards and workflows"; \
-echo "  • Focuses on what needs to be done, not how long"; \
-echo ""; \
-echo "WORKFLOW:"; \
-echo "  1. Analyze issue and create plan"; \
-echo "  2. Prompt: 'Commit plan and add comment to issue?'"; \
-echo "  3. If yes: commit to git and post GitHub comment"; \
-echo "  4. Prompt: 'Would you like to execute the plan now?'"; \
-echo ""; \
-echo "PRECONDITIONS:"; \
-echo "  • GitHub CLI (gh) installed and authenticated"; \
-echo "  • In a git repository (for local issue references)"; \
-echo "  • Project has CLAUDE directory structure"; \
-echo ""; \
-echo "SAFETY:"; \
-echo "  • Won't overwrite existing plan files"; \
-echo "  • All git operations require confirmation"; \
-echo "  • GitHub comment posting requires approval"; \
-echo "  • Clear preview before any changes"; \
-echo ""; \
-exit 0; \
-fi
-=======
-If you see `--help` in the arguments, please provide this help text and stop:
-
-```
+<help>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- GH:ISSUE:PLAN - GitHub Issue to Plan Converter
+ **g:gh:issue:plan - GitHub Issue to Plan Converter**
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Creates comprehensive plans from GitHub issues following project workflow
+Creates a comprehensive plan from a GitHub issue following project workflow
 standards. Analyzes issue content, comments, and linked issues to generate
-structured plans with tasks, research items, and progress tracking.
+a structured plan with tasks and progress tracking. Never includes time
+estimates in the generated plan or GitHub comments.
 
 USAGE:
   /g:gh:issue:plan [issue-url-or-number]
@@ -121,35 +57,45 @@ EXAMPLES:
   /g:gh:issue:plan #123
     Create plan from issue number (uses current repo)
 
+  /g:gh:issue:plan
+    Show recent issues and select interactively
+
 FEATURES:
   • Extracts requirements from issue and comments
   • Creates structured plan following project standards
   • Generates task list with progress tracking
   • Links to relevant project documentation
-  • Optional: Posts plan back to GitHub issue
+  • Prompts to commit and post to GitHub after creation
+  • Never includes time estimates in plans
 
 OUTPUT:
-  • Creates plan file in CLAUDE/plan/issue-{number}.md
+  • Creates plan file in CLAUDE/plan/issue-{number}-{title}.md
   • Includes task breakdown with [ ] checkboxes
   • References project standards and workflows
+  • Focuses on what needs to be done, not how long
+
+WORKFLOW:
+  1. Analyze issue and create plan
+  2. Prompt: 'Commit plan and add comment to issue?'
+  3. If yes: commit to git and post GitHub comment
+  4. Prompt: 'Would you like to execute the plan now?'
 
 PRECONDITIONS:
   • GitHub CLI (gh) installed and authenticated
   • In a git repository (for local issue references)
   • Project has CLAUDE directory structure
-```
+
+SAFETY:
+  • Won't overwrite existing plan files
+  • All git operations require confirmation
+  • GitHub comment posting requires approval
+  • Clear preview before any changes
+</help>
 
 ## 🚦 Precondition Checks
 
 ### Environment Validation
-!echo "Validating GitHub environment and project setup"; \
-set -e; echo "=== GitHub Issue Planning Environment Check ==="; \
-test -d .git && echo "✓ Git repository found" || (echo "✗ Not in a git repository" && exit 1); \
-which gh >/dev/null 2>&1 && echo "✓ gh CLI available ($(gh --version | head -1))" || (echo "✗ gh CLI not found - required for GitHub operations" && exit 1); \
-gh auth status >/dev/null 2>&1 && echo "✓ GitHub authenticated" || (echo "✗ Not authenticated with GitHub - run: gh auth login" && exit 1); \
-test -d CLAUDE && echo "✓ CLAUDE directory exists" || (echo "✗ CLAUDE directory not found" && exit 1); \
-test -d CLAUDE/plan && echo "✓ CLAUDE/plan directory exists" || (echo "⚠ CLAUDE/plan directory not found - will create" && mkdir -p CLAUDE/plan); \
-test -f CLAUDE/PlanWorkflow.md && echo "✓ PlanWorkflow.md found" || echo "⚠ PlanWorkflow.md not found - will use defaults"
+!bash .claude/cc-commands/scripts/g/gh/issue/plan_env_validate.bash
 
 ## 📊 Argument Parsing
 
@@ -157,26 +103,7 @@ test -f CLAUDE/PlanWorkflow.md && echo "✓ PlanWorkflow.md found" || echo "⚠ 
 Parse the issue argument and determine the mode of operation.
 </Task>
 
-!echo "=== ARGUMENT PARSING ==="; \
-if [ -z "$ARGUMENTS" ]; then \
-  echo "MODE: \"INTERACTIVE\""; \
-  echo "ISSUE_NUMBER: \"\""; \
-  echo "Need to show issue list for selection"; \
-elif [[ "$ARGUMENTS" =~ ^https://github.com/.*/issues/([0-9]+) ]]; then \
-  ISSUE_NUM="${BASH_REMATCH[1]}"; \
-  echo "MODE: \"URL\""; \
-  echo "ISSUE_NUMBER: \"$ISSUE_NUM\""; \
-  echo "Parsed issue number from GitHub URL"; \
-elif [[ "$ARGUMENTS" =~ ^#?([0-9]+)$ ]]; then \
-  ISSUE_NUM="${BASH_REMATCH[1]}"; \
-  echo "MODE: \"NUMBER\""; \
-  echo "ISSUE_NUMBER: \"$ISSUE_NUM\""; \
-  echo "Using issue number directly"; \
-else \
-  echo "ERROR: Invalid argument format"; \
-  echo "Expected: issue number (#123) or GitHub URL"; \
-  exit 1; \
-fi
+!bash .claude/cc-commands/scripts/g/gh/issue/plan_arg_parse.bash "$ARGUMENTS"
 
 ### Issue Selection Interface
 
@@ -184,15 +111,7 @@ fi
 If no issue was specified, show recent issues for selection.
 </Task>
 
-!if [ -z "$ARGUMENTS" ]; then \
-  echo "=== Recent Open Issues ==="; \
-  echo ""; \
-  gh issue list --state open --limit 10 --json number,title,author,createdAt,labels --jq '.[] | "\(.number)\t\(.createdAt[0:10])\t\(.author.login)\t\(.title[0:60])\(.title[60:] | if . != "" then "..." else "" end)\t\(if .labels then (.labels | map(.name) | join(", "))[0:30] else "" end)"' | awk 'BEGIN {printf "%-6s %-12s %-15s %-63s %s\n", "#", "Created", "Author", "Title", "Labels"; print "────── ──────────── ─────────────── ─────────────────────────────────────────────────────────────── ─────────"} {printf "%-6s %-12s %-15s %-63s %s\n", $1, $2, $3, $4, $5}'; \
-  echo ""; \
-  echo "Please specify an issue number from the list above."; \
-  echo "Example: /g:gh:issue:plan 123"; \
-  exit 0; \
-fi
+!bash .claude/cc-commands/scripts/g/gh/issue/plan_list_issues.bash "$ARGUMENTS"
 
 ## 📊 Issue Analysis Phase
 
@@ -202,21 +121,7 @@ fi
 Fetch the issue data from GitHub including all comments and metadata.
 </Task>
 
-!echo "Fetching detailed issue data from GitHub"; \
-ISSUE_ARG="$ARGUMENTS"; \
-if [[ "$ISSUE_ARG" =~ ^https://github.com/.*/issues/([0-9]+) ]]; then \
-  ISSUE_NUM="${BASH_REMATCH[1]}"; \
-elif [[ "$ISSUE_ARG" =~ ^#?([0-9]+)$ ]]; then \
-  ISSUE_NUM="${BASH_REMATCH[1]}"; \
-fi; \
-echo "=== Fetching Issue Data for #$ISSUE_NUM ==="; \
-gh issue view "$ISSUE_NUM" --json number,title,body,author,createdAt,updatedAt,labels,assignees,milestone,state,comments > /tmp/issue-$ISSUE_NUM.json 2>&1 || (echo "Failed to fetch issue #$ISSUE_NUM" && exit 1); \
-echo "✓ Issue data fetched successfully"; \
-echo "Title: $(jq -r '.title' /tmp/issue-$ISSUE_NUM.json)"; \
-echo "Author: $(jq -r '.author.login' /tmp/issue-$ISSUE_NUM.json)"; \
-echo "State: $(jq -r '.state' /tmp/issue-$ISSUE_NUM.json)"; \
-echo "Comments: $(jq '.comments | length' /tmp/issue-$ISSUE_NUM.json)"; \
-echo "Labels: $(jq -r '.labels | map(.name) | join(", ")' /tmp/issue-$ISSUE_NUM.json || echo "none")"
+!bash .claude/cc-commands/scripts/g/gh/issue/plan_issue_fetch.bash "$ARGUMENTS"
 
 ### Issue Content Analysis
 
@@ -305,16 +210,7 @@ Do you want to create this plan? (yes/no)
 Upon confirmation, create the plan file in CLAUDE/plan/ directory.
 </Task>
 
-!echo "Creating plan file"; \
-ISSUE_NUM="[extracted from above]"; \
-ISSUE_TITLE="[extracted and kebab-cased]"; \
-PLAN_FILE="CLAUDE/plan/issue-${ISSUE_NUM}-${ISSUE_TITLE}.md"; \
-if [ -f "$PLAN_FILE" ]; then \
-  echo "WARNING: Plan file already exists: $PLAN_FILE"; \
-  echo "Please remove or rename the existing file first"; \
-  exit 1; \
-fi; \
-echo "✓ Plan file path validated: $PLAN_FILE"
+!bash .claude/cc-commands/scripts/g/gh/issue/plan_file_create.bash "$ISSUE_NUMBER" "$ISSUE_TITLE"
 
 <Write>
 [Plan content will be written here based on the issue analysis]
@@ -322,19 +218,7 @@ echo "✓ Plan file path validated: $PLAN_FILE"
 
 ### Verify Plan Creation
 
-!echo "Verifying plan file creation"; \
-PLAN_FILE="[path from above]"; \
-if [ -f "$PLAN_FILE" ]; then \
-  echo "✓ Plan file created successfully"; \
-  echo "Location: $PLAN_FILE"; \
-  echo "Size: $(wc -l < "$PLAN_FILE") lines"; \
-  echo ""; \
-  echo "Tasks in plan:"; \
-  grep -E "^(\[ \]|\[✓\]|\[⏳\])" "$PLAN_FILE" | head -10; \
-else \
-  echo "✗ Failed to create plan file"; \
-  exit 1; \
-fi
+!bash .claude/cc-commands/scripts/g/gh/issue/plan_verify.bash "$PLAN_FILE_PATH"
 
 ## 📤 Enhanced Post-Creation Workflow
 
@@ -355,27 +239,9 @@ If no:
 
 ### Execute Combined Actions
 
-!if [ "$USER_WANTS_COMMIT_AND_COMMENT" = "yes" ]; then \
-  echo "=== Executing Git Commit and GitHub Comment ==="; \
-  PLAN_FILE="[path from above]"; \
-  ISSUE_NUM="[number]"; \
-  ISSUE_TITLE="[title]"; \
-  set -e; \
-  \
-  echo "[1/2] Committing plan to git..."; \
-  git add "$PLAN_FILE" && echo "✓ Plan file staged"; \
-  git commit -m "Add plan for issue #${ISSUE_NUM}: ${ISSUE_TITLE}" && echo "✓ Commit created"; \
-  git log --oneline -1; \
-  \
-  echo ""; \
-  echo "[2/2] Posting comment to GitHub issue..."; \
-  COMMENT="📋 **Plan Created**\n\nI've analyzed this issue and created a comprehensive plan following the project's workflow standards.\n\n**Plan Summary:**\n- Total tasks: [count]\n- Categories: [list]\n- Key areas: [areas]\n\n**Next Steps:**\n1. Review the plan for completeness\n2. Execute tasks following the progress tracking\n3. Update task status as work progresses\n\nPlan committed to repository: \`CLAUDE/plan/issue-${ISSUE_NUM}-${ISSUE_TITLE}.md\`\n\n*Plan generated without time estimates per project standards*"; \
-  gh issue comment "$ISSUE_NUM" --body "$COMMENT" && echo "✓ Comment posted successfully" || echo "✗ Failed to post comment"; \
-  echo ""; \
-  echo "✓ Both actions completed successfully!"; \
-else \
-  echo "Skipping commit and GitHub comment"; \
-fi
+<Task>
+If the user wants to commit and comment, execute the commit and comment script. Otherwise, skip to the execution prompt.
+</Task>
 
 ## 🚀 Execution Prompt
 

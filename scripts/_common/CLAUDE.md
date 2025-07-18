@@ -194,11 +194,17 @@ source "$COMMON_DIR/env/env_validate.bash"
 validate_git_environment
 ```
 
-**Execute** when you need structured output:
+**Execute** when you need structured output for Claude Code:
 ```bash
-RESULT=$(bash "$COMMON_DIR/git/git_status.bash")
-eval "$RESULT"  # Sets BRANCH, CHANGES_EXIST, etc.
+# Script outputs KEY=value pairs that Claude Code reads
+bash "$COMMON_DIR/git/git_status.bash"
+# Claude Code will see:
+# BRANCH=main
+# CHANGES_EXIST=true
+# etc.
 ```
+
+**IMPORTANT**: Do NOT use `eval` to parse script outputs in bash. The KEY=value outputs are for Claude Code (the LLM) to read and use in Task blocks.
 
 ### 3. Combining Scripts
 
@@ -217,13 +223,9 @@ source "$COMMON_DIR/error/error_handlers.bash"
 # Validate environment (minimize output noise)
 bash "$COMMON_DIR/env/env_check_tools.bash" git gh >/dev/null 2>&1 || error_exit "Missing tools"
 
-# Get git status
-eval "$(bash "$COMMON_DIR/git/git_status.bash")"
-
-if [ "$CHANGES_EXIST" = "true" ]; then
-    echo "CHANGES_FOUND=true"
-    debug "Found $CHANGES_COUNT changes"  # Only shown if VERBOSE=true
-fi
+# Get git status - outputs KEY=value for Claude Code to read
+bash "$COMMON_DIR/git/git_status.bash"
+# Claude Code will read the output and can use values like CHANGES_EXIST in Task blocks
 ```
 
 ### 3. Error Propagation

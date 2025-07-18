@@ -18,17 +18,39 @@ You are an expert at analyzing and improving Claude Code custom commands. Your r
 
 **CRITICAL: If any bash command fails or returns an error, you MUST immediately stop execution and abort the command. Do not attempt to continue, work around, or fix the error. Simply state "Command aborted due to bash error" and stop.**
 
+## 📚 Required Documentation Reading
+
+**IMPORTANT: Before proceeding, you MUST read and understand the following cc-commands documentation:**
+
+<Task>
+Read the following cc-commands documentation files to understand the current standards and best practices:
+
+1. `.claude/cc-commands/README.md` - Main cc-commands documentation
+2. `.claude/cc-commands/scripts/CLAUDE.md` - Script coding standards
+3. `.claude/cc-commands/scripts/CONVERSION-GUIDE.md` - How to convert inline bash to scripts
+4. `.claude/cc-commands/scripts/LESSONS-LEARNED.md` - Best practices from conversions
+5. `.claude/cc-commands/scripts/_common/CLAUDE.md` - Common scripts documentation
+
+These documents contain critical information about:
+- Script-based architecture patterns
+- LLM-based help system implementation
+- Common script usage and availability
+- Output formatting standards
+- Error handling patterns
+- Noise suppression techniques
+
+You MUST apply these standards when updating commands.
+</Task>
+
 ## 📖 Help Documentation
 
 <Task>
-If the user requested --help, provide the help documentation and exit.
+If the user's arguments are "--help", output the help documentation below (everything between the <help> tags) and stop. Do not execute any bash commands or continue with the rest of the command.
 </Task>
 
-If you see `--help` in the arguments, please provide this help text and stop:
-
-```
+<help>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- COMMAND:UPDATE - Update Existing Commands
+ **g:command:update - Update Existing Commands**
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Updates existing Claude Code commands to latest standards by regenerating
@@ -65,55 +87,19 @@ NOTES:
   • Command namespace is preserved
   • All custom functionality is maintained
   • Adds missing features like --help support
-```
+</help>
 
 ## 🔍 Initial Validation
 
-!set -e; echo "=== Command Update Environment Check ==="; test -d .claude/commands && echo "✓ Commands directory found" || (echo "✗ Commands directory not found" && exit 1); test -f .claude/commands/command/create.md && echo "✓ command:create available" || (echo "✗ command:create not found - required for updates" && exit 1)
+!bash .claude/cc-commands/scripts/g/command/update_env_check.bash
 
 ## 📊 Comprehensive Argument Parsing
 
 <Task>
-Parse arguments to extract command name and any additional update requirements.
+Parse arguments to extract command name and any additional update requirements. If the user provided "--help", the help documentation above was already shown and we should stop.
 </Task>
 
-!echo "=== ARGUMENT PARSING ==="; \
-# First check for --help \
-if [ "$ARGUMENTS" = "--help" ]; then \
-  echo "HELP_REQUESTED: true"; \
-  exit 0; \
-fi; \
-if [ -z "$ARGUMENTS" ]; then \
-  echo "=== Available Commands ==="; \
-  find .claude/commands -follow -name "*.md" -type f 2>/dev/null | grep -v "command/create.md" | grep -v "command/update.md" | sed 's|.claude/commands/||' | sed 's|\.md$||' | sed 's|/|:|g' | sort | nl -w2 -s". "; \
-  echo ""; \
-  echo "Usage: /g:command:update <command-name> [additional-requirements]"; \
-  echo ""; \
-  echo "Examples:"; \
-  echo "  /g:command:update test:integration"; \
-  echo "  /g:command:update test:integration \"Add --coverage flag and parallel test support\""; \
-  exit 0; \
-fi; \
-# Extract command name (first word) \
-COMMAND_NAME=$(echo "$ARGUMENTS" | awk '{print $1}'); \
-# Extract additional requirements (everything after first word) \
-ADDITIONAL_REQS=$(echo "$ARGUMENTS" | cut -d' ' -f2-); \
-if [ "$COMMAND_NAME" = "$ADDITIONAL_REQS" ]; then \
-  ADDITIONAL_REQS=""; \
-fi; \
-# Output parsed data \
-echo "COMMAND_NAME: \"$COMMAND_NAME\""; \
-echo "ADDITIONAL_REQUIREMENTS: \"$ADDITIONAL_REQS\""; \
-if [ -n "$ADDITIONAL_REQS" ]; then \
-  echo "UPDATE_MODE: \"ENHANCE\""; \
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
-  echo " Enhancement Mode - Adding New Features"; \
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
-  echo "Additional requirements: $ADDITIONAL_REQS"; \
-else \
-  echo "UPDATE_MODE: \"REFRESH\""; \
-  echo "Updating to latest standards only"; \
-fi
+!bash .claude/cc-commands/scripts/g/command/update_arg_parse.bash "$ARGUMENTS"
 
 ### Validate Target Command
 
@@ -121,40 +107,7 @@ fi
 Validate the command exists. I'll use the COMMAND_NAME from the parsed output above.
 </Task>
 
-!# Re-extract command name since variables don't persist \
-COMMAND_NAME=$(echo "$ARGUMENTS" | awk '{print $1}'); \
-COMMAND_PATH=""; \
-if [[ "$COMMAND_NAME" == *:* ]]; then \
-  FOLDER_PATH="${COMMAND_NAME//:://}.md"; \
-  if [ -f ".claude/commands/${FOLDER_PATH}" ]; then \
-    COMMAND_PATH=".claude/commands/${FOLDER_PATH}"; \
-    echo "✓ Found command: ${FOLDER_PATH}"; \
-    echo "COMMAND_PATH: \"$COMMAND_PATH\""; \
-  else \
-    echo "✗ Command not found: ${COMMAND_NAME}"; \
-    echo "Available commands:"; \
-    find .claude/commands -follow -name "*.md" -type f 2>/dev/null | sed 's|.claude/commands/||' | sed 's|\.md$||' | sed 's|/|:|g' | sort; \
-    exit 1; \
-  fi; \
-else \
-  if [[ "$COMMAND_NAME" == *.md ]]; then \
-    STRIPPED="${COMMAND_NAME%.md}"; \
-  else \
-    STRIPPED="$COMMAND_NAME"; \
-  fi; \
-  if [ -f ".claude/commands/${STRIPPED}.md" ]; then \
-    COMMAND_PATH=".claude/commands/${STRIPPED}.md"; \
-    echo "✓ Found command: ${STRIPPED}.md"; \
-    echo "COMMAND_PATH: \"$COMMAND_PATH\""; \
-  elif [ -f ".claude/commands/${STRIPPED//:///}.md" ]; then \
-    COMMAND_PATH=".claude/commands/${STRIPPED//:///}.md"; \
-    echo "✓ Found command: ${STRIPPED//:///}.md"; \
-    echo "COMMAND_PATH: \"$COMMAND_PATH\""; \
-  else \
-    echo "✗ Command not found: ${COMMAND_NAME}"; \
-    exit 1; \
-  fi; \
-fi
+!bash .claude/cc-commands/scripts/g/command/update_validate.bash "$ARGUMENTS"
 
 ## 📖 Read Existing Command
 
@@ -214,22 +167,7 @@ The updated command will include:
 Before providing the update summary, create a backup of the existing command.
 </Task>
 
-!# Re-extract command name and path since variables don't persist \
-COMMAND_NAME=$(echo "$ARGUMENTS" | awk '{print $1}'); \
-if [[ "$COMMAND_NAME" == *:* ]]; then \
-  COMMAND_PATH=".claude/commands/${COMMAND_NAME//:://}.md"; \
-else \
-  COMMAND_PATH=".claude/commands/${COMMAND_NAME}.md"; \
-fi; \
-echo "Creating backup..."; \
-BACKUP_PATH="${COMMAND_PATH%.md}-backup-$(date +%Y%m%d-%H%M%S).md"; \
-if cp "$COMMAND_PATH" "$BACKUP_PATH"; then \
-  echo "✓ Backup created: $BACKUP_PATH"; \
-  echo "BACKUP_PATH: \"$BACKUP_PATH\""; \
-else \
-  echo "✗ Failed to create backup"; \
-  exit 1; \
-fi
+!bash .claude/cc-commands/scripts/g/command/update_backup.bash "$ARGUMENTS"
 
 ## 📋 Update Summary Complete
 
