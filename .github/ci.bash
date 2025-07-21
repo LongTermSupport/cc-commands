@@ -1,11 +1,54 @@
 #!/usr/bin/env bash
 # Script: ci.bash
 # Purpose: CI checks for Claude Code commands
-# Usage: ci.bash
+# Usage: ci.bash [-v|--verbose]
 # Output: CI validation results and errors
 
 set -euo pipefail
 IFS=$'\n\t'
+
+# Enable debug backtrace on error
+set -E
+trap 'debug_backtrace' ERR
+
+# Parse command line arguments
+VERBOSE=false
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -v|--verbose)
+            VERBOSE=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [-v|--verbose]"
+            exit 1
+            ;;
+    esac
+done
+
+# Debug backtrace function
+debug_backtrace() {
+    local error_code=$?
+    echo "================== DEBUG BACKTRACE ==================" >&2
+    echo "Error occurred with exit code: $error_code" >&2
+    echo "Call stack:" >&2
+    local frame=0
+    while caller $frame; do
+        frame=$((frame + 1))
+    done | while read line func file; do
+        echo "  at $func ($file:$line)" >&2
+    done
+    echo "====================================================" >&2
+    exit $error_code
+}
+
+# Debug output function
+debug() {
+    if [ "$VERBOSE" = true ]; then
+        echo "DEBUG: $*" >&2
+    fi
+}
 
 # Colors for output
 RED='\033[0;31m'
@@ -26,13 +69,13 @@ declare -a WARNING_MESSAGES=()
 error() {
     echo "ERROR: $1" >&2
     ERROR_MESSAGES+=("$1")
-    ((ERRORS++))
+    ERRORS=$((ERRORS + 1))
 }
 
 warning() {
     echo "WARNING: $1" >&2
     WARNING_MESSAGES+=("$1")
-    ((WARNINGS++))
+    WARNINGS=$((WARNINGS + 1))
 }
 
 success() {
@@ -41,6 +84,17 @@ success() {
 
 info() {
     echo "$1"
+}
+
+# Normalize paths that start with .claude/cc-commands/ to be relative to CI root
+normalize_path() {
+    local path="$1"
+    # If path starts with .claude/cc-commands/, remove that prefix
+    if [[ "$path" =~ ^\.claude/cc-commands/ ]]; then
+        echo "${path#.claude/cc-commands/}"
+    else
+        echo "$path"
+    fi
 }
 
 # Check 1: Verify help documentation pattern
@@ -77,8 +131,12 @@ check_adhoc_bash() {
     local has_issues=false
     local line_num=0
     
+    # Debug: Show file size
+    local file_lines=$(wc -l < "$file")
+    debug "check_adhoc_bash processing $filename with $file_lines lines"
+    
     while IFS= read -r line; do
-        ((line_num++))
+        line_num=$((line_num + 1))
         
         # Skip if not a bash command line
         if [[ ! "$line" =~ ^! ]]; then
@@ -135,22 +193,45 @@ check_script_references() {
     local file="$1"
     local filename=$(basename "$file")
     local has_issues=false
+    local in_template=false
+    local line_num=0
     
-    # Find all bash script references
-    if grep -q "^!.*bash .*\.claude/cc-commands/scripts/" "$file"; then
-        while IFS=: read -r line_num line; do
-            # Extract script path
+    # Process file line by line to skip template sections
+    while IFS= read -r line; do
+        line_num=$((line_num + 1))
+        
+        # Check for template tags
+        if [[ "$line" == "<template>"* ]]; then
+            in_template=true
+            continue
+        elif [[ "$line" == "</template>"* ]]; then
+            in_template=false
+            continue
+        fi
+        
+        # Skip lines inside template blocks
+        if [ "$in_template" = true ]; then
+            continue
+        fi
+        
+        # Check for bash script references
+        if [[ "$line" =~ ^!.*bash.*\.claude/cc-commands/scripts/ ]]; then
             local script_path=$(echo "$line" | grep -o '\.claude/cc-commands/scripts/[^[:space:]"]*\.bash' || true)
             
             if [ -n "$script_path" ]; then
-                # Check from repo root
-                if [ ! -f "$script_path" ]; then
+                # Normalize the path to be relative to cc-commands root
+                local relative_path=$(normalize_path "$script_path")
+                
+                # Check if file exists relative to current directory
+                if [ ! -f "$relative_path" ]; then
                     error "$filename:$line_num: Referenced script does not exist: $script_path"
                     has_issues=true
+                else
+                    debug "Script exists: $relative_path"
                 fi
             fi
-        done < <(grep -n "^!.*bash .*\.claude/cc-commands/scripts/" "$file")
-    fi
+        fi
+    done < "$file"
     
     if [ "$has_issues" = false ]; then
         success "$filename: All referenced scripts exist"
@@ -310,6 +391,281 @@ check_command_execution_patterns() {
     return 0
 }
 
+# Check 7: Find orphaned scripts
+check_orphaned_scripts() {
+    local has_issues=false
+    
+    info "Checking for orphaned scripts..."
+    
+    # Build list of all bash scripts referenced in commands
+    local referenced_scripts=()
+    while IFS= read -r file; do
+        # Extract all script paths from command files
+        while IFS= read -r script_path; do
+            # Remove .claude/cc-commands/ prefix to get relative path
+            local relative_path="${script_path#.claude/cc-commands/}"
+            referenced_scripts+=("$relative_path")
+            debug "Found reference to script: $relative_path"
+        done < <(grep -o '\.claude/cc-commands/scripts/[^[:space:]"]*\.bash' "$file" 2>/dev/null || true)
+    done < <(find export/commands -name "*.md" -type f 2>/dev/null)
+    
+    # Build list of all scripts called by other scripts
+    while IFS= read -r script; do
+        # Look for bash calls to other scripts
+        while IFS= read -r called_script; do
+            # Handle both absolute and relative paths
+            if [[ "$called_script" =~ ^\$.*/(scripts/.*)$ ]]; then
+                referenced_scripts+=("${BASH_REMATCH[1]}")
+                debug "Script $script calls: ${BASH_REMATCH[1]}"
+            elif [[ "$called_script" =~ (scripts/[^[:space:]\"]+\.bash) ]]; then
+                referenced_scripts+=("${BASH_REMATCH[1]}")
+                debug "Script $script calls: ${BASH_REMATCH[1]}"
+            fi
+        done < <(grep -E 'bash\s+[^|]+\.bash' "$script" 2>/dev/null | grep -o '[^[:space:]]*\.bash' || true)
+    done < <(find scripts -name "*.bash" -type f 2>/dev/null | grep -v "/_inc/")
+    
+    # Special handling for orchestrator subdirectory scripts
+    # These are called by orchestrators using capture_script_output
+    while IFS= read -r orchestrator; do
+        local orch_dir=$(dirname "$orchestrator")
+        # Look for capture_script_output calls
+        while IFS= read -r line; do
+            if [[ "$line" =~ capture_script_output[[:space:]]+\"?\$[^/]+/([^\"[:space:]]+)\"? ]]; then
+                local sub_path="${BASH_REMATCH[1]}"
+                # Construct full path relative to scripts/
+                local full_path="${orch_dir#./}/${sub_path}"
+                referenced_scripts+=("$full_path")
+                debug "Orchestrator $orchestrator calls: $full_path"
+            fi
+        done < <(grep "capture_script_output" "$orchestrator" 2>/dev/null || true)
+    done < <(find scripts -name "*_orchestrate.bash" -type f 2>/dev/null)
+    
+    # Convert to unique set
+    local unique_refs=()
+    if [ ${#referenced_scripts[@]} -gt 0 ]; then
+        while IFS= read -r ref; do
+            unique_refs+=("$ref")
+        done < <(printf '%s\n' "${referenced_scripts[@]}" | sort -u)
+    fi
+    
+    debug "Total unique script references: ${#unique_refs[@]}"
+    
+    # Check each script to see if it's referenced
+    while IFS= read -r script; do
+        local is_referenced=false
+        local script_name=$(basename "$script")
+        
+        # Skip include files
+        if [[ "$script" =~ /_inc/ ]]; then
+            continue
+        fi
+        
+        # Check if this script is in our referenced list
+        for ref in "${unique_refs[@]}"; do
+            if [[ "$script" == "$ref" ]] || [[ "$script" == *"/$ref" ]]; then
+                is_referenced=true
+                break
+            fi
+        done
+        
+        if [ "$is_referenced" = false ]; then
+            warning "$script: Orphaned script - not referenced by any command or other script"
+            has_issues=true
+        fi
+    done < <(find scripts -name "*.bash" -type f 2>/dev/null | grep -v "/_inc/")
+    
+    if [ "$has_issues" = false ]; then
+        success "No orphaned scripts found"
+    fi
+    
+    return 0
+}
+
+# Check 8: Find orphaned includes
+check_orphaned_includes() {
+    local has_issues=false
+    
+    info "Checking for orphaned include files..."
+    
+    # Build list of all sourced includes
+    local sourced_includes=()
+    while IFS= read -r script; do
+        # Look for source statements
+        while IFS= read -r line; do
+            # Extract the include file path from the line
+            local inc_file=""
+            if [[ "$line" =~ \.inc\.bash ]]; then
+                # Extract filename after last /
+                inc_file=$(echo "$line" | grep -o '[^/]*\.inc\.bash' | head -1)
+                if [ -n "$inc_file" ]; then
+                    sourced_includes+=("$inc_file")
+                    debug "Found source of include: $inc_file"
+                fi
+            fi
+        done < <(grep -E '(source|\.).*\.inc\.bash' "$script" 2>/dev/null || true)
+    done < <(find scripts -name "*.bash" -type f 2>/dev/null)
+    
+    # Convert to unique set
+    local unique_sources=()
+    if [ ${#sourced_includes[@]} -gt 0 ]; then
+        while IFS= read -r src; do
+            unique_sources+=("$src")
+        done < <(printf '%s\n' "${sourced_includes[@]}" | sort -u)
+    fi
+    
+    debug "Total unique include sources: ${#unique_sources[@]}"
+    
+    # Check each include file to see if it's sourced
+    if [ -d "scripts/_inc" ]; then
+        while IFS= read -r include; do
+            local is_sourced=false
+            local include_name=$(basename "$include")
+            
+            # Check if this include is in our sourced list
+            for src in "${unique_sources[@]}"; do
+                if [[ "$include_name" == "$src" ]]; then
+                    is_sourced=true
+                    break
+                fi
+            done
+            
+            if [ "$is_sourced" = false ]; then
+                warning "$include: Orphaned include - not sourced by any script"
+                has_issues=true
+            fi
+        done < <(find scripts/_inc -name "*.inc.bash" -type f 2>/dev/null)
+    fi
+    
+    if [ "$has_issues" = false ]; then
+        success "No orphaned includes found"
+    fi
+    
+    return 0
+}
+
+# Check 9: Enforce orchestrator pattern
+check_orchestrator_pattern() {
+    local has_issues=false
+    
+    info "Checking for orchestrator pattern compliance..."
+    
+    # Check each command file
+    while IFS= read -r file; do
+        local filename=$(basename "$file")
+        local command_name="${filename%.md}"
+        
+        # Skip commands that are known to be simple (no orchestration needed)
+        if [[ "$command_name" =~ ^(help|version|status)$ ]]; then
+            debug "Skipping simple command: $command_name"
+            continue
+        fi
+        
+        # Count bash calls in the command
+        local bash_calls=$(grep -c "^!bash" "$file" || true)
+        debug "Command $command_name has $bash_calls bash calls"
+        
+        # If more than 3 bash calls, check for orchestrator pattern
+        if [ "$bash_calls" -gt 3 ]; then
+            # Look for orchestrator script reference
+            if ! grep -q "_orchestrate\.bash" "$file"; then
+                warning "$filename: Command has $bash_calls bash calls but no orchestrator pattern. Consider refactoring to reduce calls."
+                has_issues=true
+                
+                # Check if it's calling multiple scripts that could be orchestrated
+                local script_calls=$(grep "^!bash.*\.bash" "$file" | grep -v "_orchestrate\.bash" | wc -l)
+                if [ "$script_calls" -gt 2 ]; then
+                    warning "$filename: Multiple script calls ($script_calls) detected. Strong candidate for orchestrator pattern."
+                fi
+            fi
+        fi
+        
+        # Check for sequential related operations that should be orchestrated
+        if grep -A5 "^!bash.*git.*\.bash" "$file" | grep -q "^!bash.*git.*\.bash"; then
+            warning "$filename: Multiple sequential git operations detected. Consider using orchestrator pattern."
+            has_issues=true
+        fi
+        
+        # Check for analysis followed by execution pattern
+        if grep -A10 "analysis.*\.bash" "$file" | grep -q "execute.*\.bash"; then
+            if ! grep -q "_orchestrate\.bash" "$file"; then
+                warning "$filename: Analysis->Execute pattern detected without orchestrator. Consider refactoring."
+                has_issues=true
+            fi
+        fi
+    done < <(find export/commands -name "*.md" -type f 2>/dev/null)
+    
+    if [ "$has_issues" = false ]; then
+        success "All commands follow orchestrator pattern appropriately"
+    fi
+    
+    return 0
+}
+
+# Check 10: Enforce orchestrator directory structure
+check_orchestrator_structure() {
+    local has_issues=false
+    
+    info "Checking orchestrator directory structure..."
+    
+    # Find all orchestrator scripts
+    while IFS= read -r orchestrator; do
+        local orch_dir=$(dirname "$orchestrator")
+        local orch_name=$(basename "$orchestrator")
+        local command_name="${orch_name%_orchestrate.bash}"
+        local parent_dir=$(basename "$(dirname "$orch_dir")")
+        
+        debug "Checking orchestrator: $orchestrator"
+        debug "Directory: $orch_dir"
+        debug "Command name: $command_name"
+        debug "Parent dir: $parent_dir"
+        
+        # Extract the expected command directory name
+        local expected_dir=$(basename "$orch_dir")
+        
+        # Check if directory name matches command name
+        if [[ "$expected_dir" != "$command_name" ]]; then
+            error "$orchestrator: Directory name '$expected_dir' must match command name '$command_name'"
+            has_issues=true
+        fi
+        
+        # Check that orchestrator is in a subdirectory (not at command level)
+        # It should be like scripts/g/command/sync/sync_orchestrate.bash
+        # Not scripts/g/command/sync_orchestrate.bash
+        if [[ ! "$orch_dir" =~ /${command_name}$ ]]; then
+            error "$orchestrator: Orchestrator must be in subdirectory matching command name"
+            has_issues=true
+        fi
+        
+        # Check for required subdirectories
+        local required_dirs=("pre" "analysis" "execute" "post")
+        for subdir in "${required_dirs[@]}"; do
+            if [ ! -d "$orch_dir/$subdir" ]; then
+                warning "$orchestrator: Missing recommended subdirectory: $subdir/"
+            fi
+        done
+        
+        # Check that scripts in subdirectories follow naming convention
+        for subdir in "${required_dirs[@]}"; do
+            if [ -d "$orch_dir/$subdir" ]; then
+                while IFS= read -r script; do
+                    local script_name=$(basename "$script")
+                    # Scripts in subdirectories should not have command prefix
+                    if [[ "$script_name" =~ ^${command_name}_ ]]; then
+                        warning "$script: Scripts in subdirectories should not have command prefix. Use descriptive names like 'env_validate.bash' instead of '${command_name}_env_validate.bash'"
+                    fi
+                done < <(find "$orch_dir/$subdir" -name "*.bash" -type f 2>/dev/null)
+            fi
+        done
+        
+    done < <(find scripts -name "*_orchestrate.bash" -type f 2>/dev/null)
+    
+    if [ "$has_issues" = false ]; then
+        success "All orchestrators follow correct directory structure"
+    fi
+    
+    return 0
+}
+
 # Main CI check
 main() {
     info "=== Claude Code Commands CI Check ==="
@@ -322,14 +678,23 @@ main() {
         exit 1
     fi
     
+    # Debug: Show number of command files found
+    local num_files=$(find "$commands_dir" -name "*.md" -type f | wc -l)
+    debug "Found $num_files command files to check"
+    
     # Process each command file
     while IFS= read -r file; do
-        (( TOTAL_COMMANDS++ ))
+        TOTAL_COMMANDS=$((TOTAL_COMMANDS + 1))
         echo "Checking: $file"
         
-        # Run all checks
+        # Debug: Show which check we're running
+        debug "Running check_help_documentation..."
         check_help_documentation "$file"
+        
+        debug "Running check_adhoc_bash..."
         check_adhoc_bash "$file"  
+        
+        debug "Running check_script_references..."
         check_script_references "$file"
         
         echo ""
@@ -340,6 +705,10 @@ main() {
     check_include_files
     check_script_conventions
     check_command_execution_patterns
+    check_orchestrator_pattern
+    check_orchestrator_structure
+    check_orphaned_scripts
+    check_orphaned_includes
     echo ""
     
     # Summary
@@ -352,14 +721,64 @@ main() {
         error "CI check failed with $ERRORS errors"
         info ""
         info "Error details:"
-        printf '%s\n' "${ERROR_MESSAGES[@]}"
+        if [ ${#ERROR_MESSAGES[@]} -gt 0 ]; then
+            printf '%s\n' "${ERROR_MESSAGES[@]}"
+        fi
+        
+        # LLM instructions for fixing errors
+        info ""
+        info "=== INSTRUCTIONS FOR FIXING ERRORS ==="
+        info "1. For 'Referenced script does not exist' errors:"
+        info "   - Check if the path starts with .claude/cc-commands/ (remove this prefix)"
+        info "   - Verify the script actually exists in the scripts/ directory"
+        info "   - If it's a template placeholder (contains [namespace]), it should be inside <template> tags"
+        info ""
+        info "2. For 'Missing <help> tag' errors:"
+        info "   - Add <help> and </help> tags around the help documentation"
+        info "   - Ensure there's a Task block that checks for --help and outputs the help"
+        info ""
+        info "3. For other errors, read the specific error message and fix accordingly"
+        info "=================================================================="
+        
         exit 1
     fi
     
     if [ "$WARNINGS" -gt 0 ]; then
         info ""
         info "Warning details:"
-        printf '%s\n' "${WARNING_MESSAGES[@]}"
+        if [ ${#WARNING_MESSAGES[@]} -gt 0 ]; then
+            printf '%s\n' "${WARNING_MESSAGES[@]}"
+        fi
+        
+        # LLM instructions for fixing warnings
+        info ""
+        info "=== INSTRUCTIONS FOR FIXING WARNINGS ==="
+        info "1. For 'Orphaned script' warnings:"
+        info "   - First verify the script is truly orphaned by checking:"
+        info "     a) Is it called by an orchestrator using capture_script_output?"
+        info "     b) Is it referenced by any command or other script?"
+        info "     c) Is it a common utility that should be kept?"
+        info "   - If truly orphaned, remove it with: rm <script-path>"
+        info "   - If not orphaned, the CI detection may need improvement"
+        info ""
+        info "2. For 'Command has X bash calls but no orchestrator' warnings:"
+        info "   - This command needs migration to the orchestrator pattern"
+        info "   - Create an orchestrator in scripts/g/[namespace]/[command]/[command]_orchestrate.bash"
+        info "   - See CommandStructure.md for the pattern"
+        info ""
+        info "3. For 'Scripts in subdirectories should not have command prefix' warnings:"
+        info "   - Rename the script to remove the command prefix"
+        info "   - E.g., 'push_execute_git.bash' → 'execute_git.bash'"
+        info "   - Update the orchestrator to use the new name"
+        info ""
+        info "4. For 'Missing recommended subdirectory' warnings:"
+        info "   - This is just a recommendation, not required"
+        info "   - Create the directory if you plan to add scripts there"
+        info ""
+        info "5. For 'Script should set error handling options' warnings:"
+        info "   - Add 'set -euo pipefail' after the shebang line"
+        info "   - Unless the script sources an include file that shouldn't set options"
+        info "=================================================================="
     fi
     
     success "All CI checks passed!"

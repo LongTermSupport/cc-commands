@@ -26,6 +26,22 @@ Reserve Claude's decision-making for tasks requiring:
 
 ## Directory Structure Pattern
 
+**CRITICAL**: The orchestrator script MUST be inside the command subdirectory, not at the command level.
+
+✅ **CORRECT**:
+```
+scripts/g/command/sync/sync_orchestrate.bash
+scripts/g/gh/push/push_orchestrate.bash
+```
+
+❌ **WRONG**:
+```
+scripts/g/command/sync_orchestrate.bash
+scripts/g/gh/push_orchestrate.bash
+```
+
+### Full Structure Pattern
+
 ```
 scripts/
 └── g/
@@ -45,6 +61,8 @@ scripts/
                 ├── summary.bash
                 └── cleanup.bash
 ```
+
+**CI Enforced**: The CI script will fail if orchestrators are not in the correct subdirectory structure.
 
 ## Orchestrator Pattern
 
