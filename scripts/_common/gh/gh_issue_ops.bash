@@ -9,7 +9,7 @@ IFS=$'\n\t'
 
 # Get script directory for loading other scripts
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../error/error_handlers.bash"
+source "$SCRIPT_DIR/../../_inc/error_handler.inc.bash"
 
 # Fetch issue details
 fetch_issue() {

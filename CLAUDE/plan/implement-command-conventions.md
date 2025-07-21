@@ -13,21 +13,30 @@ Ensure all the following have been read:
 [✓] Identify commands that need orchestrator pattern
 [✓] Create orchestrator scripts for multi-step commands
 [✓] Update all script references to use correct conventions
-[⏳] Migrate error handling to new include structure
+[✓] Migrate error handling to new include structure
 [✓] Update g:command:create to minimize bash calls and generate new structure
 [✓] Migrate g:gh:push to orchestrator pattern (8→2 calls)
 [✓] Migrate g:w:execute to orchestrator pattern
-[✓] Run CI and fix any violations
+[✓] Run CI and fix any violations (0 errors, only warnings)
 [✓] Add debug backtrace and orphan detection to CI
 [✓] Update plan document with ACTUAL CI findings (not false positives)
 [✓] Move sync_orchestrate.bash to sync/ subdirectory for consistency
 [✓] Add CI enforcement for orchestrator directory structure
 [✓] Update CommandStructure.md with clear orchestrator location rules
-[ ] Migrate g:command:update to orchestrator pattern (4 scripts → 1-2 calls)
-[ ] Migrate g:gh:issue:plan to orchestrator pattern (6 scripts → 1-2 calls)
-[ ] Migrate g:w:plan to orchestrator pattern (4 scripts → 1-2 calls)
-[ ] Check if symfony:create:command needs orchestrator pattern
-[ ] Fix error_handlers.bash shell options (or verify it's intentional)
+[✓] Update create.md template to generate orchestrator pattern
+[✓] Fix CI path normalization and template detection
+[✓] Improve CI orphan detection for orchestrator subdirectory scripts
+[✓] Migrate g:command:update to orchestrator pattern (4 scripts → 2 calls)
+[✓] Migrate g:gh:issue:plan to orchestrator pattern (6 scripts → 3 calls)
+[✓] Migrate g:w:plan to orchestrator pattern (4 scripts → 2 calls) 
+[✓] Check if symfony:create:command needs orchestrator pattern (No - only 3 _common calls)
+[✓] Update all scripts to use new error handler include (39 files migrated)
+[ ] Reassess _common script usage for DRY principle
+[ ] Refactor proxy scripts - if they just call _common, orchestrator should call _common directly
+[✓] Remove legacy error_handlers.bash bridge script
+[ ] Move all CI functionality from GitHub workflow into ci.bash
+[ ] Add shellcheck integration to ci.bash
+[ ] Update GitHub workflow to just call ci.bash/cl
 [ ] Clean up git deleted files (old scripts before migration)
 [ ] Test all commands to ensure they still work
 
@@ -238,6 +247,21 @@ source "$SCRIPT_DIR/../../../_inc/error_handler.inc.bash"
 # Script implementation
 ```
 
+#### Scripts Still Using Old Error Handler (39 files):
+**Unmigrated Commands (priority):**
+- All g:command:update scripts (4 files)
+- All g:gh:issue:plan scripts (7 files)
+- All g:w:plan scripts (4 files)
+
+**Migrated Commands (need cleanup):**
+- g:command:sync scripts (8 files) - already migrated but still using old handler
+- _common scripts (11 files) - may be needed by unmigrated commands
+
+**Next Steps:**
+1. Migrate unmigrated commands to orchestrator pattern
+2. Update all scripts to use new include path
+3. Remove error_handlers.bash once all scripts are updated
+
 ### CI Compliance Strategy
 
 #### Pre-Migration CI Run
@@ -316,19 +340,47 @@ source "$SCRIPT_DIR/../../../_inc/error_handler.inc.bash"
 
 ### Migration Priority
 
-#### High Priority (Complex Commands)
-1. g:command:create - Core functionality
-2. g:gh:push - Complex workflow
-3. g:w:execute - Complex state management
+#### Completed ✓
+1. g:command:create - Core functionality ✓
+2. g:gh:push - Complex workflow ✓
+3. g:w:execute - Complex state management ✓
+4. g:command:sync - Git workflow ✓
 
-#### Medium Priority
-4. g:command:update
-5. g:gh:issue:plan
-6. g:symfony:create:command
+#### High Priority (Remaining)
+1. **g:gh:issue:plan** - 6 bash calls (most complex remaining)
+2. **g:command:update** - 4 bash calls
+3. **g:w:plan** - 4 bash calls
 
-#### Low Priority
-7. g:w:plan - Simpler structure
-8. Any other simple commands
+#### No Migration Needed
+- **g:symfony:create:command** - Only 3 calls to _common scripts (acceptable)
+
+### CI Consolidation Plan
+
+#### Current State
+- CI logic may be split between GitHub workflow and ci.bash
+- Shellcheck might be run separately
+- Workflow may have ad-hoc bash commands
+
+#### Target State
+1. **ci.bash becomes single entry point** for all CI checks:
+   - Command validation
+   - Script conventions
+   - Shellcheck integration
+   - Orchestrator pattern enforcement
+   - Include/delegate separation
+   - Orphan detection
+
+2. **GitHub workflow simplification**:
+   ```yaml
+   - name: Run CI
+     run: bash .github/ci.bash
+   ```
+
+3. **Shellcheck integration**:
+   - Add shellcheck to ci.bash
+   - Check all .bash files
+   - Respect shellcheck directives
+   - Clear error reporting
 
 ### Lessons from g:command:sync Migration
 

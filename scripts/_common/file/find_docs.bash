@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMMON_DIR="$SCRIPT_DIR/.."
 
 # Load common error handling
-source "$COMMON_DIR/error/error_handlers.bash"
+source "$COMMON_DIR/../_inc/error_handler.inc.bash"
 
 # Documentation search paths and patterns
 declare -a SEARCH_PATTERNS=(

@@ -13,7 +13,7 @@ COMMON_DIR="$SCRIPT_DIR/../../_common"
 SYNC_DIR="$SCRIPT_DIR/sync"
 
 # Load common scripts
-source "$COMMON_DIR/error/error_handlers.bash"
+source "$COMMON_DIR/../_inc/error_handler.inc.bash"
 
 # Variable to store outputs from sub-scripts
 declare -A SCRIPT_OUTPUTS

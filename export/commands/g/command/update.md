@@ -91,25 +91,17 @@ NOTES:
   • Adds missing features like --help support
 </help>
 
-## 🔍 Initial Validation
+## 🔍 Initial Analysis Phase
 
-!bash .claude/cc-commands/scripts/g/command/update_env_check.bash
-
-## 📊 Comprehensive Argument Parsing
+!bash .claude/cc-commands/scripts/g/command/update/update_orchestrate.bash analyze "$ARGUMENTS"
 
 <Task>
-Parse arguments to extract command name and any additional update requirements. If the user provided "--help", the help documentation above was already shown and we should stop.
+Based on the orchestrator output:
+- Check if COMMAND_NAME is provided
+- Verify COMMAND_PATH exists
+- Note UPDATE_MODE (ENHANCE or REFRESH)
+- Check ADDITIONAL_REQUIREMENTS if any
 </Task>
-
-!bash .claude/cc-commands/scripts/g/command/update_arg_parse.bash "$ARGUMENTS"
-
-### Validate Target Command
-
-<Task>
-Validate the command exists. I'll use the COMMAND_NAME from the parsed output above.
-</Task>
-
-!bash .claude/cc-commands/scripts/g/command/update_validate.bash "$ARGUMENTS"
 
 ## 📖 Read Existing Command
 
@@ -169,7 +161,7 @@ The updated command will include:
 Before providing the update summary, create a backup of the existing command.
 </Task>
 
-!bash .claude/cc-commands/scripts/g/command/update_backup.bash "$ARGUMENTS"
+!bash .claude/cc-commands/scripts/g/command/update/update_orchestrate.bash backup "$ARGUMENTS"
 
 ## 📋 Update Summary Complete
 

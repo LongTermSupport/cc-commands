@@ -96,36 +96,17 @@ SAFETY:
   • Clear preview before any changes
 </help>
 
-## 🚦 Precondition Checks
+## 🚦 Analysis and Issue Selection Phase
 
-### Environment Validation
-!bash .claude/cc-commands/scripts/g/gh/issue/plan_env_validate.bash
-
-## 📊 Argument Parsing
+!bash .claude/cc-commands/scripts/g/gh/issue/plan/plan_orchestrate.bash analyze "$ARGUMENTS"
 
 <Task>
-Parse the issue argument and determine the mode of operation.
+Based on the orchestrator output:
+- Check if OPERATION_MODE is interactive, url, number, or invalid
+- If interactive and NO_ISSUE_SELECTED=true, let user select from the list
+- Note the ISSUE_NUMBER and ISSUE_TITLE for later use
+- Check if issue data was successfully fetched
 </Task>
-
-!bash .claude/cc-commands/scripts/g/gh/issue/plan_arg_parse.bash "$ARGUMENTS"
-
-### Issue Selection Interface
-
-<Task>
-If no issue was specified, show recent issues for selection.
-</Task>
-
-!bash .claude/cc-commands/scripts/g/gh/issue/plan_list_issues.bash "$ARGUMENTS"
-
-## 📊 Issue Analysis Phase
-
-### Fetch Complete Issue Information
-
-<Task>
-Fetch the issue data from GitHub including all comments and metadata.
-</Task>
-
-!bash .claude/cc-commands/scripts/g/gh/issue/plan_issue_fetch.bash "$ARGUMENTS"
 
 ### Issue Content Analysis
 
@@ -262,7 +243,7 @@ Do you want to create this plan? (yes/no)
 Upon confirmation, create the plan file in CLAUDE/plan/ directory.
 </Task>
 
-!bash .claude/cc-commands/scripts/g/gh/issue/plan_file_create.bash "$ISSUE_NUMBER" "$ISSUE_TITLE"
+!bash .claude/cc-commands/scripts/g/gh/issue/plan/plan_orchestrate.bash execute "$ISSUE_NUMBER" "$ISSUE_TITLE"
 
 <Write>
 [Plan content will be written here based on the issue analysis and project documentation]
@@ -277,7 +258,9 @@ The plan will:
 
 ### Verify Plan Creation
 
-!bash .claude/cc-commands/scripts/g/gh/issue/plan_verify.bash "$PLAN_FILE_PATH"
+<Task>
+The plan has been created and verified. The PLAN_FILE_PATH was output by the orchestrator.
+</Task>
 
 ## 📤 Enhanced Post-Creation Workflow
 
@@ -300,7 +283,11 @@ If no:
 
 <Task>
 If the user wants to commit and comment, execute the commit and comment script. Otherwise, skip to the execution prompt.
+
+If yes, run the commit phase:
 </Task>
+
+!bash .claude/cc-commands/scripts/g/gh/issue/plan/plan_orchestrate.bash commit "$PLAN_FILE_PATH" "$ISSUE_NUMBER"
 
 ## 🚀 Execution Prompt
 

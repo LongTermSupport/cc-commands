@@ -75,19 +75,19 @@ MODES:
     - Makes actual code changes
 </help>
 
-## 📊 Argument Parsing
+## 📊 Initial Analysis Phase
+
+!bash .claude/cc-commands/scripts/g/w/plan/plan_orchestrate.bash analyze "$ARGUMENTS"
 
 <Task>
-Parse all arguments at once and output structured data for use throughout the command.
-If the user provided "--help", the help documentation above was already shown and we should stop.
+Based on the orchestrator output:
+- Check PLAN_NAME and FILENAME from parsed arguments
+- Note WORKFLOW_FOUND status
+- Check EXISTING_PLANS if any
+- If the user provided "--help", the help documentation above was already shown and we should stop.
 </Task>
 
-!bash .claude/cc-commands/scripts/g/w/plan_arg_parse.bash "$ARGUMENTS"
-
-## 🚦 Precondition Checks
-
-### Workflow Documentation Discovery
-!bash .claude/cc-commands/scripts/g/w/plan_workflow_discover.bash
+## 🚦 Workflow Status
 <Task>
 Based on the workflow discovery results, analyze the project structure and identify available documentation to reference in the plan.
 </Task>
@@ -119,9 +119,11 @@ If no task name was provided, ask for it. Otherwise, ask for additional details 
 Based on the workflow documentation status and task details, analyze the project structure and gather relevant information.
 </Task>
 
-### Checking Existing Plans
+### Existing Plans Status
 
-!bash .claude/cc-commands/scripts/g/w/plan_check_existing.bash "$FILENAME"
+<Task>
+The orchestrator already checked for existing plans. Review the EXISTING_PLANS output from above.
+</Task>
 
 ## 📝 Plan Generation
 
@@ -210,7 +212,7 @@ I'll now create a plan following the discovered workflow structure.
 Create the plan directory if it doesn't exist and prepare the plan content.
 </Task>
 
-!bash .claude/cc-commands/scripts/g/w/plan_create_directory.bash "$PLAN_DIR"
+!bash .claude/cc-commands/scripts/g/w/plan/plan_orchestrate.bash create "$PLAN_DIR"
 
 ### Plan Template Structure
 
