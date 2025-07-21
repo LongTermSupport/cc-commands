@@ -118,6 +118,9 @@ Pre-installed commands available to all projects:
 - `/g:w:plan` - Generate comprehensive project plans with progress tracking
 - `/g:w:execute` - Execute previously created plans with workflow-based approach and status verification
 
+#### Symfony Tools (`g:symfony:*`)
+- `/g:symfony:create:command` - Create new Symfony console commands with best practices
+
 ### Project Commands (custom namespaces)
 
 Organize your commands with meaningful namespaces:
