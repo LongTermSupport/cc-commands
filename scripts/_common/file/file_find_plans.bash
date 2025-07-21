@@ -9,7 +9,7 @@ IFS=$'\n\t'
 
 # Get script directory for loading other scripts
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../error/error_handlers.bash"
+source "$SCRIPT_DIR/../../_inc/error_handler.inc.bash"
 
 # Find the plan directory
 find_plan_directory() {
@@ -71,7 +71,7 @@ list_plans() {
         echo "PLAN_${i}_FILE=$plan"
         echo "PLAN_${i}_NAME=$basename"
         echo "PLAN_${i}_MODIFIED=$modified"
-        ((i++))
+        i=$((i + 1))
     done
     
     # Show recent plans
@@ -82,15 +82,19 @@ list_plans() {
         local basename=$(basename "$plan")
         local modified=$(date -r "$plan" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "unknown")
         echo "  $basename - $modified"
-        ((count++))
+        count=$((count + 1))
         [ $count -ge 10 ] && break
     done
+    
+    return 0
 }
 
 # Find a specific plan
 find_plan() {
     local search_term="${1:-}"
-    require_arg "$search_term" "search term"
+    if [ -z "$search_term" ]; then
+        error_exit "Missing required argument: search term"
+    fi
     
     eval "$(find_plan_directory)"
     
@@ -137,7 +141,7 @@ find_plan() {
             echo "MATCH_${i}_FILE=$match"
             echo "MATCH_${i}_NAME=$(basename "$match")"
             echo "  $(basename "$match")"
-            ((i++))
+            i=$((i + 1))
         done
         return 1
     fi
@@ -146,7 +150,9 @@ find_plan() {
 # Analyze a plan file
 analyze_plan() {
     local plan_file="${1:-}"
-    require_arg "$plan_file" "plan file"
+    if [ -z "$plan_file" ]; then
+        error_exit "Missing required argument: plan file"
+    fi
     
     if [ ! -f "$plan_file" ]; then
         error_exit "Plan file not found: $plan_file"
@@ -215,7 +221,9 @@ analyze_plan() {
 # Create a new plan file
 create_plan() {
     local plan_name="${1:-}"
-    require_arg "$plan_name" "plan name"
+    if [ -z "$plan_name" ]; then
+        error_exit "Missing required argument: plan name"
+    fi
     
     eval "$(find_plan_directory)"
     

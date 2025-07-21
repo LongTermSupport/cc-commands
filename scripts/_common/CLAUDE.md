@@ -2,6 +2,8 @@
 
 This directory contains shared bash scripts that provide reusable functionality for Claude Code commands.
 
+📚 **For a complete reference of all common scripts with detailed documentation, see [/CLAUDE/CommonScripts.md](/CLAUDE/CommonScripts.md)**
+
 ## Directory Organization
 
 ```

@@ -324,7 +324,7 @@ main() {
     
     # Process each command file
     while IFS= read -r file; do
-        ((TOTAL_COMMANDS++))
+        (( TOTAL_COMMANDS++ ))
         echo "Checking: $file"
         
         # Run all checks

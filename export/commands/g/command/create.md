@@ -179,34 +179,17 @@ Creates new Claude Code custom commands with best practices, including:
 If the user's arguments are "--help", output the comprehensive help documentation above and stop. Do not execute any bash commands.
 </Task>
 
-## 🔍 Initial Validation & Preconditions
+## 🔍 Initial Analysis Phase
 
-!bash .claude/cc-commands/scripts/_common/env/env_check_tools.bash jq gh
+!bash .claude/cc-commands/scripts/g/command/create/create_orchestrate.bash analyze "$ARGUMENTS"
 
-### System Requirements Check
-
-**Environment Status:**
-- **Working Directory:** [Current directory path]
-- **Commands Directory:** [Exists/Will be created]
-- **JQ Tool:** [Available/Not available] (optional for enhanced features)
-- **GitHub CLI:** [Available/Not available] (needed for GitHub commands)
-- **GitHub Auth:** [Authenticated/Not authenticated]
-
-### 📊 Argument Parsing & Validation
-
-!bash .claude/cc-commands/scripts/g/command/create_arg_parse.bash "$ARGUMENTS"
-
-### Argument Analysis
-
-**Parsing Results:**
-- **Mode:** [Interactive/Full argument mode]
-- **Command Name:** [Extracted from arguments or will be requested]
-- **Requirements:** [Full requirements provided or will be gathered interactively]
-- **Target Path:** [Where the command will be created]
-
-**Validation Status:**
-- **Command Exists:** [Checked for existing command conflicts]
-- **Path Availability:** [Confirmed target location is available]
+<Task>
+Based on the orchestrator output:
+- Check environment validation results
+- Review parsed arguments if provided
+- Note if CommandStructure.md documentation is available
+- Determine whether to proceed with interactive or full argument mode
+</Task>
 
 ### ⚡ Requirements Gathering
 
@@ -343,11 +326,46 @@ Once you approve the permissions, I'll add the appropriate bash command permissi
 You need to confirm user approves the permissions
 </Task>
 
+## 🏗️ Command Structure Best Practices
+
+**CRITICAL: Read CommandStructure.md**
+
+<Task>
+If COMMAND_STRUCTURE_DOC=true from the orchestrator output, read the CommandStructure.md file to understand the orchestrator pattern and best practices for creating efficient commands.
+</Task>
+
+!cat .claude/cc-commands/CLAUDE/CommandStructure.md 2>/dev/null || echo "CommandStructure.md not available - using standard patterns"
+
+### 📋 Orchestrator Pattern Decision
+
+<Task>
+Based on the command requirements, determine if this command needs an orchestrator pattern:
+
+**Use Orchestrator Pattern if the command has:**
+- Multiple sequential steps (3+ bash operations)
+- Conditional logic ("if X then Y" flows)
+- Complex state management between steps
+- Analysis phase followed by execution phase
+
+**Skip Orchestrator for:**
+- Simple single-operation commands
+- Commands that only read/display information
+- Commands with minimal bash usage
+</Task>
+
 ## 🔧 Bash Command Optimization Best Practices
 
-NO Inline bash
-ONLY command or _common scripts. Create command scripts as required, search for _common scripts that could be used.
-IF the task is something that is likely to be reusable in other claude code commands, consider creating a new _common script
+**Follow the Orchestrator Pattern when appropriate:**
+- Create a main orchestrator script that coordinates sub-scripts
+- Organize scripts in subdirectories: pre/, analysis/, execute/, post/
+- Use capture_script_output function to parse KEY=value outputs
+- Minimize bash calls (target: 1-2 calls per command)
+
+**Script Organization:**
+- NO inline bash for complex operations
+- Use existing _common scripts when possible
+- Create command-specific scripts in organized directories
+- Follow the pattern from g:command:sync (8 calls → 2 calls)
 
 ### ✅ **Best Practice: Script-Based Approach**
 ```bash
@@ -630,12 +648,25 @@ Confirms: Before making automated fixes
 3. **Makes changes?** (yes/no)
 
 **I'll then:**
-- Create the command with optimized Claude Code patterns
-- Use minimal bash only for system operations
+- Create the command following CommandStructure.md patterns
+- Implement orchestrator pattern if needed (for complex multi-step commands)
+- Use minimal bash calls (1-2 instead of many)
 - Include comprehensive help documentation
 - Set up appropriate bash permissions
-- Apply Claude Code best practices
-- Generate a production-ready command with maximum efficiency
+- Generate organized script structure when appropriate
+- Apply the latest cc-commands best practices
+
+## 🚀 Command Creation Execution
+
+<Task>
+Once requirements are gathered and command content is prepared, execute the creation phase.
+</Task>
+
+!bash .claude/cc-commands/scripts/g/command/create/create_orchestrate.bash create "$COMMAND_NAME" "$COMMAND_CONTENT" "$SCRIPTS_NEEDED"
+
+<Task>
+Review the creation results and provide final instructions to the user.
+</Task>
 
 ## 🔄 Post-Creation Instructions
 

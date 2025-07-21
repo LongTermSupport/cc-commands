@@ -4,12 +4,24 @@
 # Usage: execute_list_plans.bash
 # Output: Plan listing with status and progress
 
+set -euo pipefail
+IFS=$'\n\t'
+
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Load common scripts
+source "$SCRIPT_DIR/../../../../_inc/error_handler.inc.bash"
+
 main() {
     echo "✓ Discovering available plans"
     echo "=== DISCOVERING PLANS ==="
     
-    # Find plan directory (case-insensitive)
-    PLAN_DIR=$(find . -maxdepth 2 -iname "plan" -type d | grep -i "claude/plan" | head -1 || echo "")
+    # Find project root (where .git is)
+    PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+    
+    # Find plan directory (case-insensitive) from project root
+    PLAN_DIR=$(find "$PROJECT_ROOT" -maxdepth 3 -iname "plan" -type d | grep -i "claude/plan" | head -1 || echo "")
     
     if [ -n "$PLAN_DIR" ]; then
         cd "$PLAN_DIR"
@@ -19,7 +31,7 @@ main() {
         echo "---------|------|--------|-------"
         
         # Process all .md files in one pass, extracting all needed info
-        find . -name "*.md" -type f -printf "%T@ %P\n" 2>/dev/null | sort -rn | head -10 | while IFS=" " read -r timestamp filepath; do
+        while IFS=" " read -r timestamp filepath; do
             planname=$(basename "$filepath" .md)
             
             # Simple status checks using grep
@@ -44,7 +56,7 @@ main() {
             summary=$(echo "$summary" | tr '|' '-' | tr -d '`$')
             
             echo "$planname|$status|$completed/$total|$summary"
-        done
+        done < <(find . -name "*.md" -type f -printf "%T@ %P\n" 2>/dev/null | sort -rn | head -10)
         
         echo ""
         echo "LIST_SUCCESS=true"
@@ -59,3 +71,4 @@ main() {
 
 main
 echo "Script success: ${0##*/}"
+exit 0

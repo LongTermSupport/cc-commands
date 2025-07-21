@@ -12,14 +12,21 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMMON_DIR="$SCRIPT_DIR/../../../../_common"
 
 # Load common scripts
-source "$COMMON_DIR/error/error_handlers.bash"
+source "$SCRIPT_DIR/../../../../_inc/error_handler.inc.bash"
 
 main() {
     echo "✓ Checking README.md currency"
     echo "=== README Update Check ==="
     
-    # Change to cc-commands directory
-    cd ".claude/cc-commands"
+    # Find cc-commands directory (we might already be in it)
+    if [ -d ".claude/cc-commands" ]; then
+        cd ".claude/cc-commands"
+    elif [ -f "README.md" ] && [ -d "scripts" ] && [ -d "CLAUDE" ]; then
+        # We're likely already in cc-commands
+        true
+    else
+        error_exit "Cannot find cc-commands directory"
+    fi
     
     # Check if README is current by comparing last modified time with recent commits
     if [ -f "README.md" ]; then
@@ -45,7 +52,44 @@ main() {
         echo "README_OUTDATED=missing"
     fi
     
-    echo "✓ README check complete"
+    # Check CommonScripts.md
+    echo ""
+    echo "=== CommonScripts.md Update Check ==="
+    
+    if [ -f "CLAUDE/CommonScripts.md" ]; then
+        COMMON_SCRIPTS_MODIFIED=$(stat -c %Y CLAUDE/CommonScripts.md 2>/dev/null || echo "0")
+        
+        # Find most recent _common script modification
+        if [ -d "scripts/_common" ]; then
+            LAST_COMMON_CHANGE=$(find scripts/_common -name "*.bash" -printf "%T@\n" | sort -n | tail -1 | cut -d. -f1)
+            
+            if [ "$COMMON_SCRIPTS_MODIFIED" -lt "$LAST_COMMON_CHANGE" ]; then
+                echo "⚠️  CommonScripts.md appears outdated compared to _common script changes"
+                echo "📝 Consider updating CommonScripts.md to reflect current common scripts"
+                echo "COMMON_SCRIPTS_OUTDATED=true"
+                
+                # Find which scripts were modified after the doc
+                echo ""
+                echo "Scripts modified after CommonScripts.md:"
+                find scripts/_common -name "*.bash" -newer CLAUDE/CommonScripts.md -printf "  - %P\n" | sort
+            else
+                echo "✓ CommonScripts.md appears current"
+                echo "COMMON_SCRIPTS_OUTDATED=false"
+            fi
+            
+            # Count scripts vs documented scripts
+            SCRIPT_COUNT=$(find scripts/_common -name "*.bash" -type f | wc -l)
+            echo "COMMON_SCRIPT_COUNT=$SCRIPT_COUNT"
+        else
+            echo "⚠️  Common scripts directory not found"
+            echo "COMMON_SCRIPTS_OUTDATED=unknown"
+        fi
+    else
+        echo "⚠️  CommonScripts.md not found"
+        echo "COMMON_SCRIPTS_OUTDATED=missing"
+    fi
+    
+    echo "✓ Documentation check complete"
 }
 
 main

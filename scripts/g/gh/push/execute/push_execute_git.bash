@@ -9,10 +9,10 @@ IFS=$'\n\t'
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMMON_DIR="$SCRIPT_DIR/../../_common"
+COMMON_DIR="$SCRIPT_DIR/../../../../_common"
 
 # Load common scripts
-source "$COMMON_DIR/error/error_handlers.bash"
+source "$SCRIPT_DIR/../../../../_inc/error_handler.inc.bash"
 source "$COMMON_DIR/git/git_smart_commit.bash"
 
 # Arguments

@@ -9,11 +9,12 @@ IFS=$'\n\t'
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMMON_DIR="$SCRIPT_DIR/../../_common"
 
-# Load common scripts
-source "$COMMON_DIR/error/error_handlers.bash"
-source "$COMMON_DIR/arg/arg_parse_standard.bash" "$@"
+# Source error handler include
+source "$SCRIPT_DIR/../../../../_inc/error_handler.inc.bash"
+
+# Common scripts directory
+COMMON_DIR="$SCRIPT_DIR/../../../../_common"
 
 # Check for help
 if [ "$HELP_REQUESTED" = "true" ]; then

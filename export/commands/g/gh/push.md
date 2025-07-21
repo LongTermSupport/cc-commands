@@ -89,64 +89,45 @@ smart commit messages, pushes to remote, and monitors all triggered workflows.
 • Recovery suggestions for common issues
 </help>
 
-## 🚦 Precondition Checks
+## 🚦 Initial Analysis Phase
 
-### Environment Validation
-!bash .claude/cc-commands/scripts/_common/env/env_validate.bash git gh
+!bash .claude/cc-commands/scripts/g/gh/push/push_orchestrate.bash analyze
 
-## 📊 Repository State Analysis
-
-### Current Status Check
-!bash .claude/cc-commands/scripts/_common/git/git_state_analysis.bash summary
+<Task>
+Based on the orchestrator analysis:
+- Check if ACTION_REQUIRED is "none" - if so, repository is up to date
+- If ACTION_REQUIRED is "commit_and_push", we need to commit changes
+- If ACTION_REQUIRED is "push_only", we just need to push existing commits
+- If COMMIT_MESSAGE_NEEDED is true, generate a smart commit message
+</Task>
 
 ## 🎯 Decision Point
 
 <Task>
-Based on the repository analysis, determine what action to take:
-1. If CHANGES_EXIST is "true", ask the user for confirmation to proceed with committing the changes.
-2. If CHANGES_EXIST is "false" but PUSH_NEEDED is "true", proceed directly to push existing commits.
-3. If both are "false", inform the user that everything is up to date and exit.
+Based on ACTION_REQUIRED from the analysis:
+
+1. If "none": Inform the user that everything is up to date and exit
+2. If "commit_and_push": Ask for confirmation to commit the detected changes
+3. If "push_only": Proceed directly to push existing commits
+
+For "commit_and_push", generate an intelligent commit message based on the actual changes.
 </Task>
 
-!bash .claude/cc-commands/scripts/g/gh/push_decision.bash "$CHANGES_EXIST" "$PUSH_NEEDED"
+## 🚀 Execution Phase
 
 <Task>
-Based on the ACTION output above:
-- If ACTION is "none", the repository is up to date and we should exit
-- If ACTION is "commit_and_push" or "push_only", proceed with the appropriate operations
+If proceeding with the operation, execute the git operations and monitor workflows.
+Pass the ACTION and any generated COMMIT_MESSAGE to the orchestrator.
 </Task>
 
-## 📝 Smart Commit Message Generation
+!bash .claude/cc-commands/scripts/g/gh/push/push_orchestrate.bash execute "$ACTION_REQUIRED" "$COMMIT_MESSAGE"
 
 <Task>
-If ACTION is "commit_and_push", show that we'll generate an intelligent commit message based on the actual changes detected.
+Review the execution results:
+- Check FINAL_RESULT for success/failure
+- Note if WORKFLOWS_MONITORED was true
+- Provide appropriate feedback based on results
 </Task>
-
-!bash .claude/cc-commands/scripts/g/gh/push_commit_message.bash "$ACTION"
-
-## 🔧 Commit and Push Execution
-
-### Execute Git Operations
-!bash .claude/cc-commands/scripts/g/gh/push_execute_git.bash "$ACTION"
-
-## 🔍 GitHub Actions Detection
-
-### Workflow Discovery
-!bash .claude/cc-commands/scripts/g/gh/push_workflow_detect.bash "$PUSH_RESULT" "$PUSHED_COMMIT"
-
-## 📊 Real-time Workflow Monitoring
-
-<Task>
-If workflows were detected (MONITORING_NEEDED is "true"), monitor them until completion.
-This involves periodic checking of workflow run status and providing real-time updates.
-</Task>
-
-!bash .claude/cc-commands/scripts/g/gh/push_workflow_monitor.bash "$MONITORING_NEEDED" "$PUSHED_COMMIT" 300
-
-## ✅ Results Analysis and Verification
-
-### Final Status Check
-!bash .claude/cc-commands/scripts/g/gh/push_final_status.bash "$PUSHED_COMMIT" "$PUSH_RESULT"
 
 ## 📈 Results Summary
 

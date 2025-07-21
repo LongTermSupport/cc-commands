@@ -70,7 +70,7 @@ CRITICAL: The MODE determined here controls the entire flow of this command.
 If the user provided "--help", the help documentation below will be shown and we should stop.
 </Task>
 
-!bash .claude/cc-commands/scripts/g/w/execute_arg_parse.bash "$ARGUMENTS"
+!bash .claude/cc-commands/scripts/g/w/execute/execute_orchestrate.bash analyze "$ARGUMENTS"
 
 ## 📖 Help Documentation
 
@@ -133,8 +133,11 @@ SAFETY:
 
 ## 🚦 Precondition Checks
 
-### Environment Validation
-!bash .claude/cc-commands/scripts/g/w/execute_env_validate.bash
+### Initial Analysis
+
+<Task>
+The orchestrator will handle all analysis including argument parsing, environment validation, and mode determination.
+</Task>
 
 ### System Requirements Status
 <Task>
@@ -161,7 +164,10 @@ Do not proceed to Section B or any execution logic.
 
 ### List Recent Plans
 
-!bash .claude/cc-commands/scripts/g/w/execute_list_plans.bash
+<Task>
+If MODE=LIST from the orchestrator output above, the plans have already been listed.
+Stop here and wait for the user to run the command again with a plan name.
+</Task>
 
 <Task>
 🛑 STOP HERE if MODE=LIST. The plans have been listed above. 
@@ -184,7 +190,10 @@ If you reached here with MODE=LIST, you made an error - STOP immediately.
 Search for the plan using exact and fuzzy matching.
 </Task>
 
-!bash .claude/cc-commands/scripts/g/w/execute_plan_search.bash "$MODE" "$PLAN_NAME"
+<Task>
+The orchestrator has already handled plan search if MODE=EXECUTE.
+Check PLAN_FOUND and PLAN_PATH from the output above.
+</Task>
 
 ## 🎯 Plan Selection & Confirmation
 
@@ -218,7 +227,10 @@ Analyze the plan's current progress and verify accuracy of status markers.
 
 ### Status Verification
 
-!bash .claude/cc-commands/scripts/g/w/execute_status_verify.bash "$PLAN_PATH"
+<Task>
+The orchestrator has already verified the plan status.
+Proceed based on the verification results from above.
+</Task>
 
 ## 🚀 Execution Phase
 
@@ -246,11 +258,11 @@ Run code quality tools at appropriate intervals during execution.
 
 ### Code Standards Check
 
-!bash .claude/cc-commands/scripts/g/w/execute_allcs.bash
+!bash .claude/cc-commands/scripts/g/w/execute/execute_orchestrate.bash execute "$PLAN_PATH" allcs
 
 ### Static Analysis
 
-!bash .claude/cc-commands/scripts/g/w/execute_static_analysis.bash
+!bash .claude/cc-commands/scripts/g/w/execute/execute_orchestrate.bash execute "$PLAN_PATH" static_analysis
 
 ## 📊 Progress Tracking
 
@@ -266,7 +278,7 @@ Suggest and create git commits at logical milestones during execution.
 
 ### Check Git Status
 
-!bash .claude/cc-commands/scripts/g/w/execute_git_status.bash
+!bash .claude/cc-commands/scripts/g/w/execute/execute_orchestrate.bash execute "$PLAN_PATH" git_status
 
 ## ✅ Completion Verification
 

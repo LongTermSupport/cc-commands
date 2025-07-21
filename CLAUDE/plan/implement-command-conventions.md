@@ -9,12 +9,14 @@ Ensure all the following have been read:
 
 ## Progress
 
-[ ] Analyze current command structure and script usage
-[ ] Identify commands that need orchestrator pattern
-[ ] Create orchestrator scripts for multi-step commands
-[ ] Update all script references to use correct conventions
-[ ] Migrate error handling to new include structure
-[ ] Update all commands to minimize bash calls
+[✓] Analyze current command structure and script usage
+[✓] Identify commands that need orchestrator pattern
+[✓] Create orchestrator scripts for multi-step commands
+[✓] Update all script references to use correct conventions
+[⏳] Migrate error handling to new include structure
+[✓] Update g:command:create to minimize bash calls and generate new structure
+[✓] Migrate g:gh:push to orchestrator pattern (8→2 calls)
+[✓] Migrate g:w:execute to orchestrator pattern
 [ ] Run CI and fix any violations
 [ ] Test all commands to ensure they still work
 
