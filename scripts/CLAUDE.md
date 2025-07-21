@@ -7,16 +7,75 @@ This directory contains bash scripts used by Claude Code commands to ensure cons
 ```
 scripts/
 ├── CLAUDE.md                 # This file - coding standards and documentation
-├── _common/                  # Shared scripts used by multiple commands
+├── _inc/                     # SOURCED includes (run in caller's context)
+│   ├── CLAUDE.md            # Include documentation  
+│   └── error_handler.bash   # Error handling functions
+├── _common/                  # Shared DELEGATED scripts (run in own process)
 │   ├── CLAUDE.md            # Common scripts documentation
 │   ├── env/                 # Environment validation scripts
 │   ├── git/                 # Git operations scripts
-│   ├── file/                # File discovery and manipulation
-│   ├── gh/                  # GitHub CLI operations
-│   └── arg/                 # Argument parsing utilities
+│   ├── file/                # File discovery scripts
+│   ├── gh/                  # GitHub CLI scripts
+│   ├── arg/                 # Argument parsing scripts
+│   └── error/               # Legacy error scripts (use _inc/ instead)
 ├── g/                       # Scripts for 'g:' namespace commands
 │   └── gh/                  # Scripts for 'g:gh:' commands
 └── [other-namespaces]/      # Additional namespace-specific scripts
+```
+
+## Include vs Delegate Pattern
+
+### 🚨 CRITICAL EXECUTION RULES 🚨
+
+1. **_inc files are ONLY sourced, NEVER executed**
+   ```bash
+   # ✅ CORRECT
+   source "$SCRIPT_DIR/../_inc/error_handler.inc.bash"
+   
+   # ❌ WRONG - NEVER DO THIS
+   bash "$SCRIPT_DIR/../_inc/error_handler.inc.bash"
+   ```
+
+2. **_common files are ONLY executed, NEVER sourced**
+   ```bash
+   # ✅ CORRECT
+   bash "$COMMON_DIR/git/status_analysis.bash"
+   
+   # ❌ WRONG - NEVER DO THIS
+   source "$COMMON_DIR/git/status_analysis.bash"
+   ```
+
+**CI ENFORCED**: The CI script will fail if these rules are violated!
+
+### Sourced Includes (`_inc/` directory)
+Scripts that are **sourced** run in the calling script's context and can:
+- Access and modify caller's variables
+- Exit the calling script
+- Define functions for the caller to use
+- Share state with the caller
+
+**IMPORTANT**: Include files must NOT set shell options (set -e, etc) or modify IFS!
+
+```bash
+# Source an include file (adjust path based on script location)
+source "$SCRIPT_DIR/../_inc/error_handler.inc.bash"
+# Now use its functions directly
+error_exit "Something went wrong"  # This will exit the calling script
+```
+
+### Delegated Scripts (`_common/` and other directories)
+Scripts that are **executed** run in their own process and:
+- Have isolated variable scope
+- Communicate via stdout (KEY=value format)
+- Exit only themselves, not the caller
+- Perform specific, contained operations
+
+```bash
+# Execute a delegated script
+bash "$COMMON_DIR/git/status_analysis.bash"
+# Read its output
+# BRANCH=main
+# CHANGES_EXIST=true
 ```
 
 ## Coding Standards
@@ -49,18 +108,25 @@ set -euo pipefail
 IFS=$'\n\t'
 ```
 
-### 3. Common Directory Reference
+### 3. Script Directory References
 
-All scripts MUST define the path to _common directory at the start:
+All scripts MUST define paths to required directories:
 
 ```bash
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMMON_DIR="$SCRIPT_DIR/../../_common"  # Adjust path depth as needed
 
-# Load common scripts
-source "$COMMON_DIR/error/error_handlers.bash"
+# For including sourced files
+source "$SCRIPT_DIR/../_inc/error_handler.bash"  # Adjust ../ based on script depth
+
+# For delegating to common scripts
+COMMON_DIR="$SCRIPT_DIR/../../_common"  # Adjust path depth as needed
+bash "$COMMON_DIR/git/status_analysis.bash"
 ```
+
+**Path Examples**:
+- From `/scripts/g/command/script.bash` → `../../../_inc/` and `../../../_common/`
+- From `/scripts/g/command/sync/sub/script.bash` → `../../../../../_inc/`
 
 ### 4. Output Noise Reduction
 
@@ -120,9 +186,9 @@ set -euo pipefail  # Exit on error, undefined vars, pipe failures
 IFS=$'\n\t'        # Safe Internal Field Separator
 ```
 
-### 6. Error Messages
+### 6. Error Messages - Critical Stop Pattern
 
-When errors occur:
+When errors occur that require immediate termination, use the **COMMAND EXECUTION MUST STOP** pattern. This provides clear, unmistakable signals to both users and Claude that execution cannot continue:
 
 ```bash
 error_exit() {
@@ -135,6 +201,37 @@ error_exit() {
 
 # Usage
 command || error_exit "Failed to execute command: $?"
+```
+
+**Why This Pattern Works:**
+- The bordered message with equals signs creates visual separation
+- "COMMAND EXECUTION MUST STOP" is unambiguous
+- Clear instruction that "Claude Code should not continue"
+- Helps Claude understand this is a terminal error, not a warning
+
+**Use This Pattern For:**
+- Missing required files or directories
+- Failed authentication
+- Missing prerequisites
+- Critical validation failures
+- Any error that makes continuing dangerous or impossible
+
+**Example Usage:**
+```bash
+# Check critical prerequisites
+if [ ! -d ".git" ]; then
+    error_exit "Not in a git repository - cannot proceed with git operations"
+fi
+
+# Validate required tools
+if ! command -v gh &> /dev/null; then
+    error_exit "GitHub CLI (gh) is required but not installed"
+fi
+
+# Handle operation failures
+if ! git push origin main; then
+    error_exit "Failed to push to remote repository"
+fi
 ```
 
 ### 7. Progress Output

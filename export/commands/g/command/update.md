@@ -18,6 +18,8 @@ You are an expert at analyzing and improving Claude Code custom commands. Your r
 
 **CRITICAL: If any bash command fails or returns an error, you MUST immediately stop execution and abort the command. Do not attempt to continue, work around, or fix the error. Simply state "Command aborted due to bash error" and stop.**
 
+**CRITICAL: respect the !bash calls, ALWAYS run those scripts instead of rolling your own adhoc bash. ONLY run your own bash AFTER you have called the scripts**
+
 ## 📚 Required Documentation Reading
 
 **IMPORTANT: Before proceeding, you MUST read and understand the following cc-commands documentation:**

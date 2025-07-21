@@ -26,6 +26,8 @@ You are an expert software architect and project manager with deep knowledge of 
 
 **CRITICAL: Never include time estimates, effort estimates, or duration predictions in the generated plan or GitHub comments. Focus on task breakdown and dependencies only.**
 
+**CRITICAL: respect the !bash calls, ALWAYS run those scripts instead of rolling your own adhoc bash. ONLY run your own bash AFTER you have called the scripts**
+
 ## 📖 Help Documentation
 
 <Task>

@@ -72,109 +72,69 @@ PREREQUISITES:
 Parse the arguments to determine if help was requested. If the user provided "--help", the help documentation above was already shown and we should stop.
 </Task>
 
-## 🚦 Precondition Checks
+## 🚦 Initial Analysis
 
-### Environment Validation
-!bash .claude/cc-commands/scripts/g/command/sync_env_validate.bash
-
-## 📊 Repository Status Analysis
+### Run Complete Repository Analysis
+!bash .claude/cc-commands/scripts/g/command/sync_orchestrate.bash
 
 <Task>
-Analyze the current state of the repository to understand what needs to be synced.
+Based on the orchestrator output:
+1. Check the repository status (CHANGES_EXIST, CURRENT_BRANCH, etc.)
+2. If COMMIT_MESSAGE_REQUIRED=true, we need to generate a commit message
+3. Determine what sync operations will be needed
 </Task>
 
-!bash .claude/cc-commands/scripts/g/command/sync_status_analysis.bash
-
-### Detailed Change Analysis
+## 🎯 Sync Planning
 
 <Task>
-If changes exist, show detailed diff for user review and analyze the changes to understand what was modified.
-</Task>
+If COMMIT_MESSAGE_REQUIRED=true from the orchestrator:
+1. Analyze the changes shown in the output (modified/new files)
+2. Read specific files if needed to understand the changes better
+3. Generate a meaningful commit message following conventional commit format:
+   - Use conventional prefixes (feat:, fix:, docs:, refactor:, etc.)
+   - Clearly describe WHAT changed
+   - Be specific but concise
 
-!bash .claude/cc-commands/scripts/g/command/sync_change_analysis.bash
+Examples:
+- "feat: add orchestrator pattern to reduce bash calls"
+- "fix: correct COMMON_DIR paths in moved scripts"
+- "refactor: reorganize sync scripts into subdirectories"
 
-<Task>
-Based on the repository status, determine the sync strategy and show the user what will happen.
-</Task>
-
-## 🎯 Sync Strategy
-
-Based on the repository analysis, here's the sync plan:
-
-### 📝 Step 1: Analyze Changes and Generate Commit Message
-
-<Task>
-If there are uncommitted changes:
-1. Use git diff to see what actually changed in the files
-2. For new files, read them to understand their purpose
-3. For modified files, analyze the diff to understand what was changed
-4. Generate a meaningful commit message following conventional commit format
-
-The commit message should:
-- Use conventional commit format (feat:, fix:, docs:, refactor:, etc.)
-- Clearly describe WHAT changed (list specific commands if multiple)
-- Be specific about the nature of changes
-- Be concise but informative
-
-Examples of good commit messages:
-- "feat: add sync command for repository synchronization"
-- "fix: improve error handling in create and update commands"
-- "refactor: simplify command argument parsing logic"
-- "feat: add plan command and update create/update commands"
-
-After analyzing, display the commit message that will be used.
+Store the commit message in COMMIT_MESSAGE variable.
 </Task>
 
 ### ⚠️ Confirmation Required
 
 <Task>
-Before proceeding with any git operations, get user confirmation.
+Show the user what will happen based on the analysis:
+- List any changes that will be committed
+- Mention if pull/push operations are needed
+- Ask for confirmation to proceed
 </Task>
-
-This sync operation will:
-1. **Commit**: [Status based on analysis]
-2. **Pull**: Fetch and merge latest changes from origin
-3. **Push**: Upload your commits to share with other projects
 
 **Do you want to proceed with the sync?** (yes/no)
 
 ## 🔧 Execution Phase
 
-### Step 1: Commit Local Changes
+### Complete Sync Execution
+
+!bash .claude/cc-commands/scripts/g/command/sync_orchestrate.bash "$COMMIT_MESSAGE"
 
 <Task>
-If there are changes to commit, execute the git add and commit operations using the commit message you generated in the previous step.
+Review the orchestrator output for:
+- Confirmation of successful operations
+- README_UPDATE_NEEDED=true (requires manual README update)
+- Any errors or warnings
 </Task>
 
-!bash .claude/cc-commands/scripts/g/command/sync_commit_execute.bash "$COMMIT_MESSAGE"
-
-### Step 2: Pull Remote Changes
-
-!bash .claude/cc-commands/scripts/g/command/sync_pull_execute.bash "$CURRENT_BRANCH"
-
-### Step 3: Update README.md
+### Update README.md (if needed)
 
 <Task>
-Check if the README.md file needs updates based on the current state of commands and repository structure. If updates are needed, update the README.md to reflect the current available commands, features, and documentation, then commit those changes.
+If README_UPDATE_NEEDED=true from the orchestrator:
+1. Read the current README.md
+2. Update it to reflect current commands and features
+3. Commit the changes
 </Task>
-
-!bash .claude/cc-commands/scripts/g/command/sync_readme_check.bash
-
-<Task>
-Update README if README_OUTDATED=true
-</Task>
-
-### Step 4: Push to Remote
-
-!bash .claude/cc-commands/scripts/g/command/sync_push_execute.bash "$CURRENT_BRANCH"
-
-## ✅ Sync Complete
-
-<Task>
-Show a summary of what was accomplished during the sync.
-</Task>
-
-!bash .claude/cc-commands/scripts/g/command/sync_summary.bash
 
 ### 🚀 Next Steps
 

@@ -159,6 +159,157 @@ check_script_references() {
     return 0
 }
 
+# Check 4: Verify include file conventions
+check_include_files() {
+    local has_issues=false
+    
+    info "Checking include file conventions..."
+    
+    # Check _inc directory
+    if [ -d "scripts/_inc" ]; then
+        while IFS= read -r file; do
+            local filename=$(basename "$file")
+            
+            # Check naming convention
+            if [[ ! "$filename" =~ \.inc\.bash$ ]]; then
+                error "$file: Include files must use .inc.bash suffix"
+                has_issues=true
+            fi
+            
+            # Check for prohibited patterns
+            if grep -q "^set -[euo]" "$file"; then
+                error "$file: Include files must NOT set shell options (set -e, etc)"
+                has_issues=true
+            fi
+            
+            if grep -q "^IFS=" "$file"; then
+                error "$file: Include files must NOT modify IFS"
+                has_issues=true
+            fi
+            
+            # Check for include guard
+            if ! grep -q "_INCLUDED=" "$file"; then
+                warning "$file: Include file should have an include guard"
+                has_issues=true
+            fi
+            
+            # Check header comment
+            if ! head -n 5 "$file" | grep -q "# Include:"; then
+                warning "$file: Include file should start with '# Include:' header"
+                has_issues=true
+            fi
+            
+            if ! head -n 10 "$file" | grep -q "This file is meant to be SOURCED"; then
+                warning "$file: Include file should state it's meant to be sourced"
+                has_issues=true
+            fi
+            
+        done < <(find scripts/_inc -name "*.bash" -type f 2>/dev/null)
+    fi
+    
+    # Check for .bash files in _inc that don't have .inc.bash suffix
+    if [ -d "scripts/_inc" ]; then
+        while IFS= read -r file; do
+            if [[ ! "$file" =~ \.inc\.bash$ ]]; then
+                error "$file: All files in _inc/ must use .inc.bash suffix"
+                has_issues=true
+            fi
+        done < <(find scripts/_inc -name "*.bash" -type f 2>/dev/null)
+    fi
+    
+    if [ "$has_issues" = false ]; then
+        success "Include file conventions are followed"
+    fi
+    
+    return 0
+}
+
+# Check 5: Verify scripts follow sourcing conventions
+check_script_conventions() {
+    local has_issues=false
+    
+    info "Checking script conventions..."
+    
+    # Check all bash scripts (excluding _inc directory)
+    while IFS= read -r file; do
+        local filename=$(basename "$file")
+        local dirname=$(dirname "$file")
+        
+        # Skip include files
+        if [[ "$dirname" =~ /_inc$ ]]; then
+            continue
+        fi
+        
+        # Regular scripts should have proper headers
+        if ! head -n 10 "$file" | grep -q "^#!/usr/bin/env bash"; then
+            error "$file: Script should start with #!/usr/bin/env bash"
+            has_issues=true
+        fi
+        
+        if ! head -n 10 "$file" | grep -q "^set -euo pipefail"; then
+            warning "$file: Script should set error handling options (set -euo pipefail)"
+            has_issues=true
+        fi
+        
+        # Check for sourcing include files with correct suffix
+        if grep -q "source.*/_inc/.*\.bash" "$file" && ! grep -q "source.*/_inc/.*\.inc\.bash" "$file"; then
+            error "$file: Should source .inc.bash files, not .bash files from _inc"
+            has_issues=true
+        fi
+        
+        # CRITICAL: Check _inc files are only sourced, never executed
+        if grep -E "(bash|sh|^!bash|^!sh).*/_inc/" "$file"; then
+            error "$file: NEVER execute _inc files! They must only be sourced"
+            has_issues=true
+        fi
+        
+        # CRITICAL: Check _common files are only executed, never sourced
+        if grep -E "^\s*(source|\.).*/_common/" "$file"; then
+            error "$file: NEVER source _common files! They must only be executed with bash"
+            has_issues=true
+        fi
+        
+    done < <(find scripts -name "*.bash" -type f | grep -v "/_inc/")
+    
+    if [ "$has_issues" = false ]; then
+        success "Script conventions are followed"
+    fi
+    
+    return 0
+}
+
+# Check 6: Verify command files follow execution patterns
+check_command_execution_patterns() {
+    local has_issues=false
+    
+    info "Checking command execution patterns..."
+    
+    # Check all command files
+    while IFS= read -r file; do
+        local filename=$(basename "$file")
+        
+        # Check that _inc files are never executed in commands
+        if grep -E "^!.*bash.*/_inc/" "$file"; then
+            error "$file: Commands must NEVER execute _inc files! Use 'source' in scripts instead"
+            has_issues=true
+        fi
+        
+        # Check that _common files are never sourced in commands
+        # This shouldn't happen in command files, but let's check anyway
+        if grep -E "^!.*source.*/_common/" "$file"; then
+            error "$file: Commands must NEVER source _common files! Use 'bash' to execute"
+            has_issues=true
+        fi
+        
+    done < <(find export/commands -name "*.md" -type f 2>/dev/null)
+    
+    if [ "$has_issues" = false ]; then
+        success "Command execution patterns are correct"
+    fi
+    
+    return 0
+}
+
 # Main CI check
 main() {
     info "=== Claude Code Commands CI Check ==="
@@ -183,6 +334,13 @@ main() {
         
         echo ""
     done < <(find "$commands_dir" -name "*.md" -type f | sort)
+    
+    # Run script convention checks
+    echo ""
+    check_include_files
+    check_script_conventions
+    check_command_execution_patterns
+    echo ""
     
     # Summary
     info "=== CI Check Summary ==="
