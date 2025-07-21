@@ -69,6 +69,8 @@ FEATURES:
   • Links to relevant project documentation
   • Prompts to commit and post to GitHub after creation
   • Never includes time estimates in plans
+  • Detects bug issues and applies test-driven approach
+  • Adapts to project-specific workflows when available
 
 OUTPUT:
   • Creates plan file in CLAUDE/plan/issue-{number}-{title}.md
@@ -134,11 +136,30 @@ I'll read the issue data and analyze:
 2. All comments and discussions
 3. Any linked issues or documentation
 4. Technical requirements and constraints
+5. Determine if this is a bug fix or feature request
 </Task>
 
 <Read>
 /tmp/issue-$ISSUE_NUM.json
 </Read>
+
+### Issue Type Detection
+
+<Task>
+Determine if this issue describes a bug or a feature request.
+
+Bug indicators to look for:
+- Title or labels containing: bug, fix, error, broken, issue, problem, regression
+- Description mentioning: not working, fails, crashes, incorrect behavior
+- Stack traces or error messages
+- Steps to reproduce
+- Expected vs actual behavior
+
+If this is identified as a BUG:
+- Form a hypothesis about what's causing the issue
+- Plan will follow test-driven development approach
+- First task will be to write a failing test
+</Task>
 
 ### Link Analysis and Context Gathering
 
@@ -157,9 +178,21 @@ From the issue data, I'll:
 <Task>
 Read the relevant project documentation to ensure the plan follows established standards.
 
-Look in the project CLAUDE folder for plan workflow, coding standards, testing and any other documentation.
+1. First, check if the project has a PlanWorkflow.md file:
+   - Look for CLAUDE/PlanWorkflow.md or similar workflow documentation
+   - If found, this takes precedence over generic patterns
+   - Pay special attention to any bug-specific workflow sections
 
-Look for documentation relevant to this specific issue and for general coding/workflow/standards
+2. Search for other relevant project documentation:
+   - Look in CLAUDE/ or docs/ folders
+   - Find coding standards, testing guidelines, architecture docs
+   - Identify any project-specific conventions or requirements
+
+3. For bug fixes specifically:
+   - Check if the project defines a bug fix workflow
+   - If not, apply the general TDD approach but adapt to project conventions
+
+The plan must reference actual project documentation, not generic paths.
 </Task>
 
 ### Generate Plan Content
@@ -174,6 +207,21 @@ Based on the issue analysis and project standards, I'll create a comprehensive p
 6. Focuses on WHAT needs to be done, not HOW LONG it will take
 7. As this is a github issue - the plan must also include adding comments to the github issue with links to relevant commits made to any repository. Remember you can only add comments AFTER the commits have been pushed to github.
 8. When the issue is resolved, add a comment to that effect with a summary. Do not update issue status.
+
+For BUG FIXES specifically:
+- Start with hypothesis about the cause
+- FIRST task must be to write a test that reproduces the bug
+- Follow test-driven development approach
+- If project has bug fix workflow in PlanWorkflow.md, use that structure
+- Otherwise use this general structure:
+  * Write test to reproduce the bug (confirm hypothesis)
+  * Verify test fails with current code
+  * Implement fix
+  * Verify test passes with fix
+  * Run project's quality/lint/static analysis tools
+  * Add any additional tests for edge cases discovered
+  * Update documentation if needed
+  * Add GitHub comment with fix details and commits
 </Task>
 
 ### Plan Preview
@@ -202,6 +250,8 @@ Present the plan details and ask for confirmation before creating the file.
 - ✓ Documentation references
 - ✓ Success criteria
 - ✗ NO time estimates or duration predictions
+- ✓ For bugs: Hypothesis and test-first approach
+- ✓ For bugs: Specific bug fix progress structure
 
 Do you want to create this plan? (yes/no)
 </Task>
@@ -215,7 +265,14 @@ Upon confirmation, create the plan file in CLAUDE/plan/ directory.
 !bash .claude/cc-commands/scripts/g/gh/issue/plan_file_create.bash "$ISSUE_NUMBER" "$ISSUE_TITLE"
 
 <Write>
-[Plan content will be written here based on the issue analysis]
+[Plan content will be written here based on the issue analysis and project documentation]
+
+The plan will:
+- Reference actual project documentation found during analysis
+- Follow project-specific workflow if PlanWorkflow.md exists
+- For bugs: Include hypothesis and test-first approach adapted to project conventions
+- Include proper Progress section with task checkboxes
+- List all relevant project docs that should be read
 </Write>
 
 ### Verify Plan Creation
