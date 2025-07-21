@@ -13,7 +13,7 @@ COMMON_DIR="$SCRIPT_DIR/../../../../_common"
 
 # Load common scripts
 source "$SCRIPT_DIR/../../../../_inc/error_handler.inc.bash"
-source "$COMMON_DIR/git/git_smart_commit.bash"
+# Note: git_smart_commit.bash will be executed when needed, not sourced
 
 # Arguments
 ACTION="${1:-}"
@@ -47,7 +47,18 @@ case "$ACTION" in
                 else
                     # Use smart commit message generation
                     info "Generating commit message..."
-                    COMMIT_MSG=$(generate_smart_commit_message)
+                    COMMIT_MSG_FILE=$(mktemp)
+                    if bash "$COMMON_DIR/git/git_smart_commit.bash" generate > "$COMMIT_MSG_FILE" 2>&1; then
+                        COMMIT_MSG=$(grep "COMMIT_MESSAGE=" "$COMMIT_MSG_FILE" | cut -d= -f2-)
+                        rm -f "$COMMIT_MSG_FILE"
+                        if [ -z "$COMMIT_MSG" ]; then
+                            COMMIT_MSG="Update files with recent changes"
+                        fi
+                    else
+                        warn "Smart commit message generation failed, using default"
+                        COMMIT_MSG="Update files with recent changes"
+                        rm -f "$COMMIT_MSG_FILE"
+                    fi
                 fi
                 
                 echo "COMMIT_MESSAGE=$COMMIT_MSG"
