@@ -22,12 +22,14 @@ check_commit_workflows() {
     info "Checking workflows for commit: $commit"
     
     # Get runs for this commit
-    local runs_json=$(gh run list --limit 50 --json headSha,status,conclusion,workflowName,createdAt,url 2>/dev/null) || {
+    local runs_json
+    runs_json=$(gh run list --limit 50 --json headSha,status,conclusion,workflowName,createdAt,url 2>/dev/null) || {
         error_exit "Failed to fetch workflow runs"
     }
     
     # Filter for our commit
-    local matches=$(echo "$runs_json" | jq -r --arg sha "$commit" '.[] | select(.headSha | startswith($sha))')
+    local matches
+    matches=$(echo "$runs_json" | jq -r --arg sha "$commit" '.[] | select(.headSha | startswith($sha))')
     
     if [ -z "$matches" ]; then
         echo "WORKFLOWS_FOUND=false"
@@ -37,7 +39,8 @@ check_commit_workflows() {
     fi
     
     # Count and process matches
-    local count=$(echo "$matches" | jq -s 'length')
+    local count
+    count=$(echo "$matches" | jq -s 'length')
     echo "WORKFLOWS_FOUND=true"
     echo "WORKFLOW_COUNT=$count"
     
@@ -90,12 +93,14 @@ watch_latest_workflows() {
     info "Fetching latest $limit workflow runs..."
     
     # Get latest runs
-    local runs_json=$(gh run list --limit "$limit" --json number,status,conclusion,workflowName,event,headBranch,createdAt 2>/dev/null) || {
+    local runs_json
+    runs_json=$(gh run list --limit "$limit" --json number,status,conclusion,workflowName,event,headBranch,createdAt 2>/dev/null) || {
         error_exit "Failed to fetch workflow runs"
     }
     
     # Count runs
-    local count=$(echo "$runs_json" | jq 'length')
+    local count
+    count=$(echo "$runs_json" | jq 'length')
     echo "RUN_COUNT=$count"
     
     if [ "$count" -eq 0 ]; then
@@ -149,18 +154,23 @@ list_workflow_runs() {
     fi
     
     # Get runs
-    local runs_json=$(eval "gh run list $gh_args" 2>/dev/null) || {
+    local runs_json
+    runs_json=$(eval "gh run list $gh_args" 2>/dev/null) || {
         error_exit "Failed to list workflow runs"
     }
     
     # Output count
-    local count=$(echo "$runs_json" | jq 'length')
+    local count
+    count=$(echo "$runs_json" | jq 'length')
     echo "TOTAL_RUNS=$count"
     
     # Count by status
-    local success_count=$(echo "$runs_json" | jq '[.[] | select(.conclusion == "success")] | length')
-    local failure_count=$(echo "$runs_json" | jq '[.[] | select(.conclusion == "failure")] | length')
-    local in_progress=$(echo "$runs_json" | jq '[.[] | select(.status == "in_progress")] | length')
+    local success_count
+    success_count=$(echo "$runs_json" | jq '[.[] | select(.conclusion == "success")] | length')
+    local failure_count
+    failure_count=$(echo "$runs_json" | jq '[.[] | select(.conclusion == "failure")] | length')
+    local in_progress
+    in_progress=$(echo "$runs_json" | jq '[.[] | select(.status == "in_progress")] | length')
     
     echo "SUCCESS_COUNT=$success_count"
     echo "FAILURE_COUNT=$failure_count"
@@ -180,11 +190,13 @@ get_workflow_names() {
     info "Fetching available workflows..."
     
     # List workflow files
-    local workflows=$(gh workflow list --json name,state 2>/dev/null) || {
+    local workflows
+    workflows=$(gh workflow list --json name,state 2>/dev/null) || {
         error_exit "Failed to list workflows"
     }
     
-    local count=$(echo "$workflows" | jq 'length')
+    local count
+    count=$(echo "$workflows" | jq 'length')
     echo "WORKFLOW_DEFINITIONS=$count"
     
     # List each workflow

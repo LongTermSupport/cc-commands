@@ -55,11 +55,21 @@ Ensure all the following have been read:
 [✓] Update ShellCheck filtering in ci.bash to handle SC1091 properly
     - Fixed grep filter to properly exclude SC1091 warnings about non-constant source
     - Reduced ShellCheck errors from 66 to 24
-[ ] Fix remaining ShellCheck warnings (24 scripts)
-    - SC2155: Declare and assign separately (most common)
-    - SC2124: Assigning array to string (in orchestrators)
-    - SC2034: Variable appears unused
-    - SC2086: Double quote to prevent globbing
+[✓] Fix SC2155 warnings (declare and assign separately)
+    - Fixed 14 scripts with automated script
+    - Separated variable declaration from command substitution assignments
+[✓] Fix SC2124 warnings (array to string assignment)
+    - Fixed 5 orchestrator scripts
+    - Changed `local args="$@"` to `local args=("$@")`
+    - Updated array usage to `"${args[@]}"`
+[ ] Fix remaining ShellCheck warnings (18 scripts, down from 24)
+    - SC2034: Variable appears unused (5 occurrences)
+    - SC2128: Expanding array without index (4 occurrences)
+    - SC2155: More declare/assign issues in orchestrators (6 occurrences)
+    - SC1083: Literal braces in git upstream references (4 occurrences)
+    - SC2064: Variable expansion in trap commands (2 occurrences)
+    - SC2168: 'local' outside function (1 occurrence)
+    - Miscellaneous: SC2207, SC2126, SC2035, SC2002
 [ ] Add missing success messages to scripts (54 warnings)
     - All scripts should end with: echo "Script success: ${0##*/}"
 [ ] Clean up git deleted files (old scripts before migration)

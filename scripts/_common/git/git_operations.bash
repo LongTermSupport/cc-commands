@@ -16,7 +16,8 @@ source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 # Get current branch name
 git_get_current_branch() {
-    local branch=$(git branch --show-current 2>/dev/null || echo "")
+    local branch
+    branch=$(git branch --show-current 2>/dev/null || echo "")
     if [ -z "$branch" ]; then
         # Might be in detached HEAD state
         branch=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -30,17 +31,23 @@ git_get_current_branch() {
 
 # Check for uncommitted changes
 git_check_changes() {
-    local porcelain=$(git status --porcelain 2>/dev/null || echo "")
+    local porcelain
+    porcelain=$(git status --porcelain 2>/dev/null || echo "")
     if [ -n "$porcelain" ]; then
         echo "CHANGES_EXIST=true"
-        local count=$(echo "$porcelain" | wc -l)
+        local count
+        count=$(echo "$porcelain" | wc -l)
         echo "CHANGES_COUNT=$count"
         
         # Count different types of changes
-        local modified=$(echo "$porcelain" | grep -c "^ M" || true)
-        local added=$(echo "$porcelain" | grep -c "^A" || true)
-        local deleted=$(echo "$porcelain" | grep -c "^ D" || true)
-        local untracked=$(echo "$porcelain" | grep -c "^??" || true)
+        local modified
+        modified=$(echo "$porcelain" | grep -c "^ M" || true)
+        local added
+        added=$(echo "$porcelain" | grep -c "^A" || true)
+        local deleted
+        deleted=$(echo "$porcelain" | grep -c "^ D" || true)
+        local untracked
+        untracked=$(echo "$porcelain" | grep -c "^??" || true)
         
         echo "MODIFIED_COUNT=$modified"
         echo "ADDED_COUNT=$added"
@@ -82,7 +89,8 @@ git_safe_commit() {
     
     # Commit with message
     if git commit -m "$message"; then
-        local commit_hash=$(git rev-parse HEAD)
+        local commit_hash
+        commit_hash=$(git rev-parse HEAD)
         echo "COMMIT_RESULT=success"
         echo "COMMIT_HASH=$commit_hash"
         success "Committed changes: $commit_hash"
@@ -100,7 +108,8 @@ git_push_with_checks() {
     eval "$(git_get_current_branch)"
     
     # Check if branch has upstream
-    local upstream=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "")
+    local upstream
+    upstream=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "")
     
     if [ -z "$upstream" ]; then
         info "Setting upstream branch: origin/$BRANCH"
@@ -108,8 +117,10 @@ git_push_with_checks() {
         echo "PUSH_RESULT=success_new_upstream"
     else
         # Check if we're ahead/behind
-        local ahead=$(git rev-list --count @{u}..HEAD 2>/dev/null || echo "0")
-        local behind=$(git rev-list --count HEAD..@{u} 2>/dev/null || echo "0")
+        local ahead
+        ahead=$(git rev-list --count @{u}..HEAD 2>/dev/null || echo "0")
+        local behind
+        behind=$(git rev-list --count HEAD..@{u} 2>/dev/null || echo "0")
         
         echo "COMMITS_AHEAD=$ahead"
         echo "COMMITS_BEHIND=$behind"
@@ -149,7 +160,8 @@ git_fetch_updates() {
         
         # Check if current branch has updates
         eval "$(git_get_current_branch)"
-        local behind=$(git rev-list --count HEAD..origin/"$BRANCH" 2>/dev/null || echo "0")
+        local behind
+        behind=$(git rev-list --count HEAD..origin/"$BRANCH" 2>/dev/null || echo "0")
         
         if [ "$behind" -gt 0 ]; then
             echo "UPDATES_AVAILABLE=true"
@@ -181,7 +193,8 @@ git_stash_changes() {
     
     if git stash push -m "$message"; then
         echo "STASH_RESULT=success"
-        local stash_ref=$(git stash list -1 --format="%gd")
+        local stash_ref
+        stash_ref=$(git stash list -1 --format="%gd")
         echo "STASH_REF=$stash_ref"
         success "Changes stashed: $stash_ref"
     else

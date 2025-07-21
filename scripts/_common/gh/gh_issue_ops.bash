@@ -27,18 +27,26 @@ fetch_issue() {
     fi
     
     # Fetch issue data
-    local issue_json=$(gh issue view "$issue_num" --json number,title,body,author,state,labels,assignees,milestone,comments 2>/dev/null) || {
+    local issue_json
+    issue_json=$(gh issue view "$issue_num" --json number,title,body,author,state,labels,assignees,milestone,comments 2>/dev/null) || {
         error_exit "Failed to fetch issue #$issue_num. Check that the issue exists and you have access."
     }
     
     # Parse JSON data
-    local title=$(echo "$issue_json" | jq -r '.title // "No title"')
-    local state=$(echo "$issue_json" | jq -r '.state // "unknown"')
-    local author=$(echo "$issue_json" | jq -r '.author.login // "unknown"')
-    local body=$(echo "$issue_json" | jq -r '.body // ""')
-    local labels=$(echo "$issue_json" | jq -r '(.labels // []) | map(.name) | join(",")')
-    local assignees=$(echo "$issue_json" | jq -r '(.assignees // []) | map(.login) | join(",")')
-    local comment_count=$(echo "$issue_json" | jq -r '(.comments // []) | length')
+    local title
+    title=$(echo "$issue_json" | jq -r '.title // "No title"')
+    local state
+    state=$(echo "$issue_json" | jq -r '.state // "unknown"')
+    local author
+    author=$(echo "$issue_json" | jq -r '.author.login // "unknown"')
+    local body
+    body=$(echo "$issue_json" | jq -r '.body // ""')
+    local labels
+    labels=$(echo "$issue_json" | jq -r '(.labels // []) | map(.name) | join(",")')
+    local assignees
+    assignees=$(echo "$issue_json" | jq -r '(.assignees // []) | map(.login) | join(",")')
+    local comment_count
+    comment_count=$(echo "$issue_json" | jq -r '(.comments // []) | length')
     
     # Output structured data
     echo "ISSUE_NUMBER=$issue_num"
@@ -74,7 +82,8 @@ create_plan_from_issue() {
     fi
     
     # Create plan filename
-    local safe_title=$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//')
+    local safe_title
+    safe_title=$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//')
     local plan_name="issue-${issue_num}-${safe_title}"
     
     # Truncate if too long
@@ -103,12 +112,14 @@ list_issues() {
     info "Listing $state issues (limit: $limit)..."
     
     # Fetch issues
-    local issues_json=$(gh issue list --state "$state" --limit "$limit" --json number,title,author,labels,updatedAt 2>/dev/null) || {
+    local issues_json
+    issues_json=$(gh issue list --state "$state" --limit "$limit" --json number,title,author,labels,updatedAt 2>/dev/null) || {
         error_exit "Failed to list issues"
     }
     
     # Count issues
-    local count=$(echo "$issues_json" | jq 'length')
+    local count
+    count=$(echo "$issues_json" | jq 'length')
     echo "ISSUE_COUNT=$count"
     
     if [ "$count" -eq 0 ]; then
@@ -120,7 +131,8 @@ list_issues() {
     echo "$issues_json" | jq -r '.[] | [.number, .title, .author.login, (.labels | map(.name) | join(",")), .updatedAt] | @tsv' | \
     while IFS=$'\t' read -r number title author labels updated; do
         # Format updated date
-        local updated_formatted=$(date -d "$updated" "+%Y-%m-%d %H:%M" 2>/dev/null || echo "$updated")
+        local updated_formatted
+        updated_formatted=$(date -d "$updated" "+%Y-%m-%d %H:%M" 2>/dev/null || echo "$updated")
         
         # Truncate title if too long
         if [ ${#title} -gt 60 ]; then

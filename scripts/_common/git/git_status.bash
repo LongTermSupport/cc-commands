@@ -30,14 +30,17 @@ if git remote -v | grep -q origin; then
     
     # Try to get ahead/behind info
     if [ "$DETACHED" != "true" ]; then
-        local upstream=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "")
+        local upstream
+        upstream=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "")
         
         if [ -n "$upstream" ]; then
             echo "UPSTREAM_SET=true"
             echo "UPSTREAM=$upstream"
             
-            local ahead=$(git rev-list --count @{u}..HEAD 2>/dev/null || echo "0")
-            local behind=$(git rev-list --count HEAD..@{u} 2>/dev/null || echo "0")
+            local ahead
+            ahead=$(git rev-list --count @{u}..HEAD 2>/dev/null || echo "0")
+            local behind
+            behind=$(git rev-list --count HEAD..@{u} 2>/dev/null || echo "0")
             
             echo "COMMITS_AHEAD=$ahead"
             echo "COMMITS_BEHIND=$behind"
@@ -53,10 +56,14 @@ fi
 
 # Get last commit info
 if git rev-parse HEAD >/dev/null 2>&1; then
-    local last_commit=$(git rev-parse --short HEAD)
-    local last_message=$(git log -1 --pretty=%B | head -1)
-    local last_author=$(git log -1 --pretty=%an)
-    local last_date=$(git log -1 --pretty=%ar)
+    local last_commit
+    last_commit=$(git rev-parse --short HEAD)
+    local last_message
+    last_message=$(git log -1 --pretty=%B | head -1)
+    local last_author
+    last_author=$(git log -1 --pretty=%an)
+    local last_date
+    last_date=$(git log -1 --pretty=%ar)
     
     echo "LAST_COMMIT=$last_commit"
     echo "LAST_MESSAGE=$last_message"

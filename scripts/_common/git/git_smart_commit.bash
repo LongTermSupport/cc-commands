@@ -40,11 +40,16 @@ analyze_changes_for_message() {
     echo "NO_CHANGES=false"
     
     # Count change types
-    local added=$(grep -c "^A" "$changes_output" || true)
-    local modified=$(grep -c "^M" "$changes_output" || true)
-    local deleted=$(grep -c "^D" "$changes_output" || true)
-    local renamed=$(grep -c "^R" "$changes_output" || true)
-    local total=$(wc -l < "$changes_output")
+    local added
+    added=$(grep -c "^A" "$changes_output" || true)
+    local modified
+    modified=$(grep -c "^M" "$changes_output" || true)
+    local deleted
+    deleted=$(grep -c "^D" "$changes_output" || true)
+    local renamed
+    renamed=$(grep -c "^R" "$changes_output" || true)
+    local total
+    total=$(wc -l < "$changes_output")
     
     echo "FILES_ADDED=$added"
     echo "FILES_MODIFIED=$modified"
@@ -53,13 +58,15 @@ analyze_changes_for_message() {
     echo "FILES_TOTAL=$total"
     
     # Analyze file types
-    local file_types=$(awk '{print $2}' "$changes_output" | sed 's/.*\.//' | sort | uniq -c | sort -rn | head -5)
+    local file_types
+    file_types=$(awk '{print $2}' "$changes_output" | sed 's/.*\.//' | sort | uniq -c | sort -rn | head -5)
     echo "FILE_TYPES<<EOF"
     echo "$file_types"
     echo "EOF"
     
     # Analyze directories affected
-    local dirs_affected=$(awk '{print $2}' "$changes_output" | xargs -I {} dirname {} | sort | uniq -c | sort -rn | head -5)
+    local dirs_affected
+    dirs_affected=$(awk '{print $2}' "$changes_output" | xargs -I {} dirname {} | sort | uniq -c | sort -rn | head -5)
     echo "DIRS_AFFECTED<<EOF"
     echo "$dirs_affected"
     echo "EOF"
@@ -107,7 +114,8 @@ generate_commit_message() {
     local file_summary=""
     if [ "${FILES_TOTAL:-0}" -eq 1 ]; then
         # Single file - be specific
-        local single_file=$(echo "$CHANGE_DETAILS" | head -1 | awk '{print $2}')
+        local single_file
+        single_file=$(echo "$CHANGE_DETAILS" | head -1 | awk '{print $2}')
         message="$primary_action $single_file"
     else
         # Multiple files - summarize
@@ -154,11 +162,13 @@ execute_commit() {
         echo "COMMIT_SUCCESS=true"
         
         # Get commit hash
-        local commit_hash=$(git rev-parse HEAD)
+        local commit_hash
+        commit_hash=$(git rev-parse HEAD)
         echo "COMMIT_HASH=$commit_hash"
         
         # Get short hash
-        local short_hash=$(git rev-parse --short HEAD)
+        local short_hash
+        short_hash=$(git rev-parse --short HEAD)
         echo "COMMIT_SHORT=$short_hash"
         
         success "Committed as $short_hash: $message"
@@ -179,7 +189,8 @@ main() {
         generate)
             debug "Generating commit message from changes"
             # First analyze
-            local analysis=$(analyze_changes_for_message)
+            local analysis
+            analysis=$(analyze_changes_for_message)
             echo "$analysis"
             echo ""
             # Then generate message
@@ -194,8 +205,10 @@ main() {
             else
                 # Generate and use smart message
                 debug "Generating smart commit message"
-                local analysis=$(analyze_changes_for_message)
-                local message_data=$(generate_commit_message "$analysis")
+                local analysis
+                analysis=$(analyze_changes_for_message)
+                local message_data
+                message_data=$(generate_commit_message "$analysis")
                 
                 # Extract the generated message
                 local generated_message=""

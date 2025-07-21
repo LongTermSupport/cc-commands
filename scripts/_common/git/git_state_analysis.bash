@@ -49,11 +49,16 @@ analyze_changes() {
             echo "CHANGES_COUNT=$change_count"
             
             # Count different types of changes
-            local added=$(echo "$porcelain_output" | grep -c "^A" || true)
-            local modified=$(echo "$porcelain_output" | grep -c "^ M" || true)
-            local deleted=$(echo "$porcelain_output" | grep -c "^ D" || true)
-            local untracked=$(echo "$porcelain_output" | grep -c "^??" || true)
-            local staged=$(echo "$porcelain_output" | grep -c "^[MADRC]" || true)
+            local added
+            added=$(echo "$porcelain_output" | grep -c "^A" || true)
+            local modified
+            modified=$(echo "$porcelain_output" | grep -c "^ M" || true)
+            local deleted
+            deleted=$(echo "$porcelain_output" | grep -c "^ D" || true)
+            local untracked
+            untracked=$(echo "$porcelain_output" | grep -c "^??" || true)
+            local staged
+            staged=$(echo "$porcelain_output" | grep -c "^[MADRC]" || true)
             
             echo "CHANGES_ADDED=$added"
             echo "CHANGES_MODIFIED=$modified"

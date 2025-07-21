@@ -24,14 +24,14 @@ declare -A SCRIPT_OUTPUTS
 capture_script_output() {
     local script_path="$1"
     shift
-    local args="$@"
+    local args=("$@")
     local temp_file=$(mktemp)
     
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "→ Running: ${script_path##*/}"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     
-    if bash "$script_path" $args > "$temp_file" 2>&1; then
+    if bash "$script_path" "${args[@]}" > "$temp_file" 2>&1; then
         cat "$temp_file"
         
         # Extract KEY=value pairs
@@ -58,7 +58,7 @@ capture_script_output() {
 main() {
     local mode="${1:-analyze}"
     shift || true
-    local arguments="$@"
+    local arguments=("$@")
     
     echo "=== CREATE COMMAND ORCHESTRATOR ==="
     echo "MODE=$mode"

@@ -24,7 +24,8 @@ main() {
         echo "✓ Plan file created successfully"
         echo "Location: $plan_file"
         
-        local line_count=$(wc -l < "$plan_file")
+        local line_count
+        line_count=$(wc -l < "$plan_file")
         echo "Size: $line_count lines"
         echo "PLAN_FILE_LINES=$line_count"
         
@@ -32,7 +33,8 @@ main() {
         echo "Tasks in plan:"
         # Show first 10 task lines
         if grep -E "^(\[ \]|\[✓\]|\[⏳\])" "$plan_file" | head -10; then
-            local task_count=$(grep -E "^(\[ \]|\[✓\]|\[⏳\])" "$plan_file" | wc -l)
+            local task_count
+            task_count=$(grep -E "^(\[ \]|\[✓\]|\[⏳\])" "$plan_file" | wc -l)
             echo "PLAN_TASK_COUNT=$task_count"
         else
             echo "No tasks found in plan"

@@ -22,7 +22,8 @@ main() {
     echo "=== Plan File Creation ==="
     
     # Convert title to kebab-case for filename
-    local kebab_title=$(echo "$issue_title" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
+    local kebab_title
+    kebab_title=$(echo "$issue_title" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
     
     # Create plan file path
     local plan_file="CLAUDE/plan/issue-${issue_num}-${kebab_title}.md"

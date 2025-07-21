@@ -28,7 +28,8 @@ find_plan_directory() {
     fi
     
     # Try to find it up to 2 levels deep (case-insensitive)
-    local plan_dir=$(find . -maxdepth 2 -type d -ipath "*/claude/plan" 2>/dev/null | head -1)
+    local plan_dir
+    plan_dir=$(find . -maxdepth 2 -type d -ipath "*/claude/plan" 2>/dev/null | head -1)
     
     if [ -n "$plan_dir" ]; then
         echo "PLAN_DIR=$plan_dir"
@@ -69,8 +70,10 @@ list_plans() {
     # Output plan list with details
     local i=0
     for plan in "${plans[@]}"; do
-        local basename=$(basename "$plan")
-        local modified=$(date -r "$plan" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "unknown")
+        local basename
+        basename=$(basename "$plan")
+        local modified
+        modified=$(date -r "$plan" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "unknown")
         echo "PLAN_${i}_FILE=$plan"
         echo "PLAN_${i}_NAME=$basename"
         echo "PLAN_${i}_MODIFIED=$modified"
@@ -82,8 +85,10 @@ list_plans() {
     info "Recent plans:"
     local count=0
     for plan in "${plans[@]}"; do
-        local basename=$(basename "$plan")
-        local modified=$(date -r "$plan" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "unknown")
+        local basename
+        basename=$(basename "$plan")
+        local modified
+        modified=$(date -r "$plan" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "unknown")
         echo "  $basename - $modified"
         count=$((count + 1))
         [ $count -ge 10 ] && break

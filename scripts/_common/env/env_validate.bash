@@ -43,7 +43,8 @@ check_tool_available() {
 check_github_auth() {
     if gh auth status >/dev/null 2>&1; then
         echo "GH_AUTH=true"
-        local user=$(gh api user --jq .login 2>/dev/null || echo "unknown")
+        local user
+        user=$(gh api user --jq .login 2>/dev/null || echo "unknown")
         echo "GH_USER=$user"
         return 0
     else
@@ -112,7 +113,8 @@ validate_git_environment() {
     fi
     
     # Get git status info
-    local branch=$(git branch --show-current 2>/dev/null || echo "unknown")
+    local branch
+    branch=$(git branch --show-current 2>/dev/null || echo "unknown")
     echo "GIT_BRANCH=$branch"
     
     # Check for uncommitted changes
@@ -145,7 +147,8 @@ validate_github_environment() {
     # Check repo connection
     if gh repo view >/dev/null 2>&1; then
         echo "GH_REPO_CONNECTED=true"
-        local repo=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+        local repo
+        repo=$(gh repo view --json nameWithOwner -q .nameWithOwner)
         echo "GH_REPO=$repo"
         success "Connected to GitHub repository: $repo"
     else

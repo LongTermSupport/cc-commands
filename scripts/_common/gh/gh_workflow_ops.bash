@@ -152,14 +152,16 @@ analyze_workflow_results() {
 wait_for_workflows() {
     local commit_sha="$1"
     local timeout="$2"
-    local start_time=$(date +%s)
+    local start_time
+    start_time=$(date +%s)
     local elapsed=0
     
     info "Waiting for workflows to complete (timeout: ${timeout}s)"
     
     while [ "$elapsed" -lt "$timeout" ]; do
         # Check current status
-        local status_output=$(detect_workflows_for_commit "$commit_sha")
+        local status_output
+        status_output=$(detect_workflows_for_commit "$commit_sha")
         eval "$status_output"
         
         if [ "${MONITORING_NEEDED:-false}" = "false" ]; then
@@ -176,7 +178,8 @@ wait_for_workflows() {
         sleep 10
         
         # Update elapsed time
-        local current_time=$(date +%s)
+        local current_time
+        current_time=$(date +%s)
         elapsed=$((current_time - start_time))
     done
     
@@ -189,7 +192,8 @@ wait_for_workflows() {
 # Main execution
 main() {
     # Resolve commit SHA
-    local sha=$(resolve_commit_sha "$COMMIT_SHA")
+    local sha
+    sha=$(resolve_commit_sha "$COMMIT_SHA")
     
     case "$OPERATION" in
         detect)
