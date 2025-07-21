@@ -17,7 +17,18 @@ Ensure all the following have been read:
 [✓] Update g:command:create to minimize bash calls and generate new structure
 [✓] Migrate g:gh:push to orchestrator pattern (8→2 calls)
 [✓] Migrate g:w:execute to orchestrator pattern
-[ ] Run CI and fix any violations
+[✓] Run CI and fix any violations
+[✓] Add debug backtrace and orphan detection to CI
+[✓] Update plan document with ACTUAL CI findings (not false positives)
+[✓] Move sync_orchestrate.bash to sync/ subdirectory for consistency
+[✓] Add CI enforcement for orchestrator directory structure
+[✓] Update CommandStructure.md with clear orchestrator location rules
+[ ] Migrate g:command:update to orchestrator pattern (4 scripts → 1-2 calls)
+[ ] Migrate g:gh:issue:plan to orchestrator pattern (6 scripts → 1-2 calls)
+[ ] Migrate g:w:plan to orchestrator pattern (4 scripts → 1-2 calls)
+[ ] Check if symfony:create:command needs orchestrator pattern
+[ ] Fix error_handlers.bash shell options (or verify it's intentional)
+[ ] Clean up git deleted files (old scripts before migration)
 [ ] Test all commands to ensure they still work
 
 ## Summary
@@ -233,6 +244,32 @@ source "$SCRIPT_DIR/../../../_inc/error_handler.inc.bash"
 1. Run current CI to baseline violations
 2. Document all current failures
 3. Prioritize fixes by severity
+
+#### CI Findings (Latest Run)
+
+**ACTUAL Missing Scripts (vs CI false positives)**:
+- **False positive**: Common scripts exist (`env_check_tools.bash`, `find_docs.bash`, `detect_version.bash`, `detect_project.bash`)
+- **False positive**: Template placeholders `scripts/g/[namespace]/[command]_*.bash` are not real files
+- **Real issue**: Commands not yet migrated to orchestrator pattern:
+  - g:command:update (references 4 non-existent scripts)
+  - g:gh:issue:plan (references 6 non-existent scripts)  
+  - g:w:plan (references 4 non-existent scripts)
+- **Path issue**: sync.md references wrong path (missing /sync/ subdirectory)
+
+**Orphaned Scripts (39 warnings)**:
+- These are the deleted scripts in git status (old versions before migration)
+- Subdirectory scripts (pre/, analysis/, etc.) are NOT orphaned - they're called by orchestrators
+- Real orphans may exist in _common that aren't used anywhere
+
+**Script Convention Issues (1 warning)**:
+- `error_handlers.bash` missing `set -euo pipefail` (but it sources an include, so this may be intentional)
+
+**Orchestrator Pattern Violations (6 warnings) - VALID**:
+- `update.md`: 4 bash calls, needs orchestrator migration
+- `plan.md` (gh:issue): 6 bash calls, needs orchestrator migration
+- `plan.md` (g:w): 4 bash calls, needs orchestrator migration
+- Multiple sequential git operations detected
+- Analysis->Execute patterns without orchestrator
 
 #### Known Violations to Fix
 

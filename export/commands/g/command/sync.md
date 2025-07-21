@@ -75,7 +75,7 @@ Parse the arguments to determine if help was requested. If the user provided "--
 ## 🚦 Initial Analysis
 
 ### Run Complete Repository Analysis
-!bash .claude/cc-commands/scripts/g/command/sync_orchestrate.bash
+!bash .claude/cc-commands/scripts/g/command/sync/sync_orchestrate.bash
 
 <Task>
 Based on the orchestrator output:
@@ -118,7 +118,7 @@ Show the user what will happen based on the analysis:
 
 ### Complete Sync Execution
 
-!bash .claude/cc-commands/scripts/g/command/sync_orchestrate.bash "$COMMIT_MESSAGE"
+!bash .claude/cc-commands/scripts/g/command/sync/sync_orchestrate.bash "$COMMIT_MESSAGE"
 
 <Task>
 Review the orchestrator output for:

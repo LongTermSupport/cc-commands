@@ -375,41 +375,54 @@ Based on the command requirements, determine if this command needs an orchestrat
 
 ### 🎯 **Optimization Principles**
 
-**1. Script-Based Architecture**
-- Use dedicated bash scripts in `.claude/cc-commands/scripts/` directory
-- Leverage existing common scripts in `_common/` for reusable operations
-- Create command-specific scripts only when needed
+**1. Orchestrator Pattern Architecture (REQUIRED)**
+- Create main orchestrator in `.claude/cc-commands/scripts/g/[namespace]/[command]/[command]_orchestrate.bash`
+- Orchestrator coordinates all operations with minimal bash calls (1-2 total)
+- Sub-scripts organized in phase directories: pre/, analysis/, execute/, post/
+- See @/CLAUDE/CommandStructure.md for complete pattern documentation
 
-**2. Reusable Components**
+**2. Directory Structure**
+```
+scripts/g/[namespace]/[command]/
+├── [command]_orchestrate.bash    # Main orchestrator
+├── pre/                          # Precondition checks
+├── analysis/                     # Information gathering
+├── execute/                      # Main operations
+└── post/                         # Cleanup/summary
+```
+
+**3. Reusable Components**
+- Leverage existing common scripts in `_common/` directory
 - Environment validation: `env_check_tools.bash`, `env_validate.bash`
 - Git operations: `git_operations.bash`, `git_state_analysis.bash`
-- Argument parsing: Use common patterns or create focused scripts
+- Only create new scripts for command-specific logic
 
-**3. Structured Output Format**
+**4. Structured Output Format**
 - Scripts output `KEY=value` format for Claude to parse
-- Avoid complex formatting in bash scripts
-- Use consistent naming conventions
+- Orchestrator aggregates outputs using SCRIPT_OUTPUTS array
+- Consistent variable naming across all scripts
 
-**4. LLM-Based Help System**
+**5. LLM-Based Help System**
 - Use `<Task>` blocks to check for `--help` arguments
 - Provide help content directly in markdown, not bash
 - Never use bash to output help text
 
-**5. Fail-Fast Error Handling**
+**6. Fail-Fast Error Handling**
 - Scripts use `set -euo pipefail` for immediate error termination
-- Provide clear error messages and recovery guidance
-- Use common error handling functions
+- Source error handler: `source "$SCRIPT_DIR/../../../_inc/error_handler.inc.bash"`
+- Use `error_exit` for critical failures requiring immediate stop
 
 ## 🎯 Command Generation Template
 
 <Task>
 Before generating any command, ensure you have read and understood the cc-commands documentation as specified in the "Required Documentation Reading" section above. The generated command MUST follow the current standards for:
 
-1. **Script-based architecture** - Use existing common scripts when possible
-2. **LLM-based help system** - Help content in markdown, not bash
-3. **Structured output** - Scripts output KEY=value pairs
-4. **Error handling** - Use common error handling patterns
-5. **Noise suppression** - Follow established patterns for clean output
+1. **Orchestrator pattern** - Single script coordinates all operations (see @/CLAUDE/CommandStructure.md)
+2. **Minimal bash calls** - Target 1-2 calls per command maximum
+3. **LLM-based help system** - Help content in markdown, not bash
+4. **Structured output** - Scripts output KEY=value pairs
+5. **Error handling** - Use common error handling patterns
+6. **Directory structure** - Orchestrator in subdirectory with phase-based organization
 
 Verify you understand these patterns before proceeding with command generation.
 </Task>
@@ -482,39 +495,28 @@ If the user's arguments are "--help", output the help documentation below and st
 • [What the command will NOT do]
 </help>
 
-## 🔧 Script-Based Implementation
+## 🔄 Initial Analysis Phase
 
-### Environment Validation
-!bash .claude/cc-commands/scripts/_common/env/env_check_tools.bash [required-tools]
+### Complete Analysis and Validation
+!bash .claude/cc-commands/scripts/g/[namespace]/[command]/[command]_orchestrate.bash analyze "$ARGUMENTS"
 
-### Argument Parsing (if complex)
-!bash .claude/cc-commands/scripts/g/[namespace]/[command]_arg_parse.bash "$ARGUMENTS"
-
-### Other Operations
-!bash .claude/cc-commands/scripts/g/[namespace]/[command]_execute.bash "$ARGUMENTS"
-
-
-### Environment Validation
-!bash .claude/cc-commands/scripts/_common/env/env_check_tools.bash [required-tools]
-!bash .claude/cc-commands/scripts/_common/env/env_validate.bash
-
-### System Requirements Status
-**Environment Check Results:**
-- **Required Tool 1:** [Available/Missing]
-- **Required Tool 2:** [Available/Missing]
-- **Authentication:** [Authenticated/Not authenticated]
-- **Working Directory:** [Valid/Invalid]
-
-### Input Validation
 <Task>
-Preparation, research, user interaction
-Validate all inputs before proceeding based on the parsed arguments.
+Based on the orchestrator output:
+1. Check all KEY=value pairs from the output
+2. Verify prerequisites are met (PREREQUISITES_MET=true)
+3. Identify any missing requirements
+4. Store any generated values for later use
+
+If help was requested, it was already shown and we should stop.
 </Task>
 
-## 📊 Analysis Phase
+## 📊 Requirements Validation
 
 <Task>
-Gather information needed for execution and analyze current state.
+Based on the analysis output:
+- If VALIDATION_FAILED=true, explain the specific issues and stop
+- If USER_INPUT_REQUIRED=true, gather the needed information
+- If READY_TO_PROCEED=true, continue to planning
 </Task>
 
 ## 🎯 Execution Planning
@@ -545,16 +547,26 @@ This operation will make the following changes:
 
 **Do you want to proceed?** (yes/no)
 
-## 🔧 Execution Phase
+## 🚀 Execution Phase
+
+### Execute Command Operations
+!bash .claude/cc-commands/scripts/g/[namespace]/[command]/[command]_orchestrate.bash execute "$GENERATED_VALUES"
 
 <Task>
-Execute the planned changes with progress updates and error handling.
+Monitor the execution output:
+1. Track progress indicators
+2. Capture any generated artifacts (file paths, IDs, etc.)
+3. Note any warnings or non-critical issues
+4. If EXECUTION_FAILED=true, provide error details and recovery steps
 </Task>
 
 ## ✅ Verification Phase
 
 <Task>
-Verify changes were applied correctly and run post-execution validation.
+If VERIFICATION_REQUIRED=true from the orchestrator:
+1. Review the changes made
+2. Run any verification commands needed
+3. Confirm expected outcomes match actual results
 </Task>
 
 ## 📈 Results Summary
@@ -573,6 +585,24 @@ If something goes wrong:
 
 ---
 *Command created with Claude Code optimization best practices for maximum efficiency and clarity*
+
+## 📚 Important: Orchestrator Pattern
+
+**This template uses the orchestrator pattern to minimize bash calls:**
+- Single orchestrator script handles all operations
+- Reduces user approval prompts from many to just 1-2
+- Sub-scripts organized in phases: pre/, analysis/, execute/, post/
+- See @/CLAUDE/CommandStructure.md for full documentation
+
+**Directory structure for your command:**
+```
+scripts/g/[namespace]/[command]/
+├── [command]_orchestrate.bash    # Main orchestrator (REQUIRED)
+├── pre/                          # Precondition checks
+├── analysis/                     # Analysis scripts
+├── execute/                      # Execution scripts
+└── post/                         # Cleanup/summary
+```
 </template>
 
 

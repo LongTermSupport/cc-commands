@@ -158,7 +158,7 @@ jobs:
       - name: Run comprehensive CI checks
         run: |
           cd .claude/cc-commands
-          bash .github/ci.bash
+          bash .github/ci.bash -v
 
   documentation-check:
     name: Documentation Check
