@@ -31,6 +31,14 @@ if [ ! -d ".claude" ]; then
     exit 1
 fi
 
+# Check if .git directory exists at the same level as .claude
+if [ ! -d ".git" ]; then
+    print_error "No .git directory found at the project root."
+    print_info "This script requires a Git repository to be initialized in the same directory as .claude"
+    print_info "Please run 'git init' or ensure you're in a Git repository root directory."
+    exit 1
+fi
+
 # Establish absolute paths
 PROJECT_PATH="$(pwd)"
 CLAUDE_PATH="$PROJECT_PATH/.claude"
