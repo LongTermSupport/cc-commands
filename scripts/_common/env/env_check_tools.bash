@@ -9,7 +9,10 @@ IFS=$'\n\t'
 
 # Get script directory for loading other scripts
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../_inc/error_handler.inc.bash"
+
+# Define path to common directory
+COMMON_DIR="$SCRIPT_DIR/.."
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 # Check if no tools specified
 if [ $# -eq 0 ]; then
@@ -45,4 +48,3 @@ else
     error_exit "Missing required tools: ${missing_tools[*]}"
 fi
 
-echo "Script success: ${0##*/}"

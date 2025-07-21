@@ -9,7 +9,10 @@ IFS=$'\n\t'
 
 # Get script directory for loading other scripts
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../_inc/error_handler.inc.bash"
+
+# Define path to common directory
+COMMON_DIR="$SCRIPT_DIR/.."
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 # Fetch issue details
 fetch_issue() {
@@ -195,4 +198,3 @@ case "$OPERATION" in
         ;;
 esac
 
-echo "Script success: ${0##*/}"

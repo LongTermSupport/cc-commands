@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMMON_DIR="$SCRIPT_DIR/.."
 
 # Load common error handling
-source "$COMMON_DIR/../_inc/error_handler.inc.bash"
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 # Function to detect PHP version from composer.json
 detect_composer_php() {
@@ -169,4 +169,3 @@ main
 
 echo "# PHP version detection completed"
 echo "Script success: ${0##*/}"
-exit 0

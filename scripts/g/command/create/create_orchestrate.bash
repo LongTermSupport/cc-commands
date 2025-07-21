@@ -9,10 +9,13 @@ IFS=$'\n\t'
 
 # Script paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Define path to common directory
+COMMON_DIR="$SCRIPT_DIR/../../../_common"
 COMMAND_DIR="$SCRIPT_DIR"
 
 # Source error handler include
-source "$SCRIPT_DIR/../../../_inc/error_handler.inc.bash"
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 # Store outputs from sub-scripts
 declare -A SCRIPT_OUTPUTS
@@ -105,13 +108,13 @@ main() {
             fi
             
             # Create the command file
-            capture_script_output "$COMMAND_DIR/execute/create_command.bash" "$command_name" "$command_content" || {
+            capture_script_output "$COMMAND_DIR/execute/command.bash" "$command_name" "$command_content" || {
                 error_exit "Failed to create command file"
             }
             
             # Create any needed scripts if following orchestrator pattern
             if [ -n "$scripts_needed" ] && [ "$scripts_needed" != "none" ]; then
-                capture_script_output "$COMMAND_DIR/execute/create_scripts.bash" "$command_name" "$scripts_needed" || {
+                capture_script_output "$COMMAND_DIR/execute/scripts.bash" "$command_name" "$scripts_needed" || {
                     error_exit "Failed to create command scripts"
                 }
             fi
@@ -133,4 +136,3 @@ main() {
 }
 
 main "$@"
-echo "Script success: ${0##*/}"

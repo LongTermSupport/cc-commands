@@ -81,10 +81,10 @@ IFS=$'\n\t'
 # Script paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMMON_DIR="$SCRIPT_DIR/../../../_common"
-COMMAND_DIR="$SCRIPT_DIR/{command_name}"
+COMMAND_DIR="$SCRIPT_DIR"
 
-# Load common scripts
-source "$COMMON_DIR/error/error_handlers.bash"
+# Source error handler include
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 # Store outputs from sub-scripts
 declare -A SCRIPT_OUTPUTS
@@ -303,6 +303,85 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "=== FINAL STATE ==="
 echo "KEY1=value1"
 echo "KEY2=value2"
+```
+
+## Error Handler Sourcing Pattern
+
+### CRITICAL: Consistent Error Handler Sourcing
+
+All scripts MUST follow this pattern for sourcing the error handler:
+
+1. **Define COMMON_DIR** based on script location
+2. **Source from** `$COMMON_DIR/_inc/error_handler.inc.bash`
+
+The error handler is located at `scripts/_common/_inc/error_handler.inc.bash`, so COMMON_DIR must point to `scripts/_common/`.
+
+### COMMON_DIR Calculation by Location
+
+```bash
+# From scripts/_common/env/
+COMMON_DIR="$SCRIPT_DIR/.."
+
+# From scripts/_common/git/
+COMMON_DIR="$SCRIPT_DIR/.."
+
+# From scripts/g/command/{name}/
+COMMON_DIR="$SCRIPT_DIR/../../../_common"
+
+# From scripts/g/command/{name}/pre/
+COMMON_DIR="$SCRIPT_DIR/../../../../_common"
+
+# From scripts/g/command/{name}/analysis/
+COMMON_DIR="$SCRIPT_DIR/../../../../_common"
+
+# From scripts/g/gh/{name}/
+COMMON_DIR="$SCRIPT_DIR/../../../_common"
+
+# From scripts/g/gh/{name}/analysis/
+COMMON_DIR="$SCRIPT_DIR/../../../../_common"
+```
+
+### Standard Script Header
+
+Every bash script should start with:
+
+```bash
+#!/usr/bin/env bash
+# Script: [name].bash
+# Purpose: [description]
+# Usage: [usage]
+# Output: [output format]
+
+set -euo pipefail
+IFS=$'\n\t'
+
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Define COMMON_DIR based on location (see table above)
+COMMON_DIR="$SCRIPT_DIR/../../../../_common"  # Adjust based on location
+
+# Source error handler include
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
+```
+
+### Common Mistakes to Avoid
+
+❌ **WRONG**: Sourcing from non-existent paths
+```bash
+source "$SCRIPT_DIR/_inc/error_handler.inc.bash"  # Wrong - no _inc in script dir
+source "$SCRIPT_DIR/../../_inc/error_handler.inc.bash"  # Wrong - _inc is under _common
+```
+
+❌ **WRONG**: Not defining COMMON_DIR
+```bash
+source "../../../_common/_inc/error_handler.inc.bash"  # Wrong - use COMMON_DIR variable
+```
+
+✅ **CORRECT**: Define COMMON_DIR, then source
+```bash
+COMMON_DIR="$SCRIPT_DIR/../../../../_common"
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 ```
 
 ## When to Use This Pattern
@@ -583,6 +662,202 @@ done
 - **Orchestrator**: Handles migration workflow
 - **Phases**: backup → validate → migrate → verify → cleanup
 - **Bash calls**: 1 for dry-run analysis, 1 for execution
+
+## Conversion Guide for Existing Commands
+
+### Quick Reference for Common Conversions
+
+When converting existing commands to use the orchestrator pattern:
+
+#### Environment Checks
+**Before (inline bash):**
+```bash
+!test -d .git && echo "✓ Git repository found" || exit 1
+!which gh >/dev/null 2>&1 && echo "✓ gh CLI available" || exit 1
+```
+
+**After (using scripts):**
+```bash
+# In orchestrator or sub-script:
+bash "$COMMON_DIR/env/env_validate.bash" all
+bash "$COMMON_DIR/env/env_check_tools.bash" git gh
+```
+
+#### Git Operations
+**Before (inline bash):**
+```bash
+!BRANCH=$(git branch --show-current) && echo "Current branch: $BRANCH"
+!git add . && git commit -m "message" && git push
+```
+
+**After (using scripts):**
+```bash
+# In orchestrator:
+capture_script_output "$COMMON_DIR/git/git_state_analysis.bash" summary
+# Access via SCRIPT_OUTPUTS["BRANCH"]
+
+capture_script_output "$COMMON_DIR/git/git_operations.bash" commit "message"
+capture_script_output "$COMMON_DIR/git/git_operations.bash" push
+```
+
+### Identifying Conversion Candidates
+
+Commands should be converted to orchestrator pattern when they have:
+
+1. **Heavy Bash Usage** (>30% of file)
+   - Multiple bash blocks doing related operations
+   - Complex conditional logic in bash
+   - Loops and workflow monitoring
+
+2. **Repeated Patterns**
+   - Environment validation checks
+   - Git operations (status, commit, push)
+   - File discovery and processing
+   - GitHub API interactions
+
+3. **Performance Issues**
+   - Multiple subprocess calls
+   - Redundant operations
+   - Excessive output
+
+### Migration Process
+
+1. **Analyze Current Command**
+   - Count bash blocks: `grep -c "^!" command.md`
+   - Identify repeated patterns
+   - Map data flow between operations
+
+2. **Design Script Architecture**
+   - Map operations to orchestrator phases (pre/, analysis/, execute/, post/)
+   - Identify reusable common scripts
+   - Plan state management via SCRIPT_OUTPUTS
+
+3. **Implement Orchestrator**
+   - Use the template provided earlier
+   - Move logic to appropriate sub-scripts
+   - Ensure proper error handling
+
+4. **Update Command File**
+   - Replace multiple bash calls with orchestrator calls
+   - Move complex logic to Task blocks
+   - Test thoroughly
+
+### Expected Improvements
+
+After conversion to orchestrator pattern:
+- **40-60%** reduction in command file size
+- **70-80%** reduction in subprocess calls
+- **30-50%** faster execution
+- **60-80%** less output noise
+- Better error messages
+- Improved maintainability
+
+## Noise Suppression Patterns
+
+### Managing Output for Clean Context
+
+Use these patterns to reduce context bloat while maintaining useful diagnostics:
+
+```bash
+# From _inc/error_handler.inc.bash:
+
+# Pattern 1: Capture output, show only on failure
+run_with_output() {
+    local cmd="$1"
+    local error_msg="${2:-Command failed}"
+    local output_file=$(mktemp)
+    
+    if eval "$cmd" > "$output_file" 2>&1; then
+        rm -f "$output_file"
+        return 0
+    else
+        local exit_code=$?
+        echo "ERROR: $error_msg" >&2
+        echo "Command output:" >&2
+        cat "$output_file" >&2
+        rm -f "$output_file"
+        return $exit_code
+    fi
+}
+
+# Usage in scripts:
+run_with_output "npm install" "Failed to install dependencies"
+run_with_output "git fetch --all --prune" "Failed to fetch from remotes"
+
+# Pattern 2: Silent execution
+silent_run() {
+    "$@" >/dev/null 2>&1
+}
+
+# Usage:
+if silent_run "git diff --quiet"; then
+    echo "NO_CHANGES=true"
+else
+    echo "CHANGES_EXIST=true"
+fi
+```
+
+### Progressive Disclosure
+
+Provide summary by default, details on request:
+
+```bash
+# In sub-scripts:
+MODE="${1:-summary}"
+
+case "$MODE" in
+    summary)
+        echo "CHANGES_EXIST=$changes_exist"
+        echo "FILES_COUNT=$file_count"
+        ;;
+    detailed)
+        echo "CHANGES_EXIST=$changes_exist"
+        echo "FILES_COUNT=$file_count"
+        echo "FILES<<EOF"
+        git diff --name-only
+        echo "EOF"
+        ;;
+esac
+```
+
+## Script Quality Checklist
+
+When creating or reviewing scripts:
+
+- [ ] Single responsibility - does one thing well
+- [ ] Clear KEY=value output format
+- [ ] Proper error handling with context
+- [ ] Noise suppression for verbose operations
+- [ ] No side effects unless intended
+- [ ] Idempotent - safe to run multiple times
+- [ ] Well-documented header with usage
+- [ ] Handles edge cases (empty results, missing files)
+- [ ] Validates inputs before using
+- [ ] Returns appropriate exit codes
+
+## Common Scripts Reference
+
+The `_common/` directory provides reusable functionality. Key scripts include:
+
+### Environment & Validation
+- `env/env_validate.bash` - Comprehensive environment checks
+- `env/env_check_tools.bash` - Verify required CLI tools
+
+### Git Operations
+- `git/git_state_analysis.bash` - Repository state (summary/detailed modes)
+- `git/git_operations.bash` - Safe git operations (commit, push, pull)
+- `git/git_smart_commit.bash` - Intelligent commit message generation
+
+### File Operations
+- `file/file_find_plans.bash` - Find and analyze plan files
+- `file/find_docs.bash` - Locate documentation
+
+### GitHub Integration
+- `gh/gh_issue_ops.bash` - Issue operations
+- `gh/gh_workflow_monitor.bash` - Actions monitoring
+- `gh/gh_workflow_ops.bash` - Workflow operations
+
+For complete documentation of all common scripts, see [/CLAUDE/CommonScripts.md](/CLAUDE/CommonScripts.md).
 
 ## Conclusion
 

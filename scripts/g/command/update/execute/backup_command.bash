@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMMON_DIR="$SCRIPT_DIR/../../../../_common"
 
 # Load common scripts
-source "$COMMON_DIR/../_inc/error_handler.inc.bash"
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 # Arguments
 ARGUMENTS="${1:-}"
@@ -46,4 +46,3 @@ main() {
 }
 
 main
-echo "Script success: ${0##*/}"

@@ -9,7 +9,10 @@ IFS=$'\n\t'
 
 # Get script directory for loading other scripts
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../_inc/error_handler.inc.bash"
+
+# Define path to common directory
+COMMON_DIR="$SCRIPT_DIR/.."
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 source "$SCRIPT_DIR/git_operations.bash"
 
 # Main status gathering
@@ -71,4 +74,3 @@ else
     success "Working tree is clean"
 fi
 
-echo "Script success: ${0##*/}"

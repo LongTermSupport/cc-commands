@@ -9,10 +9,10 @@ IFS=$'\n\t'
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMMON_DIR="$SCRIPT_DIR/../../../../../../_common"
+COMMON_DIR="$SCRIPT_DIR/../../../../_common"
 
 # Source error handler
-source "$SCRIPT_DIR/../../../../../../_inc/error_handler.inc.bash"
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 main() {
     echo "✓ Validating GitHub environment and project setup"
@@ -83,4 +83,3 @@ main() {
 }
 
 main
-echo "Script success: ${0##*/}"

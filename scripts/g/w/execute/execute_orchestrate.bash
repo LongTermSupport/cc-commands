@@ -13,7 +13,7 @@ COMMAND_DIR="$SCRIPT_DIR"
 COMMON_DIR="$SCRIPT_DIR/../../../_common"
 
 # Source error handler include
-source "$SCRIPT_DIR/../../../_inc/error_handler.inc.bash"
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 # Store outputs from sub-scripts
 declare -A SCRIPT_OUTPUTS
@@ -162,4 +162,3 @@ main() {
 }
 
 main "$@"
-echo "Script success: ${0##*/}"

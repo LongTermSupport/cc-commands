@@ -117,11 +117,11 @@ All scripts MUST define paths to required directories:
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # For including sourced files
-source "$SCRIPT_DIR/../_inc/error_handler.bash"  # Adjust ../ based on script depth
+source "$SCRIPT_DIR/../_inc/error_handler.inc.bash"  # Adjust ../ based on script depth
 
 # For delegating to common scripts
 COMMON_DIR="$SCRIPT_DIR/../../_common"  # Adjust path depth as needed
-bash "$COMMON_DIR/git/status_analysis.bash"
+bash "$COMMON_DIR/git/git_state_analysis.bash"
 ```
 
 **Path Examples**:
@@ -327,39 +327,89 @@ check_github_auth() {
 ### Environment Validation
 
 ```bash
-#!/bin/bash
+#!/usr/bin/env bash
 # Check for required tools and environment
 
-source "$(dirname "$0")/../_common/env/base-checks.sh"
+set -euo pipefail
+IFS=$'\n\t'
 
-validate_environment() {
-    check_git_repository || error_exit "Not in a git repository"
-    check_tool_available "gh" || error_exit "GitHub CLI not installed"
-    check_github_auth || error_exit "Not authenticated with GitHub"
-}
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../_inc/error_handler.inc.bash"
+
+# Execute common validation scripts
+bash "$SCRIPT_DIR/../_common/env/env_validate.bash" all || error_exit "Environment validation failed"
+bash "$SCRIPT_DIR/../_common/env/env_check_tools.bash" git gh || error_exit "Required tools missing"
 ```
 
-### Composable Scripts
+### Orchestrator Pattern Example
 
-Scripts should be designed to work together:
+For complex commands, use an orchestrator to coordinate multiple operations:
 
 ```bash
 #!/usr/bin/env bash
-# Main command script
+# Script: sync_orchestrate.bash
+# Purpose: Orchestrate complete sync workflow
+# Usage: sync_orchestrate.bash [mode]
+# Output: Structured output with execution results
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-COMMON_DIR="$SCRIPT_DIR/../_common"
+set -euo pipefail
+IFS=$'\n\t'
 
-# Load common scripts
-source "$COMMON_DIR/env/env_validate.bash"
-source "$COMMON_DIR/git/git_operations.bash"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../../../../_inc/error_handler.inc.bash"
 
-# Validate environment first
-validate_git_environment
+# Store outputs from sub-scripts
+declare -A SCRIPT_OUTPUTS
 
-# Perform git operations
-git_get_current_branch
-git_check_changes
+# Function to capture and parse script outputs
+capture_script_output() {
+    local script_path="$1"
+    shift
+    local args="$@"
+    local temp_file=$(mktemp)
+    
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "→ Running: ${script_path##*/}"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    
+    if bash "$script_path" $args > "$temp_file" 2>&1; then
+        cat "$temp_file"
+        
+        # Extract KEY=value pairs
+        while IFS= read -r line; do
+            if [[ "$line" =~ ^([A-Z_]+)=(.*)$ ]]; then
+                SCRIPT_OUTPUTS["${BASH_REMATCH[1]}"]="${BASH_REMATCH[2]}"
+            fi
+        done < "$temp_file"
+    else
+        local exit_code=$?
+        cat "$temp_file" >&2
+        rm -f "$temp_file"
+        return $exit_code
+    fi
+    
+    rm -f "$temp_file"
+    echo ""
+}
+
+# Main orchestration logic
+MODE="${1:-analyze}"
+
+case "$MODE" in
+    analyze)
+        capture_script_output "$SCRIPT_DIR/pre/env_validate.bash" || error_exit "Environment validation failed"
+        capture_script_output "$SCRIPT_DIR/analysis/status_analysis.bash" || error_exit "Status analysis failed"
+        echo "ANALYSIS_COMPLETE=true"
+        ;;
+    execute)
+        # Execute based on previous analysis
+        if [[ "${SCRIPT_OUTPUTS[CHANGES_EXIST]:-false}" == "true" ]]; then
+            capture_script_output "$SCRIPT_DIR/git/commit_execute.bash" "${2:-}" || error_exit "Commit failed"
+        fi
+        capture_script_output "$SCRIPT_DIR/git/push_execute.bash" || error_exit "Push failed"
+        echo "EXECUTION_COMPLETE=true"
+        ;;
+esac
 
 echo "Script success: ${0##*/}"
 ```
@@ -610,6 +660,26 @@ else
 fi
 ```
 
+## Orchestrator Pattern
+
+For commands with multiple operations, use the orchestrator pattern to minimize bash calls. See [/CLAUDE/CommandStructure.md](/CLAUDE/CommandStructure.md) for the complete guide.
+
+### Quick Example
+Instead of multiple bash calls in a command:
+```markdown
+!bash validate.bash
+!bash analyze.bash  
+!bash commit.bash
+!bash push.bash
+```
+
+Use a single orchestrator:
+```markdown
+!bash sync_orchestrate.bash
+```
+
+The orchestrator handles all operations internally, reducing user approval prompts from 4 to 1.
+
 ## Example Complete Script
 
 ```bash
@@ -624,18 +694,16 @@ IFS=$'\n\t'
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMMON_DIR="$SCRIPT_DIR/../_common"
 
-# Load common scripts
-source "$COMMON_DIR/error/error_handlers.bash"
-source "$COMMON_DIR/env/env_validate.bash"
+# Source error handler from _inc
+source "$SCRIPT_DIR/../_inc/error_handler.inc.bash"
 
 # Arguments
 PLAN_NAME="${1:-}"
 
 # Validate environment with noise suppression
 info "Validating environment..."
-if run_with_output "validate_git_environment" "Environment validation failed"; then
+if run_with_output "bash $SCRIPT_DIR/../_common/env/env_validate.bash all" "Environment validation failed"; then
     echo "ENVIRONMENT_VALID=true"
 else
     exit 1
@@ -662,3 +730,21 @@ fi
 echo "Script success: ${0##*/}"
 exit 0
 ```
+
+## Migration Notes
+
+### Old Patterns → New Patterns
+
+1. **Error Handling**
+   - Old: `source "$COMMON_DIR/error/error_handlers.bash"`
+   - New: `source "$SCRIPT_DIR/../_inc/error_handler.inc.bash"`
+
+2. **Git Status**
+   - Old: `git_status.bash`
+   - New: `git_state_analysis.bash`
+
+3. **Multiple Bash Calls**
+   - Old: Multiple individual script calls in commands
+   - New: Single orchestrator script that coordinates operations
+
+For detailed migration guidance, see the Conversion Guide section in [/CLAUDE/CommandStructure.md](/CLAUDE/CommandStructure.md).

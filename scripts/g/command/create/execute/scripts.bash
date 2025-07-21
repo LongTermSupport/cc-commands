@@ -10,8 +10,11 @@ IFS=$'\n\t'
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Define path to common directory
+COMMON_DIR="$SCRIPT_DIR/../../../../_common"
+
 # Source error handler include
-source "$SCRIPT_DIR/../../../../_inc/error_handler.inc.bash"
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 # Arguments
 COMMAND_NAME="${1:-}"
@@ -57,10 +60,13 @@ IFS=$'\n\t'
 
 # Script paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Define path to common directory
+COMMON_DIR="$SCRIPT_DIR/../../../../_common"
 COMMAND_DIR="$SCRIPT_DIR"
 
 # Source error handler include
-source "$SCRIPT_DIR/../../../_inc/error_handler.inc.bash"
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 # Store outputs from sub-scripts
 declare -A SCRIPT_OUTPUTS
@@ -154,8 +160,11 @@ IFS=$'\n\t'
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Define path to common directory
+COMMON_DIR="$SCRIPT_DIR/../../../../_common"
+
 # Source error handler include
-source "$SCRIPT_DIR/../../../../../_inc/error_handler.inc.bash"
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 main() {
     echo "✓ Validating environment"
@@ -176,4 +185,3 @@ EOF
 }
 
 main
-echo "Script success: ${0##*/}"

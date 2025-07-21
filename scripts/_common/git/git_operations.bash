@@ -9,7 +9,10 @@ IFS=$'\n\t'
 
 # Get script directory for loading other scripts
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../_inc/error_handler.inc.bash"
+
+# Define path to common directory
+COMMON_DIR="$SCRIPT_DIR/.."
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 # Get current branch name
 git_get_current_branch() {
@@ -222,4 +225,3 @@ if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
     esac
     
     echo "Script success: ${0##*/}"
-fi

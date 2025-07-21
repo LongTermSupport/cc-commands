@@ -9,11 +9,11 @@ IFS=$'\n\t'
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMMON_DIR="$SCRIPT_DIR/../../_common"
+COMMON_DIR="$SCRIPT_DIR/../../../_common"
 SYNC_DIR="$SCRIPT_DIR/sync"
 
 # Load common scripts
-source "$COMMON_DIR/../_inc/error_handler.inc.bash"
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 # Variable to store outputs from sub-scripts
 declare -A SCRIPT_OUTPUTS
@@ -143,4 +143,3 @@ main() {
 
 # Execute main function with optional commit message parameter
 main "$@"
-echo "Script success: ${0##*/}"

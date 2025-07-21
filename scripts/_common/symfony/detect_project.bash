@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMMON_DIR="$SCRIPT_DIR/.."
 
 # Load common error handling
-source "$COMMON_DIR/../_inc/error_handler.inc.bash"
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 # Function to detect Symfony from composer.json
 detect_symfony_composer() {
@@ -241,4 +241,3 @@ main
 
 echo "# Symfony project detection completed"
 echo "Script success: ${0##*/}"
-exit 0

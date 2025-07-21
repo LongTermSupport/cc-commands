@@ -9,7 +9,10 @@ IFS=$'\n\t'
 
 # Get script directory for loading other scripts
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../../_inc/error_handler.inc.bash"
+
+# Define path to common directory
+COMMON_DIR="$SCRIPT_DIR/.."
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 # Check if we're in a git repository
 check_git_repository() {
@@ -193,4 +196,3 @@ validate_all() {
 }
 
 # Make functions available for scripts that source this file
-debug "Environment validation functions loaded"

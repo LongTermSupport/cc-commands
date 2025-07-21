@@ -1,6 +1,6 @@
 # Include: error_handler.inc.bash
 # Purpose: Common error handling functions to be sourced by scripts
-# Usage: source "$SCRIPT_DIR/../_inc/error_handler.inc.bash"
+# Usage: source "$SCRIPT_DIR/_inc/error_handler.inc.bash"
 # Note: This file is meant to be SOURCED, not executed
 # WARNING: Do not set shell options (set -e, etc) or IFS in include files!
 

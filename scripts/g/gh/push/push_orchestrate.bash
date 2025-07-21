@@ -13,7 +13,7 @@ COMMAND_DIR="$SCRIPT_DIR"
 COMMON_DIR="$SCRIPT_DIR/../../../_common"
 
 # Source error handler include
-source "$SCRIPT_DIR/../../../_inc/error_handler.inc.bash"
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 # Store outputs from sub-scripts
 declare -A SCRIPT_OUTPUTS
@@ -76,14 +76,14 @@ main() {
             local changes_exist="${SCRIPT_OUTPUTS[CHANGES_EXIST]:-false}"
             local push_needed="${SCRIPT_OUTPUTS[PUSH_NEEDED]:-false}"
             
-            capture_script_output "$COMMAND_DIR/analysis/push_decision.bash" "$changes_exist" "$push_needed" || {
+            capture_script_output "$COMMAND_DIR/analysis/decision.bash" "$changes_exist" "$push_needed" || {
                 error_exit "Push decision analysis failed"
             }
             
             # Step 4: Commit message preparation (if needed)
             local action="${SCRIPT_OUTPUTS[ACTION]:-none}"
             if [ "$action" = "commit_and_push" ]; then
-                capture_script_output "$COMMAND_DIR/analysis/push_commit_message.bash" "$action" || {
+                capture_script_output "$COMMAND_DIR/analysis/commit_message.bash" "$action" || {
                     error_exit "Commit message preparation failed"
                 }
             fi
@@ -111,7 +111,7 @@ main() {
             
             # Execute git operations
             if [ "$action" != "none" ]; then
-                capture_script_output "$COMMAND_DIR/execute/push_execute_git.bash" "$action" "$commit_message" || {
+                capture_script_output "$COMMAND_DIR/execute/execute_git.bash" "$action" "$commit_message" || {
                     error_exit "Git execution failed"
                 }
                 
@@ -134,7 +134,7 @@ main() {
                     fi
                     
                     # Final status check
-                    capture_script_output "$COMMAND_DIR/post/push_final_status.bash" "$pushed_commit" "$push_result" || {
+                    capture_script_output "$COMMAND_DIR/post/final_status.bash" "$pushed_commit" "$push_result" || {
                         warn "Final status check failed"
                     }
                 fi
@@ -152,4 +152,3 @@ main() {
 }
 
 main "$@"
-echo "Script success: ${0##*/}"

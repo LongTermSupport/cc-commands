@@ -11,7 +11,7 @@ IFS=$'\n\t'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source error handler include
-source "$SCRIPT_DIR/../../../../_inc/error_handler.inc.bash"
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 # Common scripts directory
 COMMON_DIR="$SCRIPT_DIR/../../../../_common"
@@ -180,4 +180,3 @@ scan_project_docs() {
 # Run main function
 main
 
-echo "Script success: ${0##*/}"

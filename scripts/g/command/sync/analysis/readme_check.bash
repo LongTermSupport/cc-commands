@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMMON_DIR="$SCRIPT_DIR/../../../../_common"
 
 # Load common scripts
-source "$SCRIPT_DIR/../../../../_inc/error_handler.inc.bash"
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 main() {
     echo "✓ Checking README.md currency"
@@ -93,4 +93,3 @@ main() {
 }
 
 main
-echo "Script success: ${0##*/}"

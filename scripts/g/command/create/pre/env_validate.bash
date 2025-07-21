@@ -10,8 +10,11 @@ IFS=$'\n\t'
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Define path to common directory
+COMMON_DIR="$SCRIPT_DIR/../../../../_common"
+
 # Source error handler include
-source "$SCRIPT_DIR/../../../../_inc/error_handler.inc.bash"
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 main() {
     echo "✓ Validating environment for command creation"
@@ -67,4 +70,3 @@ main() {
 }
 
 main
-echo "Script success: ${0##*/}"

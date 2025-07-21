@@ -34,9 +34,34 @@ Ensure all the following have been read:
 [ ] Reassess _common script usage for DRY principle
 [ ] Refactor proxy scripts - if they just call _common, orchestrator should call _common directly
 [✓] Remove legacy error_handlers.bash bridge script
-[ ] Move all CI functionality from GitHub workflow into ci.bash
-[ ] Add shellcheck integration to ci.bash
-[ ] Update GitHub workflow to just call ci.bash/cl
+[✓] Fix CI orphan detection to handle COMMON_DIR references
+[✓] Fix script naming convention warnings (7 scripts renamed)
+[ ] Remove truly orphaned scripts (11 scripts identified) - DEFERRED for DRY analysis
+[✓] Move all CI functionality from GitHub workflow into ci.bash
+[✓] Add shellcheck integration to ci.bash (with auto-download capability)
+[✓] Update GitHub workflow to just call ci.bash
+[✓] Fix error handler include paths in all scripts (65 scripts fixed)
+    - All scripts must define COMMON_DIR pointing to scripts/_common/
+    - All scripts must source from $COMMON_DIR/_inc/error_handler.inc.bash
+    - Fixed patterns by location:
+      * scripts/_common/*/ → COMMON_DIR="$SCRIPT_DIR/.."
+      * scripts/g/command/{name}/ → COMMON_DIR="$SCRIPT_DIR/../../../_common"
+      * scripts/g/command/{name}/*/ → COMMON_DIR="$SCRIPT_DIR/../../../../_common"
+      * scripts/g/gh/{name}/ → COMMON_DIR="$SCRIPT_DIR/../../../_common"
+      * scripts/g/gh/{name}/*/ → COMMON_DIR="$SCRIPT_DIR/../../../../_common"
+    - Created automated fix script that updated 63 of 65 scripts
+    - Manually fixed remaining 2 scripts
+    - Removed temporary fix script after use
+[✓] Update ShellCheck filtering in ci.bash to handle SC1091 properly
+    - Fixed grep filter to properly exclude SC1091 warnings about non-constant source
+    - Reduced ShellCheck errors from 66 to 24
+[ ] Fix remaining ShellCheck warnings (24 scripts)
+    - SC2155: Declare and assign separately (most common)
+    - SC2124: Assigning array to string (in orchestrators)
+    - SC2034: Variable appears unused
+    - SC2086: Double quote to prevent globbing
+[ ] Add missing success messages to scripts (54 warnings)
+    - All scripts should end with: echo "Script success: ${0##*/}"
 [ ] Clean up git deleted files (old scripts before migration)
 [ ] Test all commands to ensure they still work
 

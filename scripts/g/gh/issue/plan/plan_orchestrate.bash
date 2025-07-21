@@ -9,11 +9,11 @@ IFS=$'\n\t'
 
 # Script paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMMON_DIR="$SCRIPT_DIR/../../../../../_common"
+COMMON_DIR="$SCRIPT_DIR/../../../../_common"
 PLAN_DIR="$SCRIPT_DIR"
 
 # Source error handler
-source "$SCRIPT_DIR/../../../../../_inc/error_handler.inc.bash"
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 # Store outputs from sub-scripts
 declare -A SCRIPT_OUTPUTS
@@ -158,4 +158,3 @@ main() {
 }
 
 main "$@"
-echo "Script success: ${0##*/}"

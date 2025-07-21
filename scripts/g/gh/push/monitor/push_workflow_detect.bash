@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMMON_DIR="$SCRIPT_DIR/../../../../_common"
 
 # Load common scripts
-source "$SCRIPT_DIR/../../../../_inc/error_handler.inc.bash"
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 
 main() {
     local push_result="$1"
@@ -48,4 +48,3 @@ if [ $# -lt 2 ]; then
 fi
 
 main "$1" "$2"
-echo "Script success: ${0##*/}"

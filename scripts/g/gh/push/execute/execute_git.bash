@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMMON_DIR="$SCRIPT_DIR/../../../../_common"
 
 # Load common scripts
-source "$SCRIPT_DIR/../../../../_inc/error_handler.inc.bash"
+source "$COMMON_DIR/_inc/error_handler.inc.bash"
 # Note: git_smart_commit.bash will be executed when needed, not sourced
 
 # Arguments
@@ -133,4 +133,3 @@ if [ "$ACTION" != "none" ]; then
 fi
 
 echo "Script success: ${0##*/}"
-exit 0

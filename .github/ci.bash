@@ -246,8 +246,8 @@ check_include_files() {
     
     info "Checking include file conventions..."
     
-    # Check _inc directory
-    if [ -d "scripts/_inc" ]; then
+    # Check _inc directory (now inside _common)
+    if [ -d "scripts/_common/_inc" ]; then
         while IFS= read -r file; do
             local filename=$(basename "$file")
             
@@ -285,7 +285,7 @@ check_include_files() {
                 has_issues=true
             fi
             
-        done < <(find scripts/_inc -name "*.bash" -type f 2>/dev/null)
+        done < <(find scripts/_common/_inc -name "*.bash" -type f 2>/dev/null)
     fi
     
     # Check for .bash files in _inc that don't have .inc.bash suffix
@@ -295,7 +295,7 @@ check_include_files() {
                 error "$file: All files in _inc/ must use .inc.bash suffix"
                 has_issues=true
             fi
-        done < <(find scripts/_inc -name "*.bash" -type f 2>/dev/null)
+        done < <(find scripts/_common/_inc -name "*.bash" -type f 2>/dev/null)
     fi
     
     if [ "$has_issues" = false ]; then
@@ -432,8 +432,14 @@ check_orphaned_scripts() {
         while IFS= read -r line; do
             if [[ "$line" =~ capture_script_output[[:space:]]+\"?\$[^/]+/([^\"[:space:]]+)\"? ]]; then
                 local sub_path="${BASH_REMATCH[1]}"
-                # Construct full path relative to scripts/
-                local full_path="${orch_dir#./}/${sub_path}"
+                # Check if it's a COMMON_DIR reference
+                if [[ "$line" =~ \$COMMON_DIR ]]; then
+                    # For COMMON_DIR, the path is relative to scripts/_common/
+                    local full_path="scripts/_common/${sub_path}"
+                else
+                    # For COMMAND_DIR, construct full path relative to orchestrator
+                    local full_path="${orch_dir#./}/${sub_path}"
+                fi
                 referenced_scripts+=("$full_path")
                 debug "Orchestrator $orchestrator calls: $full_path"
             fi
@@ -666,6 +672,233 @@ check_orchestrator_structure() {
     return 0
 }
 
+# Check 11: Run ShellCheck on all scripts
+check_shellcheck() {
+    local has_issues=false
+    
+    info "Running ShellCheck on all scripts..."
+    
+    # Check if shellcheck is available
+    if ! command -v shellcheck &> /dev/null; then
+        info "ShellCheck not found. Attempting to download..."
+        
+        # Try to download shellcheck binary
+        local shellcheck_version="v0.9.0"
+        local shellcheck_dir="/tmp/shellcheck-$$"
+        local shellcheck_binary="$shellcheck_dir/shellcheck"
+        
+        mkdir -p "$shellcheck_dir"
+        
+        # Detect architecture
+        local arch=$(uname -m)
+        local os=$(uname -s | tr '[:upper:]' '[:lower:]')
+        local platform=""
+        
+        case "$os" in
+            linux)
+                case "$arch" in
+                    x86_64) platform="linux.x86_64" ;;
+                    aarch64) platform="linux.aarch64" ;;
+                    *) 
+                        warning "Unsupported architecture: $arch. Skipping shellcheck."
+                        return 0
+                        ;;
+                esac
+                ;;
+            darwin)
+                platform="darwin.x86_64"
+                ;;
+            *)
+                warning "Unsupported OS: $os. Skipping shellcheck."
+                return 0
+                ;;
+        esac
+        
+        local download_url="https://github.com/koalaman/shellcheck/releases/download/${shellcheck_version}/shellcheck-${shellcheck_version}.${platform}.tar.xz"
+        
+        info "Downloading ShellCheck from: $download_url"
+        if wget -q -O "$shellcheck_dir/shellcheck.tar.xz" "$download_url" 2>/dev/null || \
+           curl -sL -o "$shellcheck_dir/shellcheck.tar.xz" "$download_url" 2>/dev/null; then
+            
+            tar -xf "$shellcheck_dir/shellcheck.tar.xz" -C "$shellcheck_dir" --strip-components=1
+            if [ -x "$shellcheck_dir/shellcheck" ]; then
+                info "ShellCheck downloaded successfully"
+                # Use the downloaded binary
+                alias shellcheck="$shellcheck_dir/shellcheck"
+                # For subshells
+                export SHELLCHECK_BIN="$shellcheck_dir/shellcheck"
+            else
+                warning "Failed to extract ShellCheck. Skipping validation."
+                rm -rf "$shellcheck_dir"
+                return 0
+            fi
+        else
+            warning "Failed to download ShellCheck. Skipping validation."
+            rm -rf "$shellcheck_dir"
+            return 0
+        fi
+        
+        # Clean up on exit
+        trap "rm -rf $shellcheck_dir" EXIT
+    fi
+    
+    local failed=0
+    local total=0
+    
+    # Run shellcheck on all bash scripts
+    while IFS= read -r script; do
+        total=$((total + 1))
+        debug "ShellCheck: $script"
+        
+        # Run shellcheck with appropriate options
+        local shellcheck_cmd="shellcheck"
+        if [ -n "${SHELLCHECK_BIN:-}" ]; then
+            shellcheck_cmd="$SHELLCHECK_BIN"
+        fi
+        
+        # Run shellcheck and capture output
+        local shellcheck_output
+        shellcheck_output=$($shellcheck_cmd -x "$script" 2>&1 || true)
+        
+        # Filter out SC1091 (not following non-constant source)
+        local filtered_output
+        filtered_output=$(echo "$shellcheck_output" | grep -v "SC1091" | grep -v "^In.*line.*:$" | grep -v "^source.*$" | grep -v "^For more information:$" | grep -v "^$" || true)
+        
+        # Check if there are any remaining issues
+        if [ -n "$filtered_output" ]; then
+            error "$script: ShellCheck found issues"
+            echo "$filtered_output" >&2
+            failed=$((failed + 1))
+            has_issues=true
+        fi
+    done < <(find scripts -name "*.bash" -type f 2>/dev/null | sort)
+    
+    if [ "$has_issues" = false ]; then
+        success "ShellCheck passed for all $total scripts"
+    else
+        error "ShellCheck failed for $failed out of $total scripts"
+    fi
+    
+    return 0
+}
+
+# Check 12: Extended script standards
+check_script_standards_extended() {
+    local has_issues=false
+    
+    info "Checking extended script standards..."
+    
+    # Check all bash scripts
+    while IFS= read -r script; do
+        local filename=$(basename "$script")
+        
+        # Skip shebang check for include files
+        if [[ ! "$filename" =~ \.inc\.bash$ ]]; then
+            # Check shebang is exactly #!/usr/bin/env bash
+            local first_line=$(head -n1 "$script")
+            if [[ "$first_line" != "#!/usr/bin/env bash" ]]; then
+                error "$script: Incorrect shebang: '$first_line' (must be exactly '#!/usr/bin/env bash')"
+                has_issues=true
+            fi
+        fi
+        
+        # Check file naming convention (lowercase with underscores)
+        if ! [[ "$filename" =~ ^[a-z]+(_[a-z]+)*\.(bash|inc\.bash)$ ]]; then
+            error "$script: Incorrect naming convention: $filename (use lowercase_with_underscores.bash)"
+            has_issues=true
+        fi
+        
+        # Check for success message at end (except for includes)
+        if [[ ! "$script" =~ /_inc/ ]]; then
+            if ! grep -q 'echo "Script success: ${0##\*/}"' "$script"; then
+                warning "$script: Missing success message at end of script"
+            fi
+        fi
+        
+    done < <(find scripts -name "*.bash" -type f 2>/dev/null)
+    
+    if [ "$has_issues" = false ]; then
+        success "All scripts follow extended standards"
+    fi
+    
+    return 0
+}
+
+# Check 13: Required documentation
+check_required_documentation() {
+    local has_issues=false
+    
+    info "Checking required documentation..."
+    
+    # List of required documentation files
+    local required_docs=(
+        "scripts/CLAUDE.md"
+        "scripts/_common/CLAUDE.md"
+        "scripts/_common/_inc/CLAUDE.md"
+        "CLAUDE.md"
+        "CLAUDE/CommandStructure.md"
+        "README.md"
+    )
+    
+    for doc in "${required_docs[@]}"; do
+        if [ ! -f "$doc" ]; then
+            error "Missing required documentation: $doc"
+            has_issues=true
+        else
+            success "Found required documentation: $doc"
+        fi
+    done
+    
+    # Check that CLAUDE docs are not empty
+    for doc in "${required_docs[@]}"; do
+        if [ -f "$doc" ] && [ ! -s "$doc" ]; then
+            error "$doc exists but is empty"
+            has_issues=true
+        fi
+    done
+    
+    if [ "$has_issues" = false ]; then
+        success "All required documentation is present"
+    fi
+    
+    return 0
+}
+
+# Check 14: Command file structure validation
+check_command_structure_extended() {
+    local has_issues=false
+    
+    info "Checking extended command structure..."
+    
+    # Check all command files
+    while IFS= read -r file; do
+        local filename=$(basename "$file")
+        
+        # Check for YAML frontmatter
+        if ! head -n1 "$file" | grep -q "^---$"; then
+            warning "$filename: Missing YAML frontmatter"
+        fi
+        
+        # Check for .sh references (should be .bash)
+        if grep -q "!bash.*\.sh" "$file"; then
+            error "$filename: References .sh files instead of .bash"
+            has_issues=true
+        fi
+        
+        # Check for proper script path references
+        if grep -q "!bash [^.]" "$file" | grep -v "!bash \." | grep -v "!bash echo"; then
+            warning "$filename: Bash commands should reference script files with proper paths"
+        fi
+        
+    done < <(find export/commands -name "*.md" -type f 2>/dev/null)
+    
+    if [ "$has_issues" = false ]; then
+        success "All commands follow extended structure requirements"
+    fi
+    
+    return 0
+}
+
 # Main CI check
 main() {
     info "=== Claude Code Commands CI Check ==="
@@ -709,6 +942,13 @@ main() {
     check_orchestrator_structure
     check_orphaned_scripts
     check_orphaned_includes
+    echo ""
+    
+    # Run additional comprehensive checks
+    check_shellcheck
+    check_script_standards_extended
+    check_required_documentation
+    check_command_structure_extended
     echo ""
     
     # Summary
