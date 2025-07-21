@@ -160,6 +160,10 @@ Check if the README.md file needs updates based on the current state of commands
 
 !bash .claude/cc-commands/scripts/g/command/sync_readme_check.bash
 
+<Task>
+Update README if README_OUTDATED=true
+</Task>
+
 ### Step 4: Push to Remote
 
 !bash .claude/cc-commands/scripts/g/command/sync_push_execute.bash "$CURRENT_BRANCH"
