@@ -55,7 +55,7 @@ detect_github_org() {
 # Function to find most recent GitHub Projects v2 project for an organization
 detect_recent_project_v2() {
     local org="$1"
-    info "Finding most recently updated GitHub Projects v2 for org: $org"
+    debug "Finding most recently updated GitHub Projects v2 for org: $org"
     
     # Use GraphQL to get GitHub Projects v2 (the new format)
     local projects_json
@@ -105,7 +105,7 @@ detect_recent_project_legacy() {
     warn "Legacy support is NOT ACTIVELY MAINTAINED."
     warn "============================================\n"
     
-    info "Finding most recently updated legacy project for org: $org"
+    debug "Finding most recently updated legacy project for org: $org"
     
     # Get all legacy projects for the organization
     local recent_project_json
@@ -125,15 +125,15 @@ detect_recent_project() {
     # Try GitHub Projects v2 first
     local project_id
     if project_id=$(detect_recent_project_v2 "$org"); then
-        success "Found GitHub Projects v2 project: $project_id"
+        debug "Found GitHub Projects v2 project: $project_id"
         echo "$project_id"
         return 0
     fi
     
     # Fall back to legacy projects with deprecation warning
-    info "No GitHub Projects v2 found, checking for legacy projects..."
+    debug "No GitHub Projects v2 found, checking for legacy projects..."
     if project_id=$(detect_recent_project_legacy "$org"); then
-        success "Found legacy project: $project_id"
+        debug "Found legacy project: $project_id"
         echo "$project_id"
         return 0
     fi
@@ -171,13 +171,13 @@ extract_project_repos() {
     
     local repo_list
     if repo_list=$(gh project item-list "$project_id" --owner "$org" --format json 2>/dev/null); then
-        local repo_count=$(echo "$repo_list" | jq -r '[.items[].content.repository.name // empty] | unique | length')
+        local repo_count=$(echo "$repo_list" | jq -r '[.items[].content.repository // empty] | unique | length')
         echo "REPO_COUNT=$repo_count"
         
         if [[ "$repo_count" -gt 0 ]]; then
             success "Found $repo_count repositories in project"
         else
-            warning "No repositories found in project items"
+            warn "No repositories found in project items"
         fi
         return 0
     else
