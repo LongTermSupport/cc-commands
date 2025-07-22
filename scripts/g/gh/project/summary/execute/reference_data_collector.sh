@@ -1,23 +1,37 @@
-#!/bin/bash
-# Script: gather-project-updates-clean.sh  
+#!/usr/bin/env bash
+# Script: reference_data_collector.sh  
 # Purpose: GitHub Project Updates Gatherer - Generic version with dynamic parameters
-# Usage: gather-project-updates-clean.sh <org> <project_id>
+# Usage: reference_data_collector.sh <org> <project_id>
 # Output: JSON file with comprehensive GitHub project data
 
 set -euo pipefail
 IFS=$'\n\t'
 
+# Get script directory and resolve COMMON_DIR
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+COMMON_DIR="$(realpath "$SCRIPT_DIR/../../../../_common")" || {
+    echo "ERROR: Cannot resolve COMMON_DIR from $SCRIPT_DIR" >&2
+    exit 1
+}
+
+# Source helpers and error handler via safe_source pattern
+# shellcheck disable=SC1091  # helpers.inc.bash path is validated above
+source "$COMMON_DIR/_inc/helpers.inc.bash"
+safe_source "error_handler.inc.bash"  # safe_source handles path validation
+
+# Set up temp file cleanup
+setup_temp_cleanup
+
 # Arguments
 ORG="${1:-}"
 PROJECT_ID="${2:-}"
 
-if [[ -z "$ORG" || -z "$PROJECT_ID" ]]; then
-    echo "ERROR: Organization and project ID are required"
-    echo "Usage: $0 <org> <project_id>"
-    exit 1
-fi
+require_arg "$ORG" "organization name"
+require_arg "$PROJECT_ID" "project ID"
 
-OUTPUT_FILE="/tmp/github-project-summary-$(date +%Y%m%d-%H%M%S).json"
+# Create output file in var directory
+VAR_PATH=$(get_var_path)
+OUTPUT_FILE="$VAR_PATH/github-project-summary-$(date +%Y%m%d-%H%M%S).json"
 SINCE_DATE=$(date -d '24 hours ago' -Iseconds)
 
 echo "Collecting GitHub project data for $ORG / $PROJECT_ID since $SINCE_DATE..."
@@ -49,29 +63,25 @@ jq --arg timestamp "$(date -Iseconds)" \
    "$OUTPUT_FILE" > "$OUTPUT_FILE.tmp" && mv "$OUTPUT_FILE.tmp" "$OUTPUT_FILE"
 
 # Get project information
-echo "Fetching project details..."
-PROJECT_TEMP="/tmp/project_info_$$.json"
+info "Fetching project details..."
+PROJECT_TEMP=$(create_temp_file "project_info_json")
 if gh project view "$PROJECT_ID" --owner "$ORG" --format json > "$PROJECT_TEMP"; then
     jq --slurpfile project_info "$PROJECT_TEMP" '.project_info = $project_info[0]' \
        "$OUTPUT_FILE" > "$OUTPUT_FILE.tmp" && mv "$OUTPUT_FILE.tmp" "$OUTPUT_FILE"
-    rm -f "$PROJECT_TEMP"
-    echo "✓ Project information collected"
+    success "Project information collected"
 else
-    echo "ERROR: Failed to fetch project information for $ORG / $PROJECT_ID"
-    exit 1
+    error_exit "Failed to fetch project information for $ORG / $PROJECT_ID"
 fi
 
 # Get all project items
-echo "Fetching project items..."
-ITEMS_TEMP="/tmp/project_items_$$.json"
+info "Fetching project items..."
+ITEMS_TEMP=$(create_temp_file "project_items_json")
 if gh project item-list "$PROJECT_ID" --owner "$ORG" --format json --limit 500 > "$ITEMS_TEMP"; then
     jq --slurpfile items "$ITEMS_TEMP" '.project_items = $items[0].items' \
        "$OUTPUT_FILE" > "$OUTPUT_FILE.tmp" && mv "$OUTPUT_FILE.tmp" "$OUTPUT_FILE"
-    rm -f "$ITEMS_TEMP"
-    echo "✓ Project items collected"
+    success "Project items collected"
 else
-    echo "ERROR: Failed to fetch project items for $ORG / $PROJECT_ID"
-    exit 1
+    error_exit "Failed to fetch project items for $ORG / $PROJECT_ID"
 fi
 
 # Extract repositories from project items dynamically
@@ -95,7 +105,7 @@ while IFS= read -r repo; do
     echo "Processing repository: $repo"
     
     # Create temp directory for this repo's data
-    TEMP_DIR="/tmp/gh-data-$$-$repo"
+    TEMP_DIR="$VAR_PATH/gh-data-$$-$repo"
     mkdir -p "$TEMP_DIR"
     
     # Get repository info
@@ -185,17 +195,16 @@ while IFS= read -r repo; do
 done <<< "$REPO_LIST"
 
 # Get organization events for additional context
-echo "Fetching organization events..."
-TEMP_EVENTS="/tmp/org_events_$$.json"
+info "Fetching organization events..."
+TEMP_EVENTS=$(create_temp_file "org_events_json")
 if gh api "orgs/$ORG/events" -F per_page=100 > "$TEMP_EVENTS" 2>/dev/null; then
     jq --slurpfile events "$TEMP_EVENTS" '.organization_events = $events[0]' \
        "$OUTPUT_FILE" > "$OUTPUT_FILE.tmp" && mv "$OUTPUT_FILE.tmp" "$OUTPUT_FILE"
-    echo "✓ Organization events collected"
+    success "Organization events collected"
 else
-    echo "⚠ Organization events not accessible"
+    warn "Organization events not accessible"
     jq '.organization_events = []' "$OUTPUT_FILE" > "$OUTPUT_FILE.tmp" && mv "$OUTPUT_FILE.tmp" "$OUTPUT_FILE"
 fi
-rm -f "$TEMP_EVENTS"
 
 # Add summary statistics
 echo "Calculating summary statistics..."
@@ -229,3 +238,5 @@ jq -r '.summary |
 
 echo ""
 echo "Full data available in $OUTPUT_FILE"
+
+echo "Script success: ${0##*/}"

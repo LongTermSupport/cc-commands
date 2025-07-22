@@ -20,6 +20,9 @@ COMMON_DIR="$(realpath "$SCRIPT_DIR/../")" || {
 source "$COMMON_DIR/_inc/helpers.inc.bash"
 safe_source "error_handler.inc.bash"  # safe_source handles path validation
 
+# Set up temp file cleanup
+setup_temp_cleanup
+
 # Fetch issue details
 fetch_issue() {
     local issue_num="${1:-}"
@@ -65,7 +68,8 @@ fetch_issue() {
     
     # Save body to temp file if needed
     if [ -n "$body" ]; then
-        local body_file="/tmp/issue_${issue_num}_body.md"
+        local body_file
+        body_file=$(create_temp_file "issue_${issue_num}_body_md")
         echo "$body" > "$body_file"
         echo "ISSUE_BODY_FILE=$body_file"
     else
@@ -450,13 +454,15 @@ get_issue_full() {
     fi
     
     # Save full issue data including comments to temp files
-    local issue_file="/tmp/issue_${issue_num}_full.json"
+    local issue_file
+    issue_file=$(create_temp_file "issue_${issue_num}_full_json")
     echo "$issue_json" > "$issue_file"
     echo "ISSUE_FULL_DATA_FILE=$issue_file"
     
     # Save body to temp file if needed
     if [ -n "$body" ]; then
-        local body_file="/tmp/issue_${issue_num}_body.md"
+        local body_file
+        body_file=$(create_temp_file "issue_${issue_num}_body_md")
         echo "$body" > "$body_file"
         echo "ISSUE_BODY_FILE=$body_file"
     else
@@ -465,7 +471,8 @@ get_issue_full() {
     
     # Save comments to temp file if any exist
     if [ "$comment_count" -gt 0 ]; then
-        local comments_file="/tmp/issue_${issue_num}_comments.json"
+        local comments_file
+        comments_file=$(create_temp_file "issue_${issue_num}_comments_json")
         echo "$issue_json" | jq '.comments // []' > "$comments_file"
         echo "ISSUE_COMMENTS_FILE=$comments_file"
     else
@@ -474,7 +481,8 @@ get_issue_full() {
     
     # Save parent issue data if it exists
     if [ -n "$parent_info" ] && [ "$parent_info" != "null" ]; then
-        local parent_file="/tmp/issue_${issue_num}_parent.json"
+        local parent_file
+        parent_file=$(create_temp_file "issue_${issue_num}_parent_json")
         echo "$parent_info" > "$parent_file"
         echo "PARENT_ISSUE_DATA_FILE=$parent_file"
     else
@@ -483,7 +491,8 @@ get_issue_full() {
     
     # Save sub-issues data if they exist
     if [ "$subissues_count" -gt 0 ]; then
-        local subissues_file="/tmp/issue_${issue_num}_subissues.json"
+        local subissues_file
+        subissues_file=$(create_temp_file "issue_${issue_num}_subissues_json")
         echo "$subissues_info" > "$subissues_file"
         echo "SUBISSUES_DATA_FILE=$subissues_file"
     else

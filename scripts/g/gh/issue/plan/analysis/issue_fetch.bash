@@ -20,6 +20,9 @@ COMMON_DIR="$(realpath "$SCRIPT_DIR/../../../../../_common")" || {
 source "$COMMON_DIR/_inc/helpers.inc.bash"
 safe_source "error_handler.inc.bash"  # safe_source handles path validation
 
+# Set up temp file cleanup
+setup_temp_cleanup
+
 main() {
     local issue_arg="$1"
     
@@ -53,7 +56,8 @@ main() {
     
     # Use our comprehensive fetch-full function
     local fetch_output
-    local temp_file=$(mktemp)
+    local temp_file
+    temp_file=$(create_temp_file "issue_fetch_output")
     
     if bash "$COMMON_DIR/gh/gh_issue_ops.bash" fetch-full "$ISSUE_NUM" "$REPO" > "$temp_file" 2>&1; then
         cat "$temp_file"
@@ -122,12 +126,9 @@ main() {
     else
         echo "Failed to fetch comprehensive issue data for #$ISSUE_NUM"
         cat "$temp_file" >&2
-        rm -f "$temp_file"
         echo "FETCH_SUCCESS=false"
         error_exit "Failed to fetch comprehensive issue data for #$ISSUE_NUM"
     fi
-    
-    rm -f "$temp_file"
     echo "✓ Comprehensive issue data fetch complete"
 }
 
@@ -137,3 +138,4 @@ if [ $# -eq 0 ]; then
 fi
 
 main "$1"
+echo "Script success: ${0##*/}"

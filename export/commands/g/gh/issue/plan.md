@@ -26,7 +26,7 @@ You are an expert software architect and project manager with deep knowledge of 
 
 **CRITICAL: Never use interactive bash commands like `read -p`, `read`, or any command that waits for stdin input. These will hang the command. Use Task blocks to handle user interaction instead.**
 
-**CRITICAL: Never include time estimates, effort estimates, or duration predictions in the generated plan or GitHub comments. Focus on task breakdown and dependencies only.**
+**IMPORTANT: Never include time estimates, effort estimates, or duration predictions in the generated plan or GitHub comments. Focus on task breakdown and dependencies only.**
 
 **CRITICAL: respect the !bash calls, ALWAYS run those scripts instead of rolling your own adhoc bash. ONLY run your own bash AFTER you have called the scripts**
 
@@ -114,17 +114,16 @@ Based on the orchestrator output:
 
 <Task>
 Analyze the issue content to extract requirements and understand the context.
-I'll read the issue data and analyze:
-1. The main issue description
-2. All comments and discussions
-3. Any linked issues or documentation
-4. Technical requirements and constraints
-5. Determine if this is a bug fix or feature request
-</Task>
 
-<Read>
-/tmp/issue-$ISSUE_NUM.json
-</Read>
+From the orchestrator output above, I can see the issue data file paths. I need to read the issue body file to understand the main issue description and requirements. I'll extract the ISSUE_BODY_FILE path from the output and read that file.
+
+Looking at the orchestrator output for the ISSUE_BODY_FILE path, I'll read that file to analyze:
+1. The main issue description
+2. Technical requirements and constraints  
+3. Any specific details mentioned in the issue body
+4. Determine if this is a bug fix or feature request
+5. Extract any URLs mentioned in the issue body
+</Task>
 
 ### Issue Type Detection
 

@@ -20,6 +20,9 @@ COMMON_DIR="$(realpath "$SCRIPT_DIR/../../../../_common")" || {
 source "$COMMON_DIR/_inc/helpers.inc.bash"
 safe_source "error_handler.inc.bash"  # safe_source handles path validation
 
+# Set up temp file cleanup
+setup_temp_cleanup
+
 main() {
     local mode="${1:-}"
     local plan_name="${2:-}"
@@ -56,20 +59,21 @@ main() {
         echo "✓ Found exact match: ${plan_name}.md"
     else
         # Combined search: filename and content
+        local plan_matches
+        plan_matches=$(create_temp_file "plan_matches")
         {
             find . -name "*.md" -type f | grep -i "$plan_name" | sed 's|^\./||'
             grep -l -i "$plan_name" *.md 2>/dev/null || true
-        } | sort -u > /tmp/plan_matches
+        } | sort -u > "$plan_matches"
         
-        match_count=$(wc -l < /tmp/plan_matches)
+        match_count=$(wc -l < "$plan_matches")
         
         if [ "$match_count" -eq 0 ]; then
             echo "MATCH_TYPE=none"
             echo "ERROR: No plans found matching '$plan_name'"
-            rm -f /tmp/plan_matches
             error_exit "No matching plans found"
         elif [ "$match_count" -eq 1 ]; then
-            match_file=$(cat /tmp/plan_matches)
+            match_file=$(cat "$plan_matches")
             echo "MATCH_TYPE=fuzzy_single"
             echo "PLAN_FILE=$match_file"
             echo "PLAN_PATH=$PLAN_DIR/$match_file"
@@ -78,12 +82,10 @@ main() {
             echo "MATCH_TYPE=fuzzy_multiple"
             echo "MATCH_COUNT=$match_count"
             echo "⚠ Multiple matches found:"
-            cat /tmp/plan_matches | while read -r match; do
+            cat "$plan_matches" | while read -r match; do
                 echo "CANDIDATE=$match"
             done
         fi
-        
-        rm -f /tmp/plan_matches
     fi
     
     echo "✓ Plan search complete"
