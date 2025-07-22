@@ -81,14 +81,14 @@ main() {
             local changes_exist="${SCRIPT_OUTPUTS[CHANGES_EXIST]:-false}"
             local push_needed="${SCRIPT_OUTPUTS[PUSH_NEEDED]:-false}"
             
-            capture_script_output "$COMMAND_DIR/analysis/decision.bash" "$changes_exist" "$push_needed" || {
+            capture_script_output "$SCRIPT_DIR/analysis/decision.bash" "$changes_exist" "$push_needed" || {
                 error_exit "Push decision analysis failed"
             }
             
             # Step 4: Commit message preparation (if needed)
             local action="${SCRIPT_OUTPUTS[ACTION]:-none}"
             if [ "$action" = "commit_and_push" ]; then
-                capture_script_output "$COMMAND_DIR/analysis/commit_message.bash" "$action" || {
+                capture_script_output "$SCRIPT_DIR/analysis/commit_message.bash" "$action" || {
                     error_exit "Commit message preparation failed"
                 }
             fi
@@ -116,7 +116,7 @@ main() {
             
             # Execute git operations
             if [ "$action" != "none" ]; then
-                capture_script_output "$COMMAND_DIR/execute/execute_git.bash" "$action" "$commit_message" || {
+                capture_script_output "$SCRIPT_DIR/execute/execute_git.bash" "$action" "$commit_message" || {
                     error_exit "Git execution failed"
                 }
                 
@@ -125,7 +125,7 @@ main() {
                 
                 if [ "$push_result" = "success" ]; then
                     # Detect workflows
-                    capture_script_output "$COMMAND_DIR/monitor/push_workflow_detect.bash" "$push_result" "$pushed_commit" || {
+                    capture_script_output "$SCRIPT_DIR/monitor/push_workflow_detect.bash" "$push_result" "$pushed_commit" || {
                         warn "Workflow detection failed"
                     }
                     
@@ -133,13 +133,13 @@ main() {
                     
                     # Monitor workflows if needed
                     if [ "$monitoring_needed" = "true" ]; then
-                        capture_script_output "$COMMAND_DIR/monitor/push_workflow_monitor.bash" "$monitoring_needed" "$pushed_commit" 300 || {
+                        capture_script_output "$SCRIPT_DIR/monitor/push_workflow_monitor.bash" "$monitoring_needed" "$pushed_commit" 300 || {
                             warn "Workflow monitoring failed"
                         }
                     fi
                     
                     # Final status check
-                    capture_script_output "$COMMAND_DIR/post/final_status.bash" "$pushed_commit" "$push_result" || {
+                    capture_script_output "$SCRIPT_DIR/post/final_status.bash" "$pushed_commit" "$push_result" || {
                         warn "Final status check failed"
                     }
                 fi

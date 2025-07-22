@@ -68,18 +68,18 @@ main() {
     echo ""
     
     # Step 1: Environment validation
-    capture_script_output "$SYNC_DIR/pre/env_validate.bash" || {
+    capture_script_output "$SCRIPT_DIR/pre/env_validate.bash" || {
         error_exit "Environment validation failed"
     }
     
     # Step 2: Repository status analysis
-    capture_script_output "$SYNC_DIR/analysis/status_analysis.bash" || {
+    capture_script_output "$SCRIPT_DIR/analysis/status_analysis.bash" || {
         error_exit "Status analysis failed"
     }
     
     # Step 3: Change analysis (only if changes exist)
     if [[ "${SCRIPT_OUTPUTS[CHANGES_EXIST]:-false}" == "true" ]]; then
-        capture_script_output "$SYNC_DIR/analysis/change_analysis.bash" || {
+        capture_script_output "$SCRIPT_DIR/analysis/change_analysis.bash" || {
             error_exit "Change analysis failed"
         }
     else
@@ -90,7 +90,7 @@ main() {
     # Step 4: Commit execution (only if changes exist and commit message provided)
     if [[ "${SCRIPT_OUTPUTS[CHANGES_EXIST]:-false}" == "true" ]]; then
         if [[ -n "$commit_message" ]]; then
-            capture_script_output "$SYNC_DIR/git/commit_execute.bash" "$commit_message" || {
+            capture_script_output "$SCRIPT_DIR/git/commit_execute.bash" "$commit_message" || {
                 error_exit "Commit execution failed"
             }
         else
@@ -102,12 +102,12 @@ main() {
     
     # Step 5: Pull from remote
     local current_branch="${SCRIPT_OUTPUTS[CURRENT_BRANCH]:-main}"
-    capture_script_output "$SYNC_DIR/git/pull_execute.bash" "$current_branch" || {
+    capture_script_output "$SCRIPT_DIR/git/pull_execute.bash" "$current_branch" || {
         error_exit "Pull execution failed"
     }
     
     # Step 6: Check README status
-    capture_script_output "$SYNC_DIR/analysis/readme_check.bash" || {
+    capture_script_output "$SCRIPT_DIR/analysis/readme_check.bash" || {
         error_exit "README check failed"
     }
     
@@ -121,7 +121,7 @@ main() {
     # Step 8: Push to remote (only if needed)
     if [[ "${SCRIPT_OUTPUTS[PUSH_NEEDED]:-false}" == "true" ]] || \
        [[ "${SCRIPT_OUTPUTS[COMMIT_SUCCESS]:-false}" == "true" ]]; then
-        capture_script_output "$SYNC_DIR/git/push_execute.bash" "$current_branch" || {
+        capture_script_output "$SCRIPT_DIR/git/push_execute.bash" "$current_branch" || {
             error_exit "Push execution failed"
         }
     else
@@ -130,7 +130,7 @@ main() {
     fi
     
     # Step 9: Final summary
-    capture_script_output "$SYNC_DIR/post/summary.bash" || {
+    capture_script_output "$SCRIPT_DIR/post/summary.bash" || {
         echo "⚠️  Summary generation failed, but sync completed"
     }
     

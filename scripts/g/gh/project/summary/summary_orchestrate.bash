@@ -71,7 +71,7 @@ main() {
             echo "=== PROJECT SUMMARY ANALYSIS PHASE ==="
             
             # Step 1: Environment validation
-            capture_script_output "$COMMAND_DIR/pre/env_validate.bash" || {
+            capture_script_output "$SCRIPT_DIR/pre/env_validate.bash" || {
                 error_exit "Environment validation failed"
             }
             
@@ -84,7 +84,7 @@ main() {
             fi
             
             # Step 2: GitHub org and project detection/validation
-            capture_script_output "$COMMAND_DIR/pre/project_detect.bash" "$github_url" "$org" "$project_id" || {
+            capture_script_output "$SCRIPT_DIR/pre/project_detect.bash" "$github_url" "$org" "$project_id" || {
                 error_exit "Project detection failed"
             }
             
@@ -114,7 +114,7 @@ main() {
             local detected_org="${SCRIPT_OUTPUTS[DETECTED_ORG]:-$org}"
             local detected_project_id="${SCRIPT_OUTPUTS[DETECTED_PROJECT_ID]:-$project_id}"
             
-            capture_script_output "$COMMAND_DIR/execute/data_collect.bash" "$detected_org" "$detected_project_id" || {
+            capture_script_output "$SCRIPT_DIR/execute/data_collect.bash" "$detected_org" "$detected_project_id" || {
                 error_exit "Data collection failed"
             }
             
@@ -127,7 +127,7 @@ main() {
             fi
             
             # Step 2: Summary generation and analysis  
-            capture_script_output "$COMMAND_DIR/post/summary_generate.bash" "${SCRIPT_OUTPUTS[DATA_FILE]:-}" "$audience" || {
+            capture_script_output "$SCRIPT_DIR/post/summary_generate.bash" "${SCRIPT_OUTPUTS[DATA_FILE]:-}" "$audience" || {
                 error_exit "Summary generation failed"
             }
             

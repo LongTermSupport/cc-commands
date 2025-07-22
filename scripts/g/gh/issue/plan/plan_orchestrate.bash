@@ -14,6 +14,7 @@ COMMON_DIR="$(realpath "$SCRIPT_DIR/../../../../_common")" || {
     echo "ERROR: Cannot resolve COMMON_DIR from $SCRIPT_DIR" >&2
     exit 1
 }
+PLAN_DIR="$SCRIPT_DIR"
 
 # Source helpers and error handler via safe_source pattern
 # shellcheck disable=SC1091  # helpers.inc.bash path is validated above

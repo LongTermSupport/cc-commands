@@ -68,7 +68,7 @@ main() {
     case "$mode" in
         analyze)
             # Parse arguments first
-            capture_script_output "$COMMAND_DIR/pre/arg_parse.bash" "$@" || {
+            capture_script_output "$SCRIPT_DIR/pre/arg_parse.bash" "$@" || {
                 error_exit "Argument parsing failed"
             }
             
@@ -77,7 +77,7 @@ main() {
             local plan_name="${SCRIPT_OUTPUTS[PLAN_NAME]:-}"
             
             # Environment validation
-            capture_script_output "$COMMAND_DIR/pre/env_validate.bash" || {
+            capture_script_output "$SCRIPT_DIR/pre/env_validate.bash" || {
                 error_exit "Environment validation failed"
             }
             
@@ -103,7 +103,7 @@ main() {
                 
                 if [ "$match_type" != "none" ] && [ -n "$plan_path" ]; then
                     # Verify plan status
-                    capture_script_output "$COMMAND_DIR/analysis/status_verify.bash" "$plan_path" || {
+                    capture_script_output "$SCRIPT_DIR/analysis/status_verify.bash" "$plan_path" || {
                         error_exit "Status verification failed"
                     }
                 fi
@@ -131,21 +131,21 @@ main() {
             case "$action" in
                 allcs)
                     # Run code standards
-                    capture_script_output "$COMMAND_DIR/execute/allcs.bash" || {
+                    capture_script_output "$SCRIPT_DIR/execute/allcs.bash" || {
                         warn "Code standards check had issues"
                     }
                     ;;
                     
                 static_analysis)
                     # Run static analysis
-                    capture_script_output "$COMMAND_DIR/execute/static_analysis.bash" || {
+                    capture_script_output "$SCRIPT_DIR/execute/static_analysis.bash" || {
                         warn "Static analysis had issues"
                     }
                     ;;
                     
                 git_status)
                     # Check git status
-                    capture_script_output "$COMMAND_DIR/post/git_status.bash" || {
+                    capture_script_output "$SCRIPT_DIR/post/git_status.bash" || {
                         warn "Git status check failed"
                     }
                     ;;

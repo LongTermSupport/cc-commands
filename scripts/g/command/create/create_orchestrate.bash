@@ -70,13 +70,13 @@ main() {
     case "$mode" in
         analyze)
             # Step 1: Environment validation
-            capture_script_output "$COMMAND_DIR/pre/env_validate.bash" || {
+            capture_script_output "$SCRIPT_DIR/pre/env_validate.bash" || {
                 error_exit "Environment validation failed"
             }
             
             # Step 2: Parse arguments
             if [ -n "$arguments" ]; then
-                capture_script_output "$COMMAND_DIR/analysis/arg_parse.bash" "$arguments" || {
+                capture_script_output "$SCRIPT_DIR/analysis/arg_parse.bash" "$arguments" || {
                     error_exit "Argument parsing failed"
                 }
             else
@@ -111,19 +111,19 @@ main() {
             fi
             
             # Create the command file
-            capture_script_output "$COMMAND_DIR/execute/command.bash" "$command_name" "$command_content" || {
+            capture_script_output "$SCRIPT_DIR/execute/command.bash" "$command_name" "$command_content" || {
                 error_exit "Failed to create command file"
             }
             
             # Create any needed scripts if following orchestrator pattern
             if [ -n "$scripts_needed" ] && [ "$scripts_needed" != "none" ]; then
-                capture_script_output "$COMMAND_DIR/execute/scripts.bash" "$command_name" "$scripts_needed" || {
+                capture_script_output "$SCRIPT_DIR/execute/scripts.bash" "$command_name" "$scripts_needed" || {
                     error_exit "Failed to create command scripts"
                 }
             fi
             
             # Final summary
-            capture_script_output "$COMMAND_DIR/post/summary.bash" "$command_name" || {
+            capture_script_output "$SCRIPT_DIR/post/summary.bash" "$command_name" || {
                 warn "Summary generation failed"
             }
             
