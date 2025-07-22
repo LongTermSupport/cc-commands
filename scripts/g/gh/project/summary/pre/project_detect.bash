@@ -7,10 +7,17 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+# Get script directory and resolve COMMON_DIR
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMMON_DIR="$SCRIPT_DIR/../../../../../_common"
+COMMON_DIR="$(realpath "$SCRIPT_DIR/../../../../../_common")" || {
+    echo "ERROR: Cannot resolve COMMON_DIR from $SCRIPT_DIR" >&2
+    exit 1
+}
 
-source "$COMMON_DIR/_inc/error_handler.inc.bash"
+# Source helpers and error handler via safe_source pattern
+# shellcheck disable=SC1091  # helpers.inc.bash path is validated above
+source "$COMMON_DIR/_inc/helpers.inc.bash"
+safe_source "error_handler.inc.bash"  # safe_source handles path validation
 
 # Arguments
 GITHUB_URL="${1:-}"
@@ -45,12 +52,62 @@ detect_github_org() {
     return 1
 }
 
-# Function to find most recent project for an organization
-detect_recent_project() {
+# Function to find most recent GitHub Projects v2 project for an organization
+detect_recent_project_v2() {
     local org="$1"
-    info "Finding most recently updated project for org: $org"
+    info "Finding most recently updated GitHub Projects v2 for org: $org"
     
-    # Get all projects for the organization, sorted by updated date
+    # Use GraphQL to get GitHub Projects v2 (the new format)
+    local projects_json
+    if projects_json=$(gh api graphql -f query='
+    {
+      organization(login: "'"$org"'") {
+        projectsV2(first: 10, states: OPEN) {
+          nodes {
+            id
+            number
+            title
+            updatedAt
+          }
+        }
+      }
+    }' 2>/dev/null); then
+        # Check if we have any projects and if there are no errors
+        if echo "$projects_json" | jq -e '.errors' >/dev/null 2>&1; then
+            debug "GraphQL query returned errors: $(echo "$projects_json" | jq -r '.errors[0].message')"
+            return 1
+        fi
+        
+        local project_count
+        project_count=$(echo "$projects_json" | jq -r '.data.organization.projectsV2.nodes | length' 2>/dev/null)
+        
+        if [[ "$project_count" -gt 0 ]]; then
+            # Get the most recently updated project
+            local recent_project_id
+            recent_project_id=$(echo "$projects_json" | jq -r '.data.organization.projectsV2.nodes | sort_by(.updatedAt) | reverse | .[0] | .number')
+            
+            if [[ "$recent_project_id" != "null" ]]; then
+                echo "$recent_project_id"
+                return 0
+            fi
+        fi
+    fi
+    return 1
+}
+
+# Function to find most recent legacy project for an organization (DEPRECATED)
+detect_recent_project_legacy() {
+    local org="$1"
+    warn "\n=== LEGACY GITHUB PROJECTS (CLASSIC) DETECTED ==="
+    warn "GitHub Projects (Classic) is deprecated by GitHub."
+    warn "This organization is using legacy projects."
+    warn "Consider migrating to GitHub Projects v2."
+    warn "Legacy support is NOT ACTIVELY MAINTAINED."
+    warn "============================================\n"
+    
+    info "Finding most recently updated legacy project for org: $org"
+    
+    # Get all legacy projects for the organization
     local recent_project_json
     if recent_project_json=$(gh api "orgs/$org/projects" --jq 'sort_by(.updated_at) | reverse | .[0] | {id: .id, title: .title, updated: .updated_at}' 2>/dev/null); then
         if [[ "$recent_project_json" != "null" ]]; then
@@ -58,6 +115,29 @@ detect_recent_project() {
             return 0
         fi
     fi
+    return 1
+}
+
+# Function to find most recent project (tries v2 first, falls back to legacy)
+detect_recent_project() {
+    local org="$1"
+    
+    # Try GitHub Projects v2 first
+    local project_id
+    if project_id=$(detect_recent_project_v2 "$org"); then
+        success "Found GitHub Projects v2 project: $project_id"
+        echo "$project_id"
+        return 0
+    fi
+    
+    # Fall back to legacy projects with deprecation warning
+    info "No GitHub Projects v2 found, checking for legacy projects..."
+    if project_id=$(detect_recent_project_legacy "$org"); then
+        success "Found legacy project: $project_id"
+        echo "$project_id"
+        return 0
+    fi
+    
     return 1
 }
 
