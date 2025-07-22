@@ -78,10 +78,28 @@ main() {
         error_exit "README check failed"
     }
     
-    # Step 7: Update README if needed
-    if [[ "${SCRIPT_OUTPUTS[README_OUTDATED]:-false}" == "true" ]]; then
+    # Step 7: Update documentation if needed
+    local docs_update_needed=false
+    if [[ "${SCRIPT_OUTPUTS[README_OUTDATED]:-false}" == "true" ]] || \
+       [[ "${SCRIPT_OUTPUTS[COMMON_SCRIPTS_OUTDATED]:-false}" == "true" ]] || \
+       [[ "${SCRIPT_OUTPUTS[COMMON_INCLUDES_OUTDATED]:-false}" == "true" ]]; then
+        docs_update_needed=true
         echo "README_UPDATE_NEEDED=true"
-        echo "⚠️  README update required - handle in Claude Code"
+        echo "⚠️  Documentation update required - handle in Claude Code"
+        
+        if [[ "${SCRIPT_OUTPUTS[README_OUTDATED]:-false}" == "true" ]]; then
+            echo "  - README.md needs updating"
+        fi
+        if [[ "${SCRIPT_OUTPUTS[COMMON_SCRIPTS_OUTDATED]:-false}" == "true" ]]; then
+            echo "  - CommonScripts.md needs updating"
+        fi
+        if [[ "${SCRIPT_OUTPUTS[COMMON_INCLUDES_OUTDATED]:-false}" == "true" ]]; then
+            echo "  - CommonIncludes.md needs updating"
+        fi
+        echo ""
+    else
+        echo "README_UPDATE_NEEDED=false"
+        echo "✓ All documentation is current"
         echo ""
     fi
     
@@ -108,7 +126,7 @@ main() {
     echo "=== FINAL STATE ==="
     echo "SYNC_COMPLETE=true"
     echo "CHANGES_COMMITTED=${SCRIPT_OUTPUTS[COMMIT_SUCCESS]:-false}"
-    echo "README_UPDATE_NEEDED=${SCRIPT_OUTPUTS[README_OUTDATED]:-false}"
+    echo "README_UPDATE_NEEDED=${docs_update_needed}"
     echo "REMOTE_SYNCED=${SCRIPT_OUTPUTS[PUSH_SUCCESS]:-true}"
     echo "CURRENT_BRANCH=$current_branch"
 }

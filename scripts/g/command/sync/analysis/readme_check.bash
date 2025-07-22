@@ -95,6 +95,43 @@ main() {
         echo "COMMON_SCRIPTS_OUTDATED=missing"
     fi
     
+    # Check CommonIncludes.md
+    echo ""
+    echo "=== CommonIncludes.md Update Check ==="
+    
+    if [ -f "CLAUDE/CommonIncludes.md" ]; then
+        COMMON_INCLUDES_MODIFIED=$(stat -c %Y CLAUDE/CommonIncludes.md 2>/dev/null || echo "0")
+        
+        # Find most recent _inc script modification
+        if [ -d "scripts/_common/_inc" ]; then
+            LAST_INC_CHANGE=$(find scripts/_common/_inc -name "*.inc.bash" -printf "%T@\n" | sort -n | tail -1 | cut -d. -f1)
+            
+            if [ "$COMMON_INCLUDES_MODIFIED" -lt "$LAST_INC_CHANGE" ]; then
+                echo "⚠️  CommonIncludes.md appears outdated compared to _inc script changes"
+                echo "📝 Consider updating CommonIncludes.md to reflect current include functions"
+                echo "COMMON_INCLUDES_OUTDATED=true"
+                
+                # Find which scripts were modified after the doc
+                echo ""
+                echo "Include scripts modified after CommonIncludes.md:"
+                find scripts/_common/_inc -name "*.inc.bash" -newer CLAUDE/CommonIncludes.md -printf "  - %P\n" | sort
+            else
+                echo "✓ CommonIncludes.md appears current"
+                echo "COMMON_INCLUDES_OUTDATED=false"
+            fi
+            
+            # Count include scripts
+            INC_SCRIPT_COUNT=$(find scripts/_common/_inc -name "*.inc.bash" -type f | wc -l)
+            echo "INCLUDE_SCRIPT_COUNT=$INC_SCRIPT_COUNT"
+        else
+            echo "⚠️  Include scripts directory not found"
+            echo "COMMON_INCLUDES_OUTDATED=unknown"
+        fi
+    else
+        echo "⚠️  CommonIncludes.md not found"
+        echo "COMMON_INCLUDES_OUTDATED=missing"
+    fi
+    
     echo "✓ Documentation check complete"
 }
 

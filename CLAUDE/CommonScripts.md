@@ -2,7 +2,7 @@
 
 This document provides a comprehensive reference of all scripts in the `_common/` directory. These scripts provide reusable functionality for Claude Code commands.
 
-Last Updated: 2025-07-21
+Last Updated: 2025-07-22
 
 ## Table of Contents
 

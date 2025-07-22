@@ -129,13 +129,28 @@ Review the orchestrator output for:
 - Any errors or warnings
 </Task>
 
-### Update README.md (if needed)
+### Update Documentation (if needed)
 
 <Task>
-If README_UPDATE_NEEDED=true from the orchestrator:
+If README_UPDATE_NEEDED=true from the orchestrator, examine the output to see which documentation files need updating:
+
+**For README.md updates:**
 1. Read the current README.md
-2. Update it to reflect current commands and features
-3. Commit the changes
+2. Update command listings to reflect current structure
+3. Ensure all namespace sections are accurate
+
+**For CommonScripts.md updates:**
+1. Read the current CLAUDE/CommonScripts.md
+2. Update script listings and descriptions
+3. Ensure all _common scripts are documented
+
+**For CommonIncludes.md updates:**
+1. Read all _inc/*.inc.bash files
+2. Parse each file to extract function definitions and documentation
+3. Update CLAUDE/CommonIncludes.md with current function signatures and usage
+4. Ensure all functions are documented with parameters and examples
+
+After updating any files, commit the documentation changes.
 </Task>
 
 ### 🚀 Next Steps

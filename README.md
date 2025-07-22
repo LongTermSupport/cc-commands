@@ -107,16 +107,17 @@ Pre-installed commands available to all projects:
 
 #### Command Management (`g:command:*`)
 - `/g:command:create` - Create new commands with best practices and safety features
-- `/g:command:update` - Update existing commands to latest standards while preserving functionality
 - `/g:command:sync` - Synchronize cc-commands repository with intelligent commit generation
+- `/g:command:update` - Update existing commands to latest standards while preserving functionality
 
 #### GitHub Integration (`g:gh:*`)
 - `/g:gh:issue:plan` - Create comprehensive plans from GitHub issues
+- `/g:gh:project:summary` - Generate project summaries from GitHub repository data
 - `/g:gh:push` - Smart Git push with GitHub Actions monitoring and failure diagnosis
 
 #### Workflow Tools (`g:w:*`)
-- `/g:w:plan` - Generate comprehensive project plans with progress tracking
 - `/g:w:execute` - Execute previously created plans with workflow-based approach and status verification
+- `/g:w:plan` - Generate comprehensive project plans with progress tracking
 
 #### Symfony Tools (`g:symfony:*`)
 - `/g:symfony:create:command` - Create new Symfony console commands with best practices
