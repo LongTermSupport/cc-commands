@@ -95,12 +95,19 @@ main() {
             
             local plan_file="${1:-${SCRIPT_OUTPUTS[PLAN_FILE_PATH]:-}}"
             local issue_number="${2:-${SCRIPT_OUTPUTS[ISSUE_NUMBER]:-}}"
+            local issue_title="${SCRIPT_OUTPUTS[ISSUE_TITLE]:-Unknown}"
             
             if [[ -z "$plan_file" || -z "$issue_number" ]]; then
                 error_exit "Plan file and issue number required for commit"
             fi
             
-            capture_script_output "$PLAN_DIR/post/commit_comment.bash" "$plan_file" "$issue_number" || {
+            # Count tasks in the plan file (look for - [ ] patterns)
+            local task_count=0
+            if [[ -f "$plan_file" ]]; then
+                task_count=$(grep -c -- '- \[ \]' "$plan_file" 2>/dev/null || echo "0")
+            fi
+            
+            capture_script_output "$PLAN_DIR/post/commit_comment.bash" "$issue_number" "$issue_title" "$plan_file" "$task_count" || {
                 error_exit "Failed to commit and comment"
             }
             ;;
