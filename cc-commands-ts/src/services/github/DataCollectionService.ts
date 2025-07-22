@@ -1,174 +1,200 @@
-import ora from 'ora'
-import { 
-  IGitHubApiService, 
-  IGitHubProject, 
-  IProjectActivity, 
-  IRepositoryActivity 
-} from '../../interfaces/index.js'
-import { DateUtils } from '../../utils/DateUtils.js'
+import { IGitHubApiService } from '../../interfaces/index.js'
 
 /**
- * Service for collecting activity data from GitHub projects
+ * Repository activity data
+ */
+export interface IRepositoryActivity {
+  stars: number
+  forks: number
+  watchers: number
+  openIssues: number
+  recentCommits: number
+  recentIssues: number
+  recentPullRequests: number
+  lastCommitDate: string
+  lastReleaseDate: string | null
+}
+
+/**
+ * Contributor data
+ */
+export interface IContributor {
+  login: string
+  contributions: number
+}
+
+/**
+ * Release data
+ */
+export interface IRelease {
+  tagName: string
+  name: string | null
+  isPrerelease: boolean
+  publishedAt: string
+}
+
+/**
+ * Workflow data
+ */
+export interface IWorkflow {
+  id: number
+  name: string
+  state: string
+  path: string
+}
+
+/**
+ * Collected project data
+ */
+export interface IProjectData {
+  activity: IRepositoryActivity
+  contributors: IContributor[]
+  releases: IRelease[]
+  workflows: IWorkflow[]
+}
+
+/**
+ * Data collection options
+ */
+export interface IDataCollectionOptions {
+  includeActivity?: boolean
+  includeContributors?: boolean
+  includeReleases?: boolean
+  includeWorkflows?: boolean
+  includeIssues?: boolean
+  includePullRequests?: boolean
+}
+
+/**
+ * Service for collecting data from GitHub repositories
  */
 export class DataCollectionService {
   constructor(
-    private githubApi: IGitHubApiService,
-    private dateUtils: typeof DateUtils = DateUtils
+    private githubApi: IGitHubApiService
   ) {}
   
   /**
-   * Collect activity data for a project
+   * Collect comprehensive data for a repository
    */
-  async collectProjectActivity(
-    project: IGitHubProject,
-    timePeriodHours: number = 24
-  ): Promise<IProjectActivity> {
-    const spinner = ora('Collecting project activity data...').start()
+  async collectData(
+    owner: string,
+    repo: string,
+    options: IDataCollectionOptions = {}
+  ): Promise<IProjectData> {
+    // Default all options to true
+    const opts = {
+      includeActivity: true,
+      includeContributors: true,
+      includeReleases: true,
+      includeWorkflows: true,
+      includeIssues: true,
+      includePullRequests: true,
+      ...options
+    }
     
     try {
-      // Calculate time period
-      const startDate = this.dateUtils.getDateHoursAgo(timePeriodHours)
-      const endDate = new Date()
-      const timePeriod = this.dateUtils.getTimePeriodDescription(timePeriodHours)
+      // Get basic repository data first
+      const repoData = await (this.githubApi as any).getRepository(owner, repo)
       
-      // Get repositories in the project
-      spinner.text = 'Fetching project repositories...'
-      const repositories = await this.githubApi.getProjectRepositories(
-        project.organization,
-        project.number
-      )
-      
-      if (repositories.length === 0) {
-        spinner.warn('No repositories found in project')
-        return this.createEmptyActivity(timePeriod, startDate, endDate)
+      // Collect activity metrics
+      const activity: IRepositoryActivity = {
+        stars: repoData.stargazers_count || 0,
+        forks: repoData.forks_count || 0,
+        watchers: repoData.watchers_count || 0,
+        openIssues: repoData.open_issues_count || 0,
+        recentCommits: 0,
+        recentIssues: 0,
+        recentPullRequests: 0,
+        lastCommitDate: repoData.pushed_at || repoData.updated_at,
+        lastReleaseDate: null,
       }
       
-      // Collect activity for each repository
-      const repositoryActivities: IRepositoryActivity[] = []
+      // Calculate recent activity (last 7 days)
+      if (opts.includeActivity) {
+        const sevenDaysAgo = new Date()
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+        
+        // Get recent issues and PRs
+        if (opts.includeIssues || opts.includePullRequests) {
+          const issues = await this.githubApi.getRepositoryIssues(owner, repo, sevenDaysAgo)
+          activity.recentIssues = issues.filter(i => !i.isPullRequest).length
+          activity.recentPullRequests = issues.filter(i => i.isPullRequest).length
+        }
+        
+        // Get recent commits
+        const commits = await this.githubApi.getRepositoryCommits(owner, repo, sevenDaysAgo)
+        activity.recentCommits = commits.length
+      }
       
-      for (let i = 0; i < repositories.length; i++) {
-        const repo = repositories[i]
-        spinner.text = `Analyzing ${repo.fullName} (${i + 1}/${repositories.length})...`
-        
-        const [owner, name] = repo.fullName.split('/')
-        const activity = await this.collectRepositoryActivity(
-          owner,
-          name,
-          repo.fullName,
-          startDate
-        )
-        
-        if (activity.totalActivity > 0) {
-          repositoryActivities.push(activity)
+      // Collect contributors
+      let contributors: IContributor[] = []
+      if (opts.includeContributors) {
+        try {
+          const { data } = await (this.githubApi as any).octokit.rest.repos.listContributors({
+            owner,
+            repo,
+            per_page: 100,
+          })
+          contributors = data.map((c: any) => ({
+            login: c.login,
+            contributions: c.contributions,
+          }))
+        } catch (error) {
+          console.error('Failed to fetch contributors:', error)
         }
       }
       
-      // Sort by activity and calculate totals
-      repositoryActivities.sort((a, b) => b.totalActivity - a.totalActivity)
-      
-      const totalActivity = repositoryActivities.reduce(
-        (sum, repo) => sum + repo.totalActivity,
-        0
-      )
-      
-      const summary = {
-        totalIssues: repositoryActivities.reduce((sum, repo) => sum + repo.issues, 0),
-        totalPullRequests: repositoryActivities.reduce((sum, repo) => sum + repo.pullRequests, 0),
-        totalCommits: repositoryActivities.reduce((sum, repo) => sum + repo.commits, 0),
-        totalComments: repositoryActivities.reduce((sum, repo) => sum + repo.comments, 0),
+      // Collect releases
+      let releases: IRelease[] = []
+      if (opts.includeReleases) {
+        try {
+          const { data } = await (this.githubApi as any).octokit.rest.repos.listReleases({
+            owner,
+            repo,
+            per_page: 10,
+          })
+          releases = data.map((r: any) => ({
+            tagName: r.tag_name,
+            name: r.name,
+            isPrerelease: r.prerelease,
+            publishedAt: r.published_at,
+          }))
+          
+          if (releases.length > 0) {
+            activity.lastReleaseDate = releases[0].publishedAt
+          }
+        } catch (error) {
+          console.error('Failed to fetch releases:', error)
+        }
       }
       
-      const topRepositories = repositoryActivities
-        .slice(0, 5)
-        .map(repo => repo.fullName)
-      
-      spinner.succeed(`Collected activity data for ${repositoryActivities.length} repositories`)
+      // Collect workflows
+      let workflows: IWorkflow[] = []
+      if (opts.includeWorkflows) {
+        try {
+          const { data } = await (this.githubApi as any).octokit.rest.actions.listRepoWorkflows({
+            owner,
+            repo,
+          })
+          workflows = data.workflows.map((w: any) => ({
+            id: w.id,
+            name: w.name,
+            state: w.state,
+            path: w.path,
+          }))
+        } catch (error) {
+          console.error('Failed to fetch workflows:', error)
+        }
+      }
       
       return {
-        repositories: repositoryActivities,
-        totalActivity,
-        activeRepos: repositoryActivities.length,
-        timePeriod,
-        startDate,
-        endDate,
-        topRepositories,
-        summary,
+        activity,
+        contributors,
+        releases,
+        workflows,
       }
     } catch (error) {
-      spinner.fail('Failed to collect project activity')
-      throw error
-    }
-  }
-  
-  /**
-   * Collect activity data for a single repository
-   */
-  private async collectRepositoryActivity(
-    owner: string,
-    repo: string,
-    fullName: string,
-    since: Date
-  ): Promise<IRepositoryActivity> {
-    try {
-      // Collect all activity data in parallel
-      const [issues, commits, comments] = await Promise.all([
-        this.githubApi.getRepositoryIssues(owner, repo, since),
-        this.githubApi.getRepositoryCommits(owner, repo, since),
-        this.githubApi.getRepositoryComments(owner, repo, since),
-      ])
-      
-      // Separate issues and PRs
-      const issueCount = issues.filter(i => !i.isPullRequest).length
-      const prCount = issues.filter(i => i.isPullRequest).length
-      
-      const totalActivity = issueCount + prCount + commits.length + comments.length
-      
-      return {
-        name: repo,
-        fullName,
-        issues: issueCount,
-        pullRequests: prCount,
-        commits: commits.length,
-        comments: comments.length,
-        totalActivity,
-      }
-    } catch (error) {
-      console.error(`Error collecting activity for ${fullName}:`, error)
-      // Return empty activity on error
-      return {
-        name: repo,
-        fullName,
-        issues: 0,
-        pullRequests: 0,
-        commits: 0,
-        comments: 0,
-        totalActivity: 0,
-      }
-    }
-  }
-  
-  /**
-   * Create an empty activity object
-   */
-  private createEmptyActivity(
-    timePeriod: string,
-    startDate: Date,
-    endDate: Date
-  ): IProjectActivity {
-    return {
-      repositories: [],
-      totalActivity: 0,
-      activeRepos: 0,
-      timePeriod,
-      startDate,
-      endDate,
-      topRepositories: [],
-      summary: {
-        totalIssues: 0,
-        totalPullRequests: 0,
-        totalCommits: 0,
-        totalComments: 0,
-      },
+      throw new Error(`Failed to collect repository data: ${error}`)
     }
   }
 }

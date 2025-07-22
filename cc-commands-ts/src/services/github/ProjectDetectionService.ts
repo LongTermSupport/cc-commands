@@ -1,109 +1,158 @@
-import { IGitHubApiService, IGitHubProject } from '../../interfaces/index.js'
+import { IGitHubApiService } from '../../interfaces/index.js'
 import { GitRemoteParser } from '../../utils/GitRemoteParser.js'
+import { simpleGit } from 'simple-git'
 
 /**
- * Service for detecting GitHub projects from various sources
+ * Repository detection result
+ */
+export interface IRepositoryInfo {
+  owner: string
+  repo: string
+}
+
+/**
+ * GitHub repository info with metadata
+ */
+export interface IGitHubRepositoryInfo {
+  owner: string
+  name: string
+  fullName: string
+  description: string | null
+  type: string
+  primaryLanguage: string
+  topics: string[]
+  license: string | null
+  isFork: boolean
+  isArchived: boolean
+  visibility: string
+  defaultBranch: string
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * Service for detecting GitHub repositories from various sources
  */
 export class ProjectDetectionService {
   constructor(
-    private githubApi: IGitHubApiService,
-    private gitRemoteParser: GitRemoteParser
+    private githubApi?: IGitHubApiService
   ) {}
   
   /**
-   * Detect a GitHub project from the current git repository
+   * Detect repository from current directory using git remotes
    */
-  async detectFromGitRemote(): Promise<IGitHubProject> {
-    // Check if we're in a git repository
-    const isGitRepo = await this.gitRemoteParser.isGitRepository()
-    if (!isGitRepo) {
-      throw new Error('Not in a git repository. Please specify a project URL or organization/project-id manually.')
-    }
+  async detectFromDirectory(): Promise<IRepositoryInfo> {
+    const git = simpleGit()
     
-    // Get organization from git remote
-    const organization = await this.gitRemoteParser.getOrganizationFromRemote()
-    if (!organization) {
-      throw new Error('Could not determine GitHub organization from git remote. Please check your remote configuration.')
-    }
-    
-    // List projects for the organization
-    const projects = await this.githubApi.listOrganizationProjects(organization)
-    
-    if (projects.length === 0) {
-      throw new Error(`No projects found for organization ${organization}`)
-    }
-    
-    // Return the most recently updated project
-    const mostRecent = projects
-      .filter(p => !p.closed)
-      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())[0]
-    
-    if (!mostRecent) {
-      throw new Error(`No active projects found for organization ${organization}`)
-    }
-    
-    console.log(`Auto-detected project: ${mostRecent.title} (${mostRecent.url})`)
-    return mostRecent
-  }
-  
-  /**
-   * Parse a GitHub project URL and fetch the project
-   */
-  async parseProjectUrl(url: string): Promise<IGitHubProject> {
-    const parsed = this.gitRemoteParser.parseProjectUrl(url)
-    
-    if (!parsed) {
-      throw new Error(`Invalid GitHub project URL: ${url}. Expected format: https://github.com/orgs/ORG/projects/NUMBER`)
-    }
-    
-    return this.validateProject(parsed.organization, parsed.projectNumber)
-  }
-  
-  /**
-   * Validate and fetch a project by organization and number
-   */
-  async validateProject(org: string, projectNumber: number): Promise<IGitHubProject> {
     try {
-      const project = await this.githubApi.getProject(org, projectNumber)
-      
-      if (project.closed) {
-        throw new Error(`Project ${projectNumber} in organization ${org} is closed`)
+      // Check if we're in a git repository
+      const isRepo = await git.checkIsRepo()
+      if (!isRepo) {
+        throw new Error('Not in a git repository')
       }
       
-      return project
+      // Get remotes
+      const remotes = await git.getRemotes(true)
+      
+      // Look for origin or upstream
+      const remote = remotes.find(r => r.name === 'origin') || 
+                    remotes.find(r => r.name === 'upstream') ||
+                    remotes[0]
+      
+      if (!remote || !remote.refs.fetch) {
+        throw new Error('No git remote found')
+      }
+      
+      // Parse GitHub URL
+      const match = remote.refs.fetch.match(/github\.com[/:]([^/]+)\/([^/.]+)(\.git)?/)
+      if (!match) {
+        throw new Error('Remote is not a GitHub repository')
+      }
+      
+      return {
+        owner: match[1],
+        repo: match[2],
+      }
     } catch (error) {
-      if (error instanceof Error && error.message.includes('not found')) {
-        throw new Error(`Project ${projectNumber} not found in organization ${org}. Please check the project number.`)
-      }
-      throw error
+      throw new Error(`Failed to detect repository from directory: ${error}`)
     }
   }
   
   /**
-   * Suggest available projects for an organization
+   * Detect and get full repository information
    */
-  async suggestProjects(org: string): Promise<string> {
-    try {
-      const projects = await this.githubApi.listOrganizationProjects(org)
-      
-      if (projects.length === 0) {
-        return `No projects found for organization ${org}`
-      }
-      
-      const activeProjects = projects.filter(p => !p.closed)
-      
-      let suggestion = `Available projects for ${org}:\n`
-      for (const project of activeProjects.slice(0, 5)) {
-        suggestion += `  - ${project.title} (#${project.number}) - ${project.url}\n`
-      }
-      
-      if (activeProjects.length > 5) {
-        suggestion += `  ... and ${activeProjects.length - 5} more\n`
-      }
-      
-      return suggestion
-    } catch {
-      return `Could not list projects for organization ${org}`
+  async detectProject(owner: string, repo: string): Promise<IGitHubRepositoryInfo> {
+    if (!this.githubApi) {
+      throw new Error('GitHub API service not provided')
     }
+    
+    try {
+      const repoData = await (this.githubApi as any).getRepository(owner, repo)
+      
+      return {
+        owner: repoData.owner.login,
+        name: repoData.name,
+        fullName: repoData.full_name,
+        description: repoData.description,
+        type: this.detectRepositoryType(repoData),
+        primaryLanguage: repoData.language || 'Unknown',
+        topics: repoData.topics || [],
+        license: repoData.license?.spdx_id || null,
+        isFork: repoData.fork,
+        isArchived: repoData.archived,
+        visibility: repoData.private ? 'private' : 'public',
+        defaultBranch: repoData.default_branch,
+        createdAt: repoData.created_at,
+        updatedAt: repoData.updated_at,
+      }
+    } catch (error) {
+      throw new Error(`Failed to get repository information: ${error}`)
+    }
+  }
+  
+  /**
+   * Detect repository type based on its characteristics
+   */
+  private detectRepositoryType(repoData: any): string {
+    // Check topics for type hints
+    const topics = repoData.topics || []
+    
+    if (topics.includes('library') || topics.includes('package')) {
+      return 'library'
+    }
+    if (topics.includes('application') || topics.includes('app')) {
+      return 'application'
+    }
+    if (topics.includes('cli') || topics.includes('command-line')) {
+      return 'cli-tool'
+    }
+    if (topics.includes('api') || topics.includes('rest-api')) {
+      return 'api'
+    }
+    
+    // Check by language and files
+    if (repoData.language === 'JavaScript' || repoData.language === 'TypeScript') {
+      if (repoData.name.includes('api') || repoData.name.includes('server')) {
+        return 'api'
+      }
+      if (repoData.name.includes('cli')) {
+        return 'cli-tool'
+      }
+      return 'application'
+    }
+    
+    // Default based on description
+    const desc = (repoData.description || '').toLowerCase()
+    if (desc.includes('library') || desc.includes('package')) {
+      return 'library'
+    }
+    if (desc.includes('api') || desc.includes('service')) {
+      return 'api'
+    }
+    if (desc.includes('cli') || desc.includes('command')) {
+      return 'cli-tool'
+    }
+    
+    return 'application'
   }
 }

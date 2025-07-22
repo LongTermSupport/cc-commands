@@ -14,9 +14,9 @@ import {
 export class GitHubApiService implements IGitHubApiService {
   private octokit: Octokit
   
-  constructor(authToken?: string) {
+  constructor(options?: { auth?: string }) {
     this.octokit = new Octokit({
-      auth: authToken || process.env.GITHUB_TOKEN,
+      auth: options?.auth || process.env.GITHUB_TOKEN,
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     })
   }
@@ -36,6 +36,22 @@ export class GitHubApiService implements IGitHubApiService {
       return data.login
     } catch {
       return null
+    }
+  }
+
+  /**
+   * Get repository information
+   */
+  async getRepository(owner: string, name: string): Promise<any> {
+    try {
+      const { data } = await this.octokit.rest.repos.get({
+        owner,
+        repo: name,
+      })
+      return data
+    } catch (error) {
+      console.error(`Error getting repository ${owner}/${name}:`, error)
+      throw new Error(`Failed to get repository ${owner}/${name}`)
     }
   }
   

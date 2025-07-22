@@ -29,5 +29,4 @@ export {
 } from './errors/index.js'
 
 // Type exports for commands to use
-export type { AudienceType } from './types/AudienceTypes.js'
 export type { CommandArgs } from './types/ArgumentTypes.js'

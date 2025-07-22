@@ -1,11 +1,9 @@
-import { AudienceType } from './AudienceTypes.js'
-
 /**
  * Arguments for auto-detection mode
  */
 export type AutoDetectArgs = {
   mode: 'auto'
-  audience?: AudienceType
+  audience?: string
 }
 
 /**
@@ -14,7 +12,7 @@ export type AutoDetectArgs = {
 export type UrlArgs = {
   mode: 'url'
   url: string
-  audience?: AudienceType
+  audience?: string
 }
 
 /**
@@ -24,7 +22,7 @@ export type ManualArgs = {
   mode: 'manual'
   organization: string
   projectId: number
-  audience?: AudienceType
+  audience?: string
 }
 
 /**
