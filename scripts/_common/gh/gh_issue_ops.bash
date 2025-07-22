@@ -205,25 +205,42 @@ get_issue_full() {
         echo "TARGET_REPO=current"
     fi
     
-    # Get basic issue data with comments
+    # Get basic issue data with comments - use API to ensure we get actual issues, not PRs
     local issue_json
     if [ -n "$repo" ]; then
-        issue_json=$(gh issue view "$issue_num" --repo "$repo" --json number,title,body,author,state,labels,assignees,milestone,comments,url,createdAt,updatedAt 2>/dev/null) || {
+        # Use GitHub API to fetch issue and check if it's actually an issue (not a PR)
+        issue_json=$(gh api "repos/$repo/issues/$issue_num" 2>/dev/null) || {
             error_exit "Failed to fetch issue #$issue_num from repo $repo. Check that the issue exists and you have access."
         }
+        
+        # Check if this is actually a pull request
+        if echo "$issue_json" | jq -e '.pull_request' >/dev/null 2>&1; then
+            error_exit "Issue #$issue_num is actually a pull request, not an issue. Use the issue number, not the PR number."
+        fi
     else
-        issue_json=$(gh issue view "$issue_num" --json number,title,body,author,state,labels,assignees,milestone,comments,url,createdAt,updatedAt 2>/dev/null) || {
+        # Get current repo for API call
+        local current_repo
+        current_repo=$(gh repo view --json nameWithOwner | jq -r '.nameWithOwner // ""' 2>/dev/null) || {
+            error_exit "Cannot determine current repository"
+        }
+        
+        issue_json=$(gh api "repos/$current_repo/issues/$issue_num" 2>/dev/null) || {
             error_exit "Failed to fetch issue #$issue_num. Check that the issue exists and you have access."
         }
+        
+        # Check if this is actually a pull request
+        if echo "$issue_json" | jq -e '.pull_request' >/dev/null 2>&1; then
+            error_exit "Issue #$issue_num is actually a pull request, not an issue. Use the issue number, not the PR number."
+        fi
     fi
     
-    # Extract basic information
+    # Extract basic information from GitHub API response
     local title
     title=$(echo "$issue_json" | jq -r '.title // "No title"')
     local state
-    state=$(echo "$issue_json" | jq -r '.state // "unknown"')
+    state=$(echo "$issue_json" | jq -r '.state // "unknown"' | tr '[:lower:]' '[:upper:]')
     local author
-    author=$(echo "$issue_json" | jq -r '.author.login // "unknown"')
+    author=$(echo "$issue_json" | jq -r '.user.login // "unknown"')
     local body
     body=$(echo "$issue_json" | jq -r '.body // ""')
     local labels
@@ -231,9 +248,9 @@ get_issue_full() {
     local assignees
     assignees=$(echo "$issue_json" | jq -r '(.assignees // []) | map(.login) | join(",")')
     local comment_count
-    comment_count=$(echo "$issue_json" | jq -r '(.comments // []) | length')
+    comment_count=$(echo "$issue_json" | jq -r '.comments // 0')
     local url
-    url=$(echo "$issue_json" | jq -r '.url // ""')
+    url=$(echo "$issue_json" | jq -r '.html_url // ""')
     local repo_name
     if [ -n "$repo" ]; then
         repo_name="$repo"
@@ -242,9 +259,9 @@ get_issue_full() {
         repo_name=$(gh repo view --json nameWithOwner | jq -r '.nameWithOwner // "unknown"' 2>/dev/null)
     fi
     local created_at
-    created_at=$(echo "$issue_json" | jq -r '.createdAt // ""')
+    created_at=$(echo "$issue_json" | jq -r '.created_at // ""')
     local updated_at
-    updated_at=$(echo "$issue_json" | jq -r '.updatedAt // ""')
+    updated_at=$(echo "$issue_json" | jq -r '.updated_at // ""')
     
     # Get parent issue using GraphQL with sub_issues header
     local parent_json=""
