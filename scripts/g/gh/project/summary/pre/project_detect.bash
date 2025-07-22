@@ -62,7 +62,7 @@ detect_recent_project_v2() {
     if projects_json=$(gh api graphql -f query='
     {
       organization(login: "'"$org"'") {
-        projectsV2(first: 10, states: OPEN) {
+        projectsV2(first: 10) {
           nodes {
             id
             number
