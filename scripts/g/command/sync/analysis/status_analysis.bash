@@ -20,6 +20,9 @@ COMMON_DIR="$(realpath "$SCRIPT_DIR/../../../../_common")" || {
 source "$COMMON_DIR/_inc/helpers.inc.bash"
 safe_source "error_handler.inc.bash"  # safe_source handles path validation
 
+# Set up temp file cleanup
+setup_temp_cleanup
+
 main() {
     echo "✓ Analyzing repository status"
     
@@ -29,7 +32,7 @@ main() {
     echo "=== Git Status ==="
     
     # Check for uncommitted changes
-    TEMP_FILE=$(mktemp)
+    TEMP_FILE=$(create_temp_file "TEMP_FILE")
     git status --porcelain > "$TEMP_FILE"
     
     if [ -s "$TEMP_FILE" ]; then

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Script: plan_file_create.bash
-# Purpose: Create and validate plan file for GitHub issue
-# Usage: plan_file_create.bash "issue_number" "issue_title"
-# Output: Plan file creation results in KEY=value format
+# Script: path_validate.bash
+# Purpose: Validate and generate plan file path for GitHub issue
+# Usage: path_validate.bash "issue_number" "issue_title"
+# Output: Plan file path validation results in KEY=value format
 
 set -euo pipefail
 IFS=$'\n\t'

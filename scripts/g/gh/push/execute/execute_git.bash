@@ -19,6 +19,9 @@ COMMON_DIR="$(realpath "$SCRIPT_DIR/../../../../_common")" || {
 # shellcheck disable=SC1091  # helpers.inc.bash path is validated above
 source "$COMMON_DIR/_inc/helpers.inc.bash"
 safe_source "error_handler.inc.bash"  # safe_source handles path validation
+
+# Set up temp file cleanup
+setup_temp_cleanup
 # Note: git_smart_commit.bash will be executed when needed, not sourced
 
 # Arguments
@@ -53,7 +56,7 @@ case "$ACTION" in
                 else
                     # Use smart commit message generation
                     info "Generating commit message..."
-                    COMMIT_MSG_FILE=$(mktemp)
+                    COMMIT_MSG_FILE=$(create_temp_file "COMMIT_MSG_FILE")
                     if bash "$COMMON_DIR/git/git_smart_commit.bash" generate > "$COMMIT_MSG_FILE" 2>&1; then
                         COMMIT_MSG=$(grep "COMMIT_MESSAGE=" "$COMMIT_MSG_FILE" | cut -d= -f2-)
                         rm -f "$COMMIT_MSG_FILE"
@@ -71,7 +74,7 @@ case "$ACTION" in
                 
                 # Create commit with Claude Code attribution
                 info "Creating commit..."
-                COMMIT_OUTPUT=$(mktemp)
+                COMMIT_OUTPUT=$(create_temp_file "COMMIT_OUTPUT")
                 
                 if git commit -m "$COMMIT_MSG
 
@@ -124,7 +127,7 @@ if [ "$ACTION" != "none" ]; then
     BRANCH=$(git branch --show-current)
     echo "PUSH_BRANCH=$BRANCH"
     
-    PUSH_OUTPUT=$(mktemp)
+    PUSH_OUTPUT=$(create_temp_file "PUSH_OUTPUT")
     if git push origin "$BRANCH" > "$PUSH_OUTPUT" 2>&1; then
         echo "PUSH_RESULT=success"
         echo "PUSHED_COMMIT=$(git rev-parse HEAD)"

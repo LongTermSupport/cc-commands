@@ -136,6 +136,18 @@ require_file() {
     fi
 }
 
+# Check if required argument is provided
+# Usage: require_arg "$variable" "description of argument"
+require_arg() {
+    local arg_value="$1"
+    local arg_description="${2:-argument}"
+    
+    if [[ -z "$arg_value" ]]; then
+        echo "ERROR: Missing required $arg_description" >&2
+        exit 1
+    fi
+}
+
 # Validate git repository
 # Usage: require_git_repo "Custom error message"
 require_git_repo() {

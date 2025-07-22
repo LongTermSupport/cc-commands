@@ -904,6 +904,20 @@ main() {
     info "=== Claude Code Commands CI Check ==="
     info ""
     
+    # Run tests first
+    info "Running test suite..."
+    if [ -f "tests/run.bash" ]; then
+        if bash tests/run.bash; then
+            success "All tests passed"
+        else
+            error "Test suite failed"
+            exit 1
+        fi
+        echo ""
+    else
+        info "No test suite found - skipping tests"
+    fi
+    
     # Find all command files
     local commands_dir="export/commands"
     if [ ! -d "$commands_dir" ]; then

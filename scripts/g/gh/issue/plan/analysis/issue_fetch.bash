@@ -23,54 +23,112 @@ safe_source "error_handler.inc.bash"  # safe_source handles path validation
 main() {
     local issue_arg="$1"
     
-    echo "✓ Fetching detailed issue data from GitHub"
+    echo "✓ Fetching comprehensive issue data from GitHub"
     echo "=== Fetching Issue Data ==="
     
-    # Extract issue number from argument
-    if [[ "$issue_arg" =~ ^https://github.com/.*/issues/([0-9]+) ]]; then
-        ISSUE_NUM="${BASH_REMATCH[1]}"
+    # Extract issue number and repo from argument
+    local ISSUE_NUM=""
+    local REPO=""
+    
+    if [[ "$issue_arg" =~ ^https://github.com/([^/]+/[^/]+)/issues/([0-9]+) ]]; then
+        REPO="${BASH_REMATCH[1]}"
+        ISSUE_NUM="${BASH_REMATCH[2]}"
+    elif [[ "$issue_arg" =~ ^([^/]+/[^/]+)#([0-9]+)$ ]]; then
+        REPO="${BASH_REMATCH[1]}"
+        ISSUE_NUM="${BASH_REMATCH[2]}"
     elif [[ "$issue_arg" =~ ^#?([0-9]+)$ ]]; then
         ISSUE_NUM="${BASH_REMATCH[1]}"
+        # Leave REPO empty to use current repo
     else
         echo "Invalid issue argument format: $issue_arg"
-        error_exit "Invalid issue argument format"
+        error_exit "Invalid issue argument format: expected URL, repo#issue, or issue number"
     fi
     
-    echo "=== Fetching Issue Data for #$ISSUE_NUM ==="
-    
-    # Fetch issue data using gh CLI
-    if gh issue view "$ISSUE_NUM" --json number,title,body,author,createdAt,updatedAt,labels,assignees,milestone,state,comments > "/tmp/issue-$ISSUE_NUM.json" 2>&1; then
-        echo "✓ Issue data fetched successfully"
-        echo "FETCH_SUCCESS=true"
-        echo "ISSUE_JSON_FILE=/tmp/issue-$ISSUE_NUM.json"
-        echo "ISSUE_NUMBER=$ISSUE_NUM"
-        
-        # Extract and display key information
-        TITLE=$(jq -r '.title' "/tmp/issue-$ISSUE_NUM.json")
-        AUTHOR=$(jq -r '.author.login' "/tmp/issue-$ISSUE_NUM.json")
-        STATE=$(jq -r '.state' "/tmp/issue-$ISSUE_NUM.json")
-        COMMENTS=$(jq '.comments | length' "/tmp/issue-$ISSUE_NUM.json")
-        LABELS=$(jq -r '.labels | map(.name) | join(", ")' "/tmp/issue-$ISSUE_NUM.json" || echo "none")
-        
-        echo "Title: $TITLE"
-        echo "Author: $AUTHOR"
-        echo "State: $STATE"
-        echo "Comments: $COMMENTS"
-        echo "Labels: $LABELS"
-        
-        # Export for use by other scripts
-        echo "ISSUE_TITLE=$TITLE"
-        echo "ISSUE_AUTHOR=$AUTHOR"
-        echo "ISSUE_STATE=$STATE"
-        echo "ISSUE_COMMENTS=$COMMENTS"
-        echo "ISSUE_LABELS=$LABELS"
+    echo "=== Fetching Comprehensive Issue Data for #$ISSUE_NUM ==="
+    if [[ -n "$REPO" ]]; then
+        echo "Repository: $REPO"
     else
-        echo "Failed to fetch issue #$ISSUE_NUM"
-        echo "FETCH_SUCCESS=false"
-        error_exit "Failed to fetch issue #$ISSUE_NUM"
+        echo "Repository: current"
     fi
     
-    echo "✓ Issue data fetch complete"
+    # Use our comprehensive fetch-full function
+    local fetch_output
+    local temp_file=$(mktemp)
+    
+    if bash "$COMMON_DIR/gh/gh_issue_ops.bash" fetch-full "$ISSUE_NUM" "$REPO" > "$temp_file" 2>&1; then
+        cat "$temp_file"
+        
+        # Extract all the rich data from fetch-full output
+        local key value
+        while IFS='=' read -r key value; do
+            case "$key" in
+                ISSUE_NUMBER|ISSUE_TITLE|ISSUE_STATE|ISSUE_AUTHOR|ISSUE_LABELS|ISSUE_ASSIGNEES|ISSUE_COMMENT_COUNT|ISSUE_URL|ISSUE_REPOSITORY|ISSUE_CREATED_AT|ISSUE_UPDATED_AT)
+                    echo "$key=$value"
+                    ;;
+                PARENT_ISSUE_EXISTS|PARENT_ISSUE_NUMBER|PARENT_ISSUE_TITLE|PARENT_ISSUE_REPOSITORY|PARENT_ISSUE_URL)
+                    echo "$key=$value"
+                    ;;
+                SUBISSUES_COUNT|SUBISSUES_EXIST|SUBISSUE_*_NUMBER|SUBISSUE_*_TITLE|SUBISSUE_*_STATE|SUBISSUE_*_REPOSITORY|SUBISSUE_*_URL)
+                    echo "$key=$value"
+                    ;;
+                ISSUE_FULL_DATA_FILE|ISSUE_BODY_FILE|ISSUE_COMMENTS_FILE|PARENT_ISSUE_DATA_FILE|SUBISSUES_DATA_FILE)
+                    echo "$key=$value"
+                    ;;
+            esac
+        done < "$temp_file"
+        
+        echo "FETCH_SUCCESS=true"
+        echo "COMPREHENSIVE_FETCH=true"
+        
+        # Display summary of what we found
+        echo ""
+        echo "=== ISSUE RELATIONSHIP SUMMARY ==="
+        
+        # Check for parent issue
+        if grep -q "PARENT_ISSUE_EXISTS=true" "$temp_file"; then
+            local parent_repo parent_num parent_title
+            parent_repo=$(grep "PARENT_ISSUE_REPOSITORY=" "$temp_file" | cut -d'=' -f2-)
+            parent_num=$(grep "PARENT_ISSUE_NUMBER=" "$temp_file" | cut -d'=' -f2-)
+            parent_title=$(grep "PARENT_ISSUE_TITLE=" "$temp_file" | cut -d'=' -f2-)
+            echo "✓ Found parent issue: $parent_repo#$parent_num - $parent_title"
+            echo "PARENT_FOUND=true"
+        else
+            echo "✓ No parent issue found - this is a root issue"
+            echo "PARENT_FOUND=false"
+        fi
+        
+        # Check for sub-issues
+        local subissues_count
+        subissues_count=$(grep "SUBISSUES_COUNT=" "$temp_file" | cut -d'=' -f2-)
+        if [[ "${subissues_count:-0}" -gt 0 ]]; then
+            echo "✓ Found $subissues_count sub-issue(s)"
+            echo "SUBISSUES_FOUND=true"
+        else
+            echo "✓ No sub-issues found"
+            echo "SUBISSUES_FOUND=false"
+        fi
+        
+        # Check for comments with potential browser console info
+        local comment_count
+        comment_count=$(grep "ISSUE_COMMENT_COUNT=" "$temp_file" | cut -d'=' -f2-)
+        if [[ "${comment_count:-0}" -gt 0 ]]; then
+            echo "✓ Found $comment_count comment(s) - checking for browser console URLs"
+            echo "COMMENTS_AVAILABLE=true"
+        else
+            echo "✓ No comments found"
+            echo "COMMENTS_AVAILABLE=false"
+        fi
+        
+    else
+        echo "Failed to fetch comprehensive issue data for #$ISSUE_NUM"
+        cat "$temp_file" >&2
+        rm -f "$temp_file"
+        echo "FETCH_SUCCESS=false"
+        error_exit "Failed to fetch comprehensive issue data for #$ISSUE_NUM"
+    fi
+    
+    rm -f "$temp_file"
+    echo "✓ Comprehensive issue data fetch complete"
 }
 
 # Check if issue argument provided

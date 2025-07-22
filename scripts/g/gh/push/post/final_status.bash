@@ -20,6 +20,9 @@ COMMON_DIR="$(realpath "$SCRIPT_DIR/../../../../_common")" || {
 source "$COMMON_DIR/_inc/helpers.inc.bash"
 safe_source "error_handler.inc.bash"  # safe_source handles path validation
 
+# Set up temp file cleanup
+setup_temp_cleanup
+
 # Arguments
 PUSHED_COMMIT="${1:-}"
 PUSH_SUCCESSFUL="${2:-}"
@@ -64,7 +67,7 @@ if [ "$PUSH_SUCCESSFUL" = "true" ] && [ -n "$PUSHED_COMMIT" ]; then
     
     # Use gh to check workflow runs for this commit
     if command -v gh >/dev/null 2>&1; then
-        WORKFLOW_CHECK=$(mktemp)
+        WORKFLOW_CHECK=$(create_temp_file "WORKFLOW_CHECK")
         
         if gh run list --json headSha,conclusion,workflowName --limit 20 > "$WORKFLOW_CHECK" 2>&1; then
             # Count failed and successful workflows for this commit

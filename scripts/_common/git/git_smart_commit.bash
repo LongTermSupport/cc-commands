@@ -12,7 +12,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMMON_DIR="$SCRIPT_DIR/.."
 
 # Load common scripts
+source "$COMMON_DIR/_inc/helpers.inc.bash"
 source "$COMMON_DIR/_inc/error_handler.inc.bash"
+
+# Set up temp file cleanup
+setup_temp_cleanup
 
 # Operation mode
 OPERATION="${1:-analyze}"
@@ -23,7 +27,7 @@ analyze_changes_for_message() {
     local changes_output
     
     # Get file change statistics quietly
-    changes_output=$(mktemp)
+    changes_output=$(create_temp_file "changes_output")
     trap "rm -f '$changes_output'" RETURN
     
     # Capture git diff statistics

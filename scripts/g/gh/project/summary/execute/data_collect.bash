@@ -29,10 +29,16 @@ if [[ -z "$ORG" || -z "$PROJECT_ID" ]]; then
     error_exit "Usage: data_collect.bash <org> <project_id>"
 fi
 
-OUTPUT_FILE="/tmp/github-project-summary-$(date +%Y%m%d-%H%M%S).json"
+# Use var directory for output file
+VAR_PATH=$(get_var_path)
+OUTPUT_FILE="$VAR_PATH/github-project-summary-$(date +%Y%m%d-%H%M%S).json"
 SINCE_DATE=$(date -d '24 hours ago' -Iseconds)
 
+# Set up temp file cleanup
+setup_temp_cleanup
+
 info "Collecting GitHub project data for $ORG / $PROJECT_ID since $SINCE_DATE..."
+info "Output file: $OUTPUT_FILE"
 
 # Initialize JSON structure
 cat > "$OUTPUT_FILE" << 'EOF'
@@ -62,11 +68,11 @@ jq --arg timestamp "$(date -Iseconds)" \
 
 # Get project information
 info "Fetching project details..."
-PROJECT_TEMP="/tmp/project_info_$$.json"
+PROJECT_TEMP=$(create_temp_file "project_info")
 if gh project view "$PROJECT_ID" --owner "$ORG" --format json > "$PROJECT_TEMP"; then
     jq --slurpfile project_info "$PROJECT_TEMP" '.project_info = $project_info[0]' \
        "$OUTPUT_FILE" > "$OUTPUT_FILE.tmp" && mv "$OUTPUT_FILE.tmp" "$OUTPUT_FILE"
-    rm -f "$PROJECT_TEMP"
+    cleanup_temp_file "$PROJECT_TEMP"
     success "Project information collected"
 else
     echo "DATA_COLLECTED=false"
@@ -76,11 +82,11 @@ fi
 
 # Get all project items
 info "Fetching project items..."
-ITEMS_TEMP="/tmp/project_items_$$.json"
+ITEMS_TEMP=$(create_temp_file "project_items")
 if gh project item-list "$PROJECT_ID" --owner "$ORG" --format json --limit 500 > "$ITEMS_TEMP"; then
     jq --slurpfile items "$ITEMS_TEMP" '.project_items = $items[0].items' \
        "$OUTPUT_FILE" > "$OUTPUT_FILE.tmp" && mv "$OUTPUT_FILE.tmp" "$OUTPUT_FILE"
-    rm -f "$ITEMS_TEMP"
+    cleanup_temp_file "$ITEMS_TEMP"
     success "Project items collected"
 else
     echo "DATA_COLLECTED=false"
@@ -90,7 +96,16 @@ fi
 
 # Extract repositories from project items
 info "Extracting repositories from project items..."
-REPO_LIST=$(jq -r '.project_items[].content.repository.name // empty' "$OUTPUT_FILE" | sort -u | grep -v '^$')
+REPO_LIST=$(jq -r '.project_items[] | 
+  if .content.repository then
+    if (.content.repository | type) == "string" then
+      .content.repository | split("/")[1] // empty
+    else
+      .content.repository.name // empty  
+    end
+  else
+    empty
+  end' "$OUTPUT_FILE" | sort -u | grep -v '^$')
 
 if [[ -z "$REPO_LIST" ]]; then
     warning "No repositories found in project items. Using organization repositories with recent activity."
@@ -108,69 +123,73 @@ while IFS= read -r repo; do
     
     info "Processing repository: $repo"
     
-    # Create temp directory for this repo's data
-    TEMP_DIR="/tmp/gh-data-$$-$repo"
-    mkdir -p "$TEMP_DIR"
+    # Create temp files for this repo's data (using var/ directory)
+    REPO_INFO_TEMP=$(create_temp_file "repo_info_$repo")
+    ISSUES_TEMP=$(create_temp_file "issues_$repo")
+    PRS_TEMP=$(create_temp_file "prs_$repo") 
+    COMMITS_TEMP=$(create_temp_file "commits_$repo")
+    COMMENTS_TEMP=$(create_temp_file "comments_$repo")
+    EVENTS_TEMP=$(create_temp_file "events_$repo")
     
     # Get repository info
-    if gh api "repos/$ORG/$repo" > "$TEMP_DIR/repo_info.json"; then
+    if gh api "repos/$ORG/$repo" > "$REPO_INFO_TEMP"; then
         debug "Repository info collected for $repo"
     else
-        warning "Failed to get repository info for $repo"
-        echo '{}' > "$TEMP_DIR/repo_info.json"
+        warn "Failed to get repository info for $repo"
+        echo '{}' > "$REPO_INFO_TEMP"
     fi
     
     # Get recent issues using search API (more reliable for date filtering)
     SEARCH_DATE=$(echo "$SINCE_DATE" | cut -d'T' -f1)  # Extract just the date part (YYYY-MM-DD)
     
-    if gh api "search/issues?q=repo:$ORG/$repo+updated:>$SEARCH_DATE+type:issue" | jq '.items' > "$TEMP_DIR/issues.json"; then
+    if gh api "search/issues?q=repo:$ORG/$repo+updated:>$SEARCH_DATE+type:issue" | jq '.items' > "$ISSUES_TEMP"; then
         debug "Issues collected for $repo"
     else
-        warning "Failed to get issues for $repo"
-        echo '[]' > "$TEMP_DIR/issues.json"
+        warn "Failed to get issues for $repo"
+        echo '[]' > "$ISSUES_TEMP"
     fi
     
     # Get recent pull requests using search API
-    if gh api "search/issues?q=repo:$ORG/$repo+updated:>$SEARCH_DATE+type:pr" | jq '.items' > "$TEMP_DIR/prs.json"; then
+    if gh api "search/issues?q=repo:$ORG/$repo+updated:>$SEARCH_DATE+type:pr" | jq '.items' > "$PRS_TEMP"; then
         debug "Pull requests collected for $repo"
     else
-        warning "Failed to get pull requests for $repo"
-        echo '[]' > "$TEMP_DIR/prs.json"
+        warn "Failed to get pull requests for $repo"
+        echo '[]' > "$PRS_TEMP"
     fi
     
     # Get recent commits using search API
-    if gh api "search/commits?q=repo:$ORG/$repo+committer-date:>$SEARCH_DATE" | jq '.items' > "$TEMP_DIR/commits.json"; then
+    if gh api "search/commits?q=repo:$ORG/$repo+committer-date:>$SEARCH_DATE" | jq '.items' > "$COMMITS_TEMP"; then
         debug "Commits collected for $repo"
     else
         debug "No recent commits found for $repo"
-        echo '[]' > "$TEMP_DIR/commits.json"
+        echo '[]' > "$COMMITS_TEMP"
     fi
     
     # Get issue comments sorted by update date, then filter client-side
     if gh api "repos/$ORG/$repo/issues/comments?sort=updated&direction=desc&per_page=100" --paginate | \
-       jq --arg since "$SINCE_DATE" '[.[] | select(.updated_at > $since)]' > "$TEMP_DIR/issue_comments.json"; then
+       jq --arg since "$SINCE_DATE" '[.[] | select(.updated_at > $since)]' > "$COMMENTS_TEMP"; then
         debug "Issue comments collected for $repo"
     else
-        warning "Failed to get issue comments for $repo"
-        echo '[]' > "$TEMP_DIR/issue_comments.json"
+        warn "Failed to get issue comments for $repo"
+        echo '[]' > "$COMMENTS_TEMP"
     fi
     
     # Get recent repository events (may not be available for private repos)
-    if gh api "repos/$ORG/$repo/events" -F per_page=100 > "$TEMP_DIR/repo_events.json" 2>/dev/null; then
+    if gh api "repos/$ORG/$repo/events" -F per_page=100 > "$EVENTS_TEMP" 2>/dev/null; then
         debug "Repository events collected for $repo"
     else
         debug "Repository events not accessible for $repo"
-        echo '[]' > "$TEMP_DIR/repo_events.json"
+        echo '[]' > "$EVENTS_TEMP"
     fi
     
     # Update JSON with repository data
     jq --arg repo "$repo" \
-       --slurpfile repo_info "$TEMP_DIR/repo_info.json" \
-       --slurpfile issues "$TEMP_DIR/issues.json" \
-       --slurpfile prs "$TEMP_DIR/prs.json" \
-       --slurpfile commits "$TEMP_DIR/commits.json" \
-       --slurpfile issue_comments "$TEMP_DIR/issue_comments.json" \
-       --slurpfile repo_events "$TEMP_DIR/repo_events.json" \
+       --slurpfile repo_info "$REPO_INFO_TEMP" \
+       --slurpfile issues "$ISSUES_TEMP" \
+       --slurpfile prs "$PRS_TEMP" \
+       --slurpfile commits "$COMMITS_TEMP" \
+       --slurpfile issue_comments "$COMMENTS_TEMP" \
+       --slurpfile repo_events "$EVENTS_TEMP" \
        '.repositories[$repo] = {
          "info": $repo_info[0],
          "recent_issues": $issues[0],
@@ -182,11 +201,11 @@ while IFS= read -r repo; do
        "$OUTPUT_FILE" > "$OUTPUT_FILE.tmp" && mv "$OUTPUT_FILE.tmp" "$OUTPUT_FILE"
     
     # Add to consolidated recent activity
-    jq --slurpfile issues "$TEMP_DIR/issues.json" \
-       --slurpfile prs "$TEMP_DIR/prs.json" \
-       --slurpfile commits "$TEMP_DIR/commits.json" \
-       --slurpfile issue_comments "$TEMP_DIR/issue_comments.json" \
-       --slurpfile repo_events "$TEMP_DIR/repo_events.json" \
+    jq --slurpfile issues "$ISSUES_TEMP" \
+       --slurpfile prs "$PRS_TEMP" \
+       --slurpfile commits "$COMMITS_TEMP" \
+       --slurpfile issue_comments "$COMMENTS_TEMP" \
+       --slurpfile repo_events "$EVENTS_TEMP" \
        '.recent_activity.issues += $issues[0] |
         .recent_activity.pull_requests += $prs[0] |
         .recent_activity.commits += $commits[0] |
@@ -195,21 +214,26 @@ while IFS= read -r repo; do
        "$OUTPUT_FILE" > "$OUTPUT_FILE.tmp" && mv "$OUTPUT_FILE.tmp" "$OUTPUT_FILE"
     
     # Clean up temp files for this repo
-    rm -rf "$TEMP_DIR"
+    cleanup_temp_file "$REPO_INFO_TEMP"
+    cleanup_temp_file "$ISSUES_TEMP"
+    cleanup_temp_file "$PRS_TEMP"
+    cleanup_temp_file "$COMMITS_TEMP"
+    cleanup_temp_file "$COMMENTS_TEMP"
+    cleanup_temp_file "$EVENTS_TEMP"
 done <<< "$REPO_LIST"
 
 # Get organization events for additional context
 info "Fetching organization events..."
-TEMP_EVENTS="/tmp/org_events_$$.json"
-if gh api "orgs/$ORG/events" -F per_page=100 > "$TEMP_EVENTS" 2>/dev/null; then
-    jq --slurpfile events "$TEMP_EVENTS" '.organization_events = $events[0]' \
+ORG_EVENTS_TEMP=$(create_temp_file "org_events")
+if gh api "orgs/$ORG/events" -F per_page=100 > "$ORG_EVENTS_TEMP" 2>/dev/null; then
+    jq --slurpfile events "$ORG_EVENTS_TEMP" '.organization_events = $events[0]' \
        "$OUTPUT_FILE" > "$OUTPUT_FILE.tmp" && mv "$OUTPUT_FILE.tmp" "$OUTPUT_FILE"
     success "Organization events collected"
 else
     info "Organization events not accessible"
     jq '.organization_events = []' "$OUTPUT_FILE" > "$OUTPUT_FILE.tmp" && mv "$OUTPUT_FILE.tmp" "$OUTPUT_FILE"
 fi
-rm -f "$TEMP_EVENTS"
+cleanup_temp_file "$ORG_EVENTS_TEMP"
 
 # Add summary statistics
 info "Calculating summary statistics..."

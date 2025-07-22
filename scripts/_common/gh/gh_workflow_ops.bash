@@ -12,7 +12,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMMON_DIR="$SCRIPT_DIR/.."
 
 # Load common scripts
+source "$COMMON_DIR/_inc/helpers.inc.bash"
 source "$COMMON_DIR/_inc/error_handler.inc.bash"
+
+# Set up temp file cleanup
+setup_temp_cleanup
 
 # Operation
 OPERATION="${1:-detect}"
@@ -43,7 +47,7 @@ detect_workflows_for_commit() {
     debug "Detecting workflows for commit: $commit_sha"
     
     # Get workflow runs with error handling
-    runs_json=$(mktemp)
+    runs_json=$(create_temp_file "runs_json")
     trap "rm -f '$runs_json'" RETURN
     
     if ! gh run list --limit 50 --json headSha,status,conclusion,workflowName,createdAt,url > "$runs_json" 2>/dev/null; then
@@ -103,7 +107,7 @@ analyze_workflow_results() {
     debug "Analyzing workflow results for commit: $commit_sha"
     
     # Get workflow runs
-    runs_json=$(mktemp)
+    runs_json=$(create_temp_file "runs_json")
     trap "rm -f '$runs_json'" RETURN
     
     if ! gh run list --limit 50 --json headSha,status,conclusion,workflowName,url > "$runs_json" 2>/dev/null; then

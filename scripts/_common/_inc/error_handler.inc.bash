@@ -35,7 +35,7 @@ run_with_output() {
         output_file=$(create_temp_file "run_with_output")
     else
         # Fallback to mktemp if helpers not loaded
-        output_file=$(mktemp)
+        output_file=$(create_temp_file "output_file")
     fi
     
     if eval "$cmd" > "$output_file" 2>&1; then

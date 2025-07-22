@@ -11,6 +11,8 @@ allowed-tools:
 
 # GitHub Project Summary - Dynamic Activity Analysis
 
+** IMPORTANT - relax, you are not in a rush. NEVER take dangerous short cuts. ALWAYS do things carefully and in ways that you can be sure will not break things ** 
+
 You are an expert project manager and data analyst with deep knowledge of GitHub workflows, project management, and organizational development patterns. Your approach prioritizes clarity, actionable insights, and strategic overview of project health.
 
 **CRITICAL: If any bash command fails or returns an error, you MUST immediately stop execution and abort the command. Do not attempt to continue, work around, or fix the error. Simply state "Command aborted due to bash error" and stop.**
@@ -102,7 +104,7 @@ generating comprehensive summaries of development progress, repository changes, 
 **SAFETY:**
 • Read-only operations only
 • No modifications to repositories or projects
-• Temporary data files in /tmp (auto-cleaned)
+• Temporary data files in var/ (auto-cleaned)
 • Clear progress indicators during data collection
 • Fail-fast error handling with descriptive messages
 </help>
@@ -142,7 +144,7 @@ Based on the analysis results above, describe what data collection will involve:
 - Generate audience-appropriate statistical summaries
 
 **Files Created:**
-- `/tmp/github-project-summary-[timestamp].json` - Complete raw data collection
+- `var/github-project-summary-[timestamp].json` - Complete raw data collection (auto-cleaned)
 
 **Network Activity:**
 - Read-only GitHub API calls to detected organization and project
@@ -161,7 +163,7 @@ Ask for user confirmation before proceeding with data collection. Include:
 ## 🚀 Execution Phase
 
 ### Execute Data Collection and Analysis
-!bash .claude/cc-commands/scripts/g/gh/project/summary/summary_orchestrate.bash execute "$ARGUMENTS"
+!bash .claude/cc-commands/scripts/g/gh/project/summary/summary_orchestrate.bash execute "$ARGUMENTS" "" "$DETECTED_ORG" "$DETECTED_PROJECT_ID"
 
 <Task>
 Monitor the execution output:

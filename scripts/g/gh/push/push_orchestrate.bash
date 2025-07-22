@@ -20,42 +20,11 @@ COMMON_DIR="$(realpath "$SCRIPT_DIR/../../../_common")" || {
 source "$COMMON_DIR/_inc/helpers.inc.bash"
 safe_source "error_handler.inc.bash"  # safe_source handles path validation
 
+# Set up temp file cleanup
+setup_temp_cleanup
+
 # Store outputs from sub-scripts
 declare -A SCRIPT_OUTPUTS
-
-# Function to capture and parse script outputs
-capture_script_output() {
-    local script_path="$1"
-    shift
-    local temp_file=$(mktemp)
-    
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "→ Running: ${script_path##*/}"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    
-    if bash "$script_path" "$@" > "$temp_file" 2>&1; then
-        cat "$temp_file"
-        
-        # Extract KEY=value pairs
-        while IFS= read -r line; do
-            if [[ "$line" =~ ^([A-Z_]+)=(.*)$ ]]; then
-                local key="${BASH_REMATCH[1]}"
-                local value="${BASH_REMATCH[2]}"
-                SCRIPT_OUTPUTS["$key"]="$value"
-            fi
-        done < "$temp_file"
-    else
-        local exit_code=$?
-        echo "ERROR: Script failed with exit code $exit_code"
-        cat "$temp_file"
-        rm -f "$temp_file"
-        return $exit_code
-    fi
-    
-    rm -f "$temp_file"
-    echo ""
-    return 0
-}
 
 main() {
     local mode="${1:-analyze}"

@@ -21,43 +21,11 @@ PLAN_DIR="$SCRIPT_DIR"
 source "$COMMON_DIR/_inc/helpers.inc.bash"
 safe_source "error_handler.inc.bash"  # safe_source handles path validation
 
+# Set up temp file cleanup
+setup_temp_cleanup
+
 # Store outputs from sub-scripts
 declare -A SCRIPT_OUTPUTS
-
-# Function to capture and parse script outputs
-capture_script_output() {
-    local script_path="$1"
-    shift
-    local args=("$@")
-    local temp_file=$(mktemp)
-    
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo "→ Running: ${script_path##*/}"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    
-    if bash "$script_path" "${args[@]}" > "$temp_file" 2>&1; then
-        cat "$temp_file"
-        
-        # Extract KEY=value pairs
-        while IFS= read -r line; do
-            if [[ "$line" =~ ^([A-Z_]+)=(.*)$ ]]; then
-                local key="${BASH_REMATCH[1]}"
-                local value="${BASH_REMATCH[2]}"
-                SCRIPT_OUTPUTS["$key"]="$value"
-            fi
-        done < "$temp_file"
-    else
-        local exit_code=$?
-        echo "ERROR: Script failed with exit code $exit_code"
-        cat "$temp_file"
-        rm -f "$temp_file"
-        return $exit_code
-    fi
-    
-    rm -f "$temp_file"
-    echo ""
-    return 0
-}
 
 main() {
     local mode="${1:-full}"
@@ -87,8 +55,10 @@ main() {
             fi
             
             # Step 4: Fetch issue data
-            if [[ -n "${SCRIPT_OUTPUTS[ISSUE_NUMBER]:-}" ]]; then
-                capture_script_output "$PLAN_DIR/analysis/issue_fetch.bash" "${SCRIPT_OUTPUTS[ISSUE_NUMBER]}" || {
+            if [[ -n "${SCRIPT_OUTPUTS[PARSED_ISSUE_NUMBER]:-}" ]]; then
+                # Use full issue reference if available, otherwise just the issue number
+                local issue_ref="${SCRIPT_OUTPUTS[PARSED_ISSUE_REFERENCE]:-${SCRIPT_OUTPUTS[PARSED_ISSUE_NUMBER]}}"
+                capture_script_output "$PLAN_DIR/analysis/issue_fetch.bash" "$issue_ref" || {
                     error_exit "Failed to fetch issue data"
                 }
             fi
@@ -105,20 +75,21 @@ main() {
                 error_exit "Issue number and title required for execution"
             fi
             
-            # Create plan file
-            capture_script_output "$PLAN_DIR/execute/file_create.bash" "$issue_number" "$issue_title" || {
-                error_exit "Failed to create plan file"
+            # Validate plan file path
+            capture_script_output "$PLAN_DIR/execute/path_validate.bash" "$issue_number" "$issue_title" || {
+                error_exit "Failed to validate plan file path"
             }
             
+            printf "\n\nLLM TO WRITE THE PLAN CONTENTS TO THE SPECIFIED FILE PATH\n\n"
+            ;;
+            
+        commit)
             # Verify plan
             if [[ -n "${SCRIPT_OUTPUTS[PLAN_FILE_PATH]:-}" ]]; then
                 capture_script_output "$PLAN_DIR/post/verify.bash" "${SCRIPT_OUTPUTS[PLAN_FILE_PATH]}" || {
                     error_exit "Plan verification failed"
                 }
             fi
-            ;;
-            
-        commit)
             # Phase 3: Commit and comment
             echo "=== COMMIT PHASE ==="
             
@@ -142,13 +113,13 @@ main() {
             "$0" analyze "$arguments" || exit $?
             
             # Check if we have issue data
-            if [[ -z "${SCRIPT_OUTPUTS[ISSUE_NUMBER]:-}" ]]; then
+            if [[ -z "${SCRIPT_OUTPUTS[PARSED_ISSUE_NUMBER]:-}" ]]; then
                 echo "NO_ISSUE_SELECTED=true"
                 exit 0
             fi
             
             # Run execution
-            "$0" execute "${SCRIPT_OUTPUTS[ISSUE_NUMBER]}" "${SCRIPT_OUTPUTS[ISSUE_TITLE]}" || exit $?
+            "$0" execute "${SCRIPT_OUTPUTS[PARSED_ISSUE_NUMBER]}" "${SCRIPT_OUTPUTS[ISSUE_TITLE]}" || exit $?
             
             # Output for Claude to decide on commit
             echo "READY_TO_COMMIT=true"
