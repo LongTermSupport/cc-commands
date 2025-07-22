@@ -5,23 +5,33 @@ This directory contains bash scripts used by Claude Code commands to ensure cons
 ## Directory Structure
 
 ```
-scripts/
-├── CLAUDE.md                 # This file - coding standards and documentation
-├── _inc/                     # SOURCED includes (run in caller's context)
-│   ├── CLAUDE.md            # Include documentation  
-│   └── error_handler.bash   # Error handling functions
-├── _common/                  # Shared DELEGATED scripts (run in own process)
-│   ├── CLAUDE.md            # Common scripts documentation
-│   ├── env/                 # Environment validation scripts
-│   ├── git/                 # Git operations scripts
-│   ├── file/                # File discovery scripts
-│   ├── gh/                  # GitHub CLI scripts
-│   ├── arg/                 # Argument parsing scripts
-│   └── error/               # Legacy error scripts (use _inc/ instead)
-├── g/                       # Scripts for 'g:' namespace commands
-│   └── gh/                  # Scripts for 'g:gh:' commands
-└── [other-namespaces]/      # Additional namespace-specific scripts
+cc-commands/
+├── var/                      # Temporary files directory (gitignored except .gitignore)
+├── scripts/
+│   ├── CLAUDE.md            # This file - coding standards and documentation
+│   ├── _common/             # Shared DELEGATED scripts (run in own process)
+│   │   ├── CLAUDE.md        # Common scripts documentation
+│   │   ├── _inc/            # SOURCED includes (run in caller's context)
+│   │   │   ├── CLAUDE.md    # Include documentation  
+│   │   │   ├── helpers.inc.bash  # Safe sourcing helpers
+│   │   │   └── error_handler.inc.bash  # Error handling functions
+│   │   ├── env/             # Environment validation scripts
+│   │   ├── git/             # Git operations scripts
+│   │   ├── file/            # File discovery scripts
+│   │   └── gh/              # GitHub CLI scripts
+│   ├── g/                   # Scripts for 'g:' namespace commands
+│   │   └── gh/              # Scripts for 'g:gh:' commands
+│   └── [other-namespaces]/  # Additional namespace-specific scripts
+└── export/commands/         # Exported command files
 ```
+
+### Temporary Files Convention
+
+**All temporary files MUST use the `var/` directory:**
+- `var/` contains a `.gitignore` that ignores everything except itself (gitkeep pattern)
+- Temporary scripts, logs, backups should be created in `var/`
+- Clean up temporary files when operations complete
+- Example: `var/fix_script.bash`, `var/backup_data.txt`
 
 ## Include vs Delegate Pattern
 
@@ -108,25 +118,34 @@ set -euo pipefail
 IFS=$'\n\t'
 ```
 
-### 3. Script Directory References
+### 3. Script Directory References - CRITICAL PATTERN
 
-All scripts MUST define paths to required directories:
+All scripts MUST use realpath and safe_source for robust path resolution:
 
 ```bash
-# Get script directory
+# Get script directory and resolve COMMON_DIR
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+COMMON_DIR="$(realpath "$SCRIPT_DIR/../../../_common")" || {
+    echo "ERROR: Cannot resolve COMMON_DIR from $SCRIPT_DIR" >&2
+    exit 1
+}
 
-# For including sourced files
-source "$SCRIPT_DIR/../_inc/error_handler.inc.bash"  # Adjust ../ based on script depth
-
-# For delegating to common scripts
-COMMON_DIR="$SCRIPT_DIR/../../_common"  # Adjust path depth as needed
-bash "$COMMON_DIR/git/git_state_analysis.bash"
+# Source helpers and error handler via safe_source pattern
+# shellcheck disable=SC1091  # helpers.inc.bash path is validated above
+source "$COMMON_DIR/_inc/helpers.inc.bash"
+safe_source "error_handler.inc.bash"  # safe_source handles path validation
 ```
 
+**Why this pattern is required:**
+- `realpath` eliminates manual relative path calculation errors
+- `safe_source` function provides fail-fast validation before sourcing
+- Both COMMON_DIR and include files are validated before use
+- Makes debugging much easier with absolute paths in error messages
+
 **Path Examples**:
-- From `/scripts/g/command/script.bash` → `../../../_inc/` and `../../../_common/`
-- From `/scripts/g/command/sync/sub/script.bash` → `../../../../../_inc/`
+- From `scripts/g/command/script.bash` → `../../../_common`
+- From `scripts/g/command/sync/sub/script.bash` → `../../../../_common`
+- From `scripts/g/gh/issue/plan/pre/script.bash` → `../../../../../_common`
 
 ### 4. Output Noise Reduction
 

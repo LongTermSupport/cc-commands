@@ -307,26 +307,36 @@ echo "KEY2=value2"
 
 ## Error Handler Sourcing Pattern
 
-### CRITICAL: Consistent Error Handler Sourcing
+### CRITICAL: Safe Sourcing with realpath and safe_source
 
-All scripts MUST follow this pattern for sourcing the error handler:
+All scripts MUST use the safe_source pattern for robust path resolution and validation:
 
-1. **Define COMMON_DIR** based on script location
-2. **Source from** `$COMMON_DIR/_inc/error_handler.inc.bash`
+**Standard Pattern for All Scripts:**
+```bash
+# Get script directory and resolve COMMON_DIR
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+COMMON_DIR="$(realpath "$SCRIPT_DIR/RELATIVE_PATH_TO_COMMON")" || {
+    echo "ERROR: Cannot resolve COMMON_DIR from $SCRIPT_DIR" >&2
+    exit 1
+}
 
-The error handler is located at `scripts/_common/_inc/error_handler.inc.bash`, so COMMON_DIR must point to `scripts/_common/`.
+# Source helpers and error handler via safe_source pattern
+# shellcheck disable=SC1091  # helpers.inc.bash path is validated above
+source "$COMMON_DIR/_inc/helpers.inc.bash"
+safe_source "error_handler.inc.bash"  # safe_source handles path validation
+```
 
 ### COMMON_DIR Calculation by Location
 
 ```bash
 # From scripts/_common/env/
-COMMON_DIR="$SCRIPT_DIR/.."
+COMMON_DIR="$(realpath "$SCRIPT_DIR/..")"
 
 # From scripts/_common/git/
-COMMON_DIR="$SCRIPT_DIR/.."
+COMMON_DIR="$(realpath "$SCRIPT_DIR/..")"
 
 # From scripts/g/command/{name}/
-COMMON_DIR="$SCRIPT_DIR/../../../_common"
+COMMON_DIR="$(realpath "$SCRIPT_DIR/../../../_common")"
 
 # From scripts/g/command/{name}/pre/
 COMMON_DIR="$SCRIPT_DIR/../../../../_common"
