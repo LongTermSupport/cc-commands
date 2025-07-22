@@ -339,16 +339,16 @@ COMMON_DIR="$(realpath "$SCRIPT_DIR/..")"
 COMMON_DIR="$(realpath "$SCRIPT_DIR/../../../_common")"
 
 # From scripts/g/command/{name}/pre/
-COMMON_DIR="$SCRIPT_DIR/../../../../_common"
+COMMON_DIR="$(realpath "$SCRIPT_DIR/../../../../_common")"
 
 # From scripts/g/command/{name}/analysis/
-COMMON_DIR="$SCRIPT_DIR/../../../../_common"
+COMMON_DIR="$(realpath "$SCRIPT_DIR/../../../../_common")"
 
 # From scripts/g/gh/{name}/
-COMMON_DIR="$SCRIPT_DIR/../../../_common"
+COMMON_DIR="$(realpath "$SCRIPT_DIR/../../../_common")"
 
 # From scripts/g/gh/{name}/analysis/
-COMMON_DIR="$SCRIPT_DIR/../../../../_common"
+COMMON_DIR="$(realpath "$SCRIPT_DIR/../../../../_common")"
 ```
 
 ### Standard Script Header
