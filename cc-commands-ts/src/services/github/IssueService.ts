@@ -3,6 +3,10 @@
  */
 
 import type { IGitHubApiService } from '../../interfaces/IGitHubApiService.js'
+import type { 
+  GitHubIssue, 
+  GitHubIssueListParams 
+} from '../../types/GitHubApiTypes.js'
 
 /**
  * Issue data
@@ -67,10 +71,12 @@ export class IssueService {
     let avgTimeToClose: number | undefined
     
     if (closedIssues.length > 0) {
-      const totalTime = closedIssues.reduce((sum, issue) => {
+      let totalTime = 0
+      for (const issue of closedIssues) {
         const timeToClose = issue.closedAt!.getTime() - issue.createdAt.getTime()
-        return sum + timeToClose
-      }, 0)
+        totalTime += timeToClose
+      }
+
       avgTimeToClose = Math.round(totalTime / closedIssues.length / (1000 * 60 * 60 * 24)) // Days
     }
 
@@ -103,6 +109,10 @@ export class IssueService {
    * @param owner - Repository owner
    * @param repo - Repository name
    * @param options - Query options
+   * @param options.labels - Filter by labels
+   * @param options.limit - Maximum number of issues to fetch
+   * @param options.since - Only issues updated after this date
+   * @param options.state - Filter by issue state
    * @returns Array of issue data
    */
   async fetchIssues(
@@ -119,23 +129,23 @@ export class IssueService {
       const { labels, limit = 30, since, state = 'all' } = options
 
       // Build query parameters
-      const params: Record<string, any> = {
+      const params: GitHubIssueListParams = {
         direction: 'desc',
-        per_page: limit,
         sort: 'updated',
         state
       }
+      params['per_page'] = limit
 
       if (since) {
-        params['since'] = since.toISOString()
+        params.since = since.toISOString()
       }
 
       if (labels && labels.length > 0) {
-        params['labels'] = labels.join(',')
+        params.labels = labels.join(',')
       }
 
       const response = await (this.githubApi as unknown as {
-        request(route: string, params: any): Promise<{ data: any[] }>
+        request(route: string, params: GitHubIssueListParams & { owner: string; repo: string }): Promise<{ data: GitHubIssue[] }>
       }).request('GET /repos/{owner}/{repo}/issues', {
         owner,
         repo,
@@ -144,17 +154,17 @@ export class IssueService {
 
       // Filter out pull requests (GitHub API returns both issues and PRs in issues endpoint)
       return response.data
-        .filter(issue => !issue.pull_request)
-        .map(issue => ({
-          assignees: issue.assignees?.map((a: any) => a.login) || [],
-          author: issue.user?.login || 'unknown',
+        .filter((issue: GitHubIssue) => !issue.pull_request)
+        .map((issue: GitHubIssue) => ({
+          assignees: issue.assignees?.map(a => a.login) ?? [],
+          author: issue.user?.login ?? 'unknown',
           closedAt: issue.closed_at ? new Date(issue.closed_at) : undefined,
           comments: issue.comments || 0,
           createdAt: new Date(issue.created_at),
           isPullRequest: false,
-          labels: issue.labels?.map((l: any) => l.name) || [],
+          labels: issue.labels?.map(l => l.name) ?? [],
           number: issue.number,
-          state: issue.state,
+          state: issue.state as 'closed' | 'open',
           title: issue.title,
           updatedAt: new Date(issue.updated_at)
         }))

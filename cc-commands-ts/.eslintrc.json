@@ -142,6 +142,16 @@
     "unicorn/no-instanceof-array": "error",
     "unicorn/prefer-node-protocol": "error",
     
+    // Code complexity rules
+    "max-params": ["error", 4],
+    "complexity": ["error", 20],
+    
+    // Naming conventions
+    "camelcase": ["error", {
+      "properties": "always",
+      "ignoreDestructuring": false
+    }],
+    
     // Architecture-specific rules
     "no-restricted-syntax": [
       "error",
@@ -163,6 +173,25 @@
     "eslint-comments/no-unused-disable": "error"
   },
   "overrides": [
+    {
+      // DTO-specific rules
+      "files": ["**/dto/**/*.ts", "**/*DTO.ts", "**/types/**/*DTO.ts"],
+      "rules": {
+        // DTOs legitimately need many constructor parameters
+        "max-params": "off"
+      }
+    },
+    {
+      // GitHub API service rules
+      "files": ["**/services/github/**/*.ts"],
+      "rules": {
+        // GitHub API uses snake_case parameters
+        "camelcase": ["error", {
+          "properties": "never",
+          "allow": ["per_page", "since", "state", "sort", "direction", "page"]
+        }]
+      }
+    },
     {
       // Orchestrator-specific rules
       "files": ["**/orchestrators/**/*.ts", "**/commands/**/*.ts"],

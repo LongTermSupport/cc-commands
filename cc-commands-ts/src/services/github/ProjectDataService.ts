@@ -6,6 +6,11 @@
  */
 
 import type { IGitHubApiService } from '../../interfaces/IGitHubApiService.js'
+import type {
+  GitHubGraphQLProject,
+  GitHubGraphQLResponse,
+  GitHubProjectItem
+} from '../../types/GitHubApiTypes.js'
 
 /**
  * GitHub Project data
@@ -71,6 +76,7 @@ export class ProjectDataService {
    * 
    * @param projectId - Project node ID
    * @param options - Query options
+   * @param options.limit - Maximum number of items to fetch
    * @returns Array of project items
    */
   async fetchProjectItems(
@@ -150,22 +156,30 @@ export class ProjectDataService {
       `
 
       const response = await (this.githubApi as unknown as {
-        graphql(query: string, variables: any): Promise<any>
+        graphql(query: string, variables: Record<string, unknown>): Promise<GitHubGraphQLResponse<{
+          node?: {
+            items?: {
+              nodes?: GitHubProjectItem[]
+            }
+          }
+        }>>
       }).graphql(query, { limit, projectId })
 
-      const items = response.node?.items?.nodes || []
+      const items = response.data?.node?.items?.nodes || []
 
-      return items.map((item: any) => {
+      return items.map((item: GitHubProjectItem) => {
         const content = item.content || {}
-        const assignees = content.assignees?.nodes?.map((a: any) => a.login) || []
+        const assignees = content.assignees?.nodes?.map(a => a.login) || []
 
         // Find status field value
         let status: string | undefined
-        item.fieldValues?.nodes?.forEach((fv: any) => {
+        const fieldValues = item.fieldValues?.nodes || []
+        for (const fv of fieldValues) {
           if (fv.field?.name === 'Status' && fv.name) {
             status = fv.name
+            break
           }
-        })
+        }
 
         const result: ProjectItemData = {
           assignees,
@@ -198,6 +212,8 @@ export class ProjectDataService {
    * 
    * @param org - Organization name
    * @param options - Query options
+   * @param options.includeArchived - Whether to include archived projects
+   * @param options.limit - Maximum number of projects to fetch
    * @returns Array of project data
    */
   async findOrganizationProjects(
@@ -235,19 +251,25 @@ export class ProjectDataService {
       `
 
       const response = await (this.githubApi as unknown as {
-        graphql(query: string, variables: any): Promise<any>
+        graphql(query: string, variables: Record<string, unknown>): Promise<GitHubGraphQLResponse<{
+          organization?: {
+            projectsV2?: {
+              nodes?: GitHubGraphQLProject[]
+            }
+          }
+        }>>
       }).graphql(query, { limit, org })
 
-      const projects = response.organization?.projectsV2?.nodes || []
+      const projects = response.data?.organization?.projectsV2?.nodes || []
 
       return projects
-        .filter((p: any) => includeArchived || !p.closed)
-        .map((project: any) => ({
+        .filter((p: GitHubGraphQLProject) => includeArchived || !p.closed)
+        .map((project: GitHubGraphQLProject) => ({
           closed: project.closed,
           createdAt: new Date(project.createdAt),
           description: project.shortDescription,
           id: project.id,
-          itemCount: project.items.totalCount,
+          itemCount: project.items?.totalCount ?? 0,
           number: project.number,
           public: project.public,
           title: project.title,

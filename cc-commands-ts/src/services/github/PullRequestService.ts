@@ -3,6 +3,10 @@
  */
 
 import type { IGitHubApiService } from '../../interfaces/IGitHubApiService.js'
+import type { 
+  GitHubPullRequest, 
+  GitHubPullRequestListParams 
+} from '../../types/GitHubApiTypes.js'
 
 /**
  * Pull request data
@@ -68,10 +72,12 @@ export class PullRequestService {
     let avgTimeToMerge: number | undefined
     
     if (mergedPRs.length > 0) {
-      const totalTime = mergedPRs.reduce((sum, pr) => {
+      let totalTime = 0
+      for (const pr of mergedPRs) {
         const timeToMerge = pr.mergedAt!.getTime() - pr.createdAt.getTime()
-        return sum + timeToMerge
-      }, 0)
+        totalTime += timeToMerge
+      }
+
       avgTimeToMerge = Math.round(totalTime / mergedPRs.length / (1000 * 60 * 60 * 24)) // Days
     }
 
@@ -91,6 +97,9 @@ export class PullRequestService {
    * @param owner - Repository owner
    * @param repo - Repository name
    * @param options - Query options
+   * @param options.limit - Maximum number of PRs to fetch
+   * @param options.since - Only PRs updated after this date
+   * @param options.state - Filter by PR state
    * @returns Array of pull request data
    */
   async fetchPullRequests(
@@ -106,35 +115,35 @@ export class PullRequestService {
       const { limit = 30, since, state = 'all' } = options
 
       // Build query parameters
-      const params: Record<string, any> = {
+      const params: GitHubPullRequestListParams = {
         direction: 'desc',
-        per_page: limit,
         sort: 'updated',
         state
       }
+      params['per_page'] = limit
 
       if (since) {
-        params['since'] = since.toISOString()
+        params.since = since.toISOString()
       }
 
       const response = await (this.githubApi as unknown as {
-        request(route: string, params: any): Promise<{ data: any[] }>
+        request(route: string, params: GitHubPullRequestListParams & { owner: string; repo: string }): Promise<{ data: GitHubPullRequest[] }>
       }).request('GET /repos/{owner}/{repo}/pulls', {
         owner,
         repo,
         ...params
       })
 
-      return response.data.map(pr => ({
-        author: pr.user?.login || 'unknown',
+      return response.data.map((pr: GitHubPullRequest) => ({
+        author: pr.user?.login ?? 'unknown',
         comments: pr.comments || 0,
         createdAt: new Date(pr.created_at),
         draft: pr.draft || false,
-        labels: pr.labels?.map((l: any) => l.name) || [],
+        labels: pr.labels?.map(l => l.name) ?? [],
         mergedAt: pr.merged_at ? new Date(pr.merged_at) : undefined,
         number: pr.number,
-        reviewers: pr.requested_reviewers?.map((r: any) => r.login) || [],
-        state: pr.merged_at ? 'merged' : pr.state,
+        reviewers: pr.requested_reviewers?.map(r => r.login) ?? [],
+        state: pr.merged_at ? 'merged' : (pr.state as 'closed' | 'open'),
         title: pr.title,
         updatedAt: new Date(pr.updated_at)
       }))
