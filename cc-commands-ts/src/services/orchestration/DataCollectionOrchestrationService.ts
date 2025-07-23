@@ -10,7 +10,6 @@ import { join } from 'node:path'
 
 import type { IDataCollectionService } from '../../interfaces/IDataCollectionService.js'
 import type { IOrchestrationService, ServiceContext } from '../../interfaces/IOrchestrationService.js'
-import type { ContributorDTO } from '../../types/ProjectDataDTO.js'
 
 import { CommandError } from '../../errors/CommandError.js'
 import { LLMInfo } from '../../types/LLMInfo.js'
@@ -46,51 +45,8 @@ export class DataCollectionOrchestrationService implements IOrchestrationService
         since
       })
       
-      // Add summary data to LLMInfo (KEY=value pairs)
-      if (!projectData.project) {
-        throw new Error('Project data is missing')
-      }
-      
-      result.addData('REPOSITORY_NAME', projectData.project.name)
-      result.addData('REPOSITORY_OWNER', projectData.project.owner)
-      result.addData('DESCRIPTION', projectData.project.description || 'No description')
-      result.addData('PRIMARY_LANGUAGE', projectData.project.primaryLanguage)
-      result.addData('VISIBILITY', projectData.project.visibility)
-      result.addData('DEFAULT_BRANCH', projectData.project.defaultBranch)
-      result.addData('LICENSE', projectData.project.license || 'No license')
-      result.addData('CREATED_AT', projectData.project.createdAt)
-      result.addData('UPDATED_AT', projectData.project.updatedAt)
-      result.addData('IS_FORK', String(projectData.project.isFork))
-      result.addData('IS_ARCHIVED', String(projectData.project.isArchived))
-      result.addData('TOPICS', projectData.project.topics.join(', ') || 'None')
-      
-      // Activity metrics
-      result.addData('COMMIT_COUNT', String(projectData.activity.commitCount))
-      result.addData('ISSUE_COUNT', String(projectData.activity.issueCount))
-      result.addData('PR_COUNT', String(projectData.activity.prCount))
-      result.addData('RELEASE_COUNT', String(projectData.activity.releaseCount))
-      result.addData('CONTRIBUTOR_COUNT', String(projectData.activity.contributorCount))
-      result.addData('DAYS_ANALYZED', String(daysSince))
-      
-      // Latest release info
-      if (projectData.releases && projectData.releases.length > 0) {
-        const latestRelease = projectData.releases[0]
-        if (latestRelease) {
-          result.addData('LATEST_RELEASE_VERSION', latestRelease.tagName)
-          result.addData('LATEST_RELEASE_DATE', latestRelease.publishedAt)
-          result.addData('LATEST_RELEASE_NAME', latestRelease.name || latestRelease.tagName)
-          result.addData('LATEST_RELEASE_IS_PRERELEASE', String(latestRelease.isPrerelease))
-        }
-      } else {
-        result.addData('LATEST_RELEASE_VERSION', 'No releases')
-        result.addData('LAST_RELEASE_DATE', 'No releases')
-      }
-      
-      // Top contributors
-      if (projectData.contributors && projectData.contributors.length > 0) {
-        const topContributors = projectData.contributors.slice(0, 5)
-        result.addData('TOP_CONTRIBUTORS', topContributors.map((c: ContributorDTO) => `${c.login} (${c.contributions})`).join(', '))
-      }
+      // Add all data from the DTO
+      result.addDataFromDTO(projectData)
       
       // Pass through audience without interpretation
       result.addData('AUDIENCE', audience)
@@ -102,13 +58,17 @@ export class DataCollectionOrchestrationService implements IOrchestrationService
       
       const detailFile = join(dataDir, `${owner}-${repo}-${timestamp}.json`)
       const detailData = {
+        activeWorkflowNames: projectData.activeWorkflowNames,
+        activityMetrics: projectData.activityMetrics,
+        latestRelease: projectData.latestRelease,
         metadata: {
           collectedAt: new Date().toISOString(),
           daysSince,
           owner,
           repo
         },
-        ...projectData
+        repositoryData: projectData.repositoryData,
+        workflowCount: projectData.workflowCount
       }
       
       writeFileSync(detailFile, JSON.stringify(detailData, null, 2))

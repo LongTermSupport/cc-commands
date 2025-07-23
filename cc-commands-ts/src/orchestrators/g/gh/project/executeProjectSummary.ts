@@ -1,6 +1,21 @@
 /**
  * @file Pure orchestration function for project summary
  * 
+ * CRITICAL: This orchestrator ONLY collects raw data.
+ * It does NOT:
+ * - Generate summaries or reports
+ * - Format output for humans
+ * - Make decisions about importance
+ * - Create any kind of narrative
+ * 
+ * The LLM (in the command markdown) handles ALL:
+ * - Summary generation
+ * - Report formatting
+ * - Audience adaptation
+ * - Content creation
+ * 
+ * This code just fetches data and returns it as KEY=value pairs.
+ * 
  * This function contains all the orchestration logic for collecting
  * GitHub project data. It accepts services as parameters, making it
  * easy to test with mocked dependencies.

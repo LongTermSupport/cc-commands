@@ -9,6 +9,7 @@ import { execSync } from 'node:child_process'
 
 import type { IOrchestrationService, ServiceContext } from '../../interfaces/IOrchestrationService.js'
 
+import { EnvironmentValidationDTO } from '../../dto/EnvironmentValidationDTO.js'
 import { CommandError } from '../../errors/CommandError.js'
 import { LLMInfo } from '../../types/LLMInfo.js'
 
@@ -39,12 +40,14 @@ export class EnvironmentValidationService implements IOrchestrationService {
         }
       }
       
-      // Add results to LLMInfo
+      // Create validation result DTO
       const isValid = missingTools.length === 0 && missingEnvVars.length === 0
+      const validationResult = isValid 
+        ? EnvironmentValidationDTO.success()
+        : EnvironmentValidationDTO.failure(missingTools, missingEnvVars)
       
-      result.addData('ENVIRONMENT_VALID', String(isValid))
-      result.addData('MISSING_TOOLS', missingTools.join(','))
-      result.addData('MISSING_ENV_VARS', missingEnvVars.join(','))
+      // Add DTO data to result
+      result.addDataFromDTO(validationResult)
       
       // Add actions
       result.addAction('Environment validation', isValid ? 'success' : 'failed', 

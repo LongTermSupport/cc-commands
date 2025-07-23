@@ -17,6 +17,8 @@
  * - Include comprehensive error recovery information
  */
 
+import type { ILLMDataDTO } from '../interfaces/ILLMDataDTO.js'
+
 import { CommandError } from '../errors/CommandError.js'
 
 /**
@@ -149,6 +151,30 @@ export class LLMInfo {
     for (const [key, value] of Object.entries(data)) {
       this.addData(key, value)
     }
+  }
+  
+  /**
+   * Add data from a DTO implementing ILLMDataDTO
+   * 
+   * This is the preferred method for adding structured data to ensure
+   * type safety and consistent key usage.
+   * 
+   * @param dto - Data transfer object implementing ILLMDataDTO
+   * 
+   * @example
+   * ```typescript
+   * const repoData = new RepositoryDataDTO(...)
+   * info.addDataFromDTO(repoData)
+   * ```
+   */
+  addDataFromDTO(dto: ILLMDataDTO): this {
+    const data = dto.toLLMData()
+    for (const [key, value] of Object.entries(data)) {
+      // Keys from DTOs are already validated in the DTO
+      this.data.set(key, value)
+    }
+
+    return this
   }
   
   /**

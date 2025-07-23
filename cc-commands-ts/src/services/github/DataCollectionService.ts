@@ -8,6 +8,7 @@ import type {
   WorkflowDTO
 } from '../../types/ProjectDataDTO.js'
 
+import { RepoDataCollectionDTO } from '../../dto/RepoDataCollectionDTO.js'
 import { IGitHubApiService } from '../../interfaces/index.js'
 import {
   GitHubContributor,
@@ -31,7 +32,7 @@ export class DataCollectionService implements IDataCollectionService {
     owner: string,
     repo: string,
     options: DataCollectionOptionsDTO = {}
-  ): Promise<ProjectDataDTO> {
+  ): Promise<RepoDataCollectionDTO> {
     // Default all options to true
     const opts = {
       includeActivity: true,
@@ -182,13 +183,15 @@ export class DataCollectionService implements IDataCollectionService {
       activity.issueCount = activity.recentIssues  
       activity.prCount = activity.recentPullRequests
       
-      return {
+      const projectData: ProjectDataDTO = {
         activity,
         contributors,
         project,
         releases,
         workflows,
       }
+      
+      return RepoDataCollectionDTO.fromProjectData(projectData)
     } catch (error) {
       throw new Error(`Failed to collect repository data: ${error}`)
     }

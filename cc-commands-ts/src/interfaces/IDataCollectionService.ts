@@ -1,11 +1,11 @@
 /**
  * @file Interface for data collection service
  * 
- * Defines the contract for collecting comprehensive project data
+ * Defines the contract for collecting comprehensive repository data
  * from GitHub repositories.
  */
 
-import type { ProjectDataDTO } from '../types/ProjectDataDTO.js'
+import type { RepoDataCollectionDTO } from '../dto/RepoDataCollectionDTO.js'
 
 /**
  * Options for data collection
@@ -26,20 +26,20 @@ export interface DataCollectionOptionsDTO {
 }
 
 /**
- * Service interface for collecting project data
+ * Service interface for collecting repository data
  */
 export interface IDataCollectionService {
   /**
-   * Collect comprehensive data about a GitHub project
+   * Collect comprehensive data about a GitHub repository
    * 
    * @param owner - Repository owner
    * @param repo - Repository name
    * @param options - What data to collect
-   * @returns Complete project data
+   * @returns Complete repository data as DTO
    */
   collectData(
     owner: string,
     repo: string,
     options?: DataCollectionOptionsDTO
-  ): Promise<ProjectDataDTO>
+  ): Promise<RepoDataCollectionDTO>
 }
