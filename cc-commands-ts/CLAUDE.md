@@ -271,3 +271,8 @@ Issues live on GitHub.com and should be referenced by number (e.g., #22). Do not
 3. **Fail fast** - Clear errors are better than silent failures
 4. **Run QA frequently** - Catch issues early
 5. **DTOs everywhere** - Type safety prevents bugs
+6. **NO QUICK TEST SCRIPTS** - If you want to test something, write a proper test
+   - Use unit tests for testing services and orchestrators
+   - Use integration tests for testing commands
+   - Use E2E tests for testing full workflows
+   - NEVER create temporary test scripts - they bypass the test framework
