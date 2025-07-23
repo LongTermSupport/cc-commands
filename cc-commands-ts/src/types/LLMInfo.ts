@@ -1,5 +1,5 @@
 /**
- * @fileoverview Core return type for all cc-commands
+ * @file Core return type for all cc-commands
  * 
  * ARCHITECTURAL PRINCIPLE:
  * Commands do deterministic work and return raw data for LLM processing.
@@ -23,24 +23,24 @@ import { CommandError } from '../errors/CommandError.js'
  * Action performed by the command with its result
  */
 export interface Action {
-  /** Human-readable description of what was attempted */
-  event: string
-  /** Whether the action succeeded, failed, or was skipped */
-  result: 'success' | 'failed' | 'skipped'
   /** Optional details about the result */
   details?: string
   /** How long the action took in milliseconds */
   duration?: number
+  /** Human-readable description of what was attempted */
+  event: string
+  /** Whether the action succeeded, failed, or was skipped */
+  result: 'failed' | 'skipped' | 'success'
 }
 
 /**
  * File operation performed by the command
  */
 export interface FileOperation {
+  /** What was done to the file */
+  operation: 'created' | 'deleted' | 'modified' | 'read'
   /** Absolute or relative path to the file */
   path: string
-  /** What was done to the file */
-  operation: 'created' | 'modified' | 'deleted' | 'read'
   /** Size in bytes (for created/modified files) */
   size?: number
 }
@@ -61,12 +61,12 @@ export interface FileOperation {
  * ```
  */
 export class LLMInfo {
-  private readonly data: Map<string, string> = new Map()
   private readonly actions: Action[] = []
-  private readonly files: FileOperation[] = []
-  private readonly instructions: string[] = []
+  private readonly data: Map<string, string> = new Map()
   private readonly debugLogPath?: string
   private error?: CommandError
+  private readonly files: FileOperation[] = []
+  private readonly instructions: string[] = []
   
   /**
    * Private constructor prevents extension and direct instantiation
@@ -87,6 +87,27 @@ export class LLMInfo {
   }
   
   /**
+   * Record an action taken by the command.
+   * This creates an audit trail of what the command did.
+   * 
+   * @param event - Description of what was attempted
+   * @param result - Whether it succeeded, failed, or was skipped
+   * @param details - Optional additional information
+   * @param duration - How long it took in milliseconds
+   * 
+   * @example
+   * ```typescript
+   * info.addAction('Connect to database', 'success', 'Connected to prod DB', 150)
+   * info.addAction('Fetch user data', 'failed', 'Timeout after 30s', 30000)
+   * info.addAction('Send email', 'skipped', 'Email disabled in config')
+   * ```
+   */
+  addAction(event: string, result: Action['result'], details?: string, duration?: number): this {
+    this.actions.push({ details, duration, event, result })
+    return this
+  }
+  
+  /**
    * Add a key-value data pair.
    * Keys must be UPPER_SNAKE_CASE to ensure consistency.
    * 
@@ -101,11 +122,13 @@ export class LLMInfo {
    * info.addData('PROJECT_NAME', 'My Project')
    * ```
    */
-  addData(key: string, value: string | number | boolean): void {
+  addData(key: string, value: boolean | number | string): this {
     if (!this.isValidKey(key)) {
       throw new Error(`Invalid key format: ${key}. Must be UPPER_SNAKE_CASE (e.g., PROJECT_ID, USER_COUNT)`)
     }
+
     this.data.set(key, String(value))
+    return this
   }
   
   /**
@@ -122,30 +145,10 @@ export class LLMInfo {
    * })
    * ```
    */
-  addDataBulk(data: Record<string, string | number | boolean>): void {
-    Object.entries(data).forEach(([key, value]) => {
+  addDataBulk(data: Record<string, boolean | number | string>): void {
+    for (const [key, value] of Object.entries(data)) {
       this.addData(key, value)
-    })
-  }
-  
-  /**
-   * Record an action taken by the command.
-   * This creates an audit trail of what the command did.
-   * 
-   * @param event - Description of what was attempted
-   * @param result - Whether it succeeded, failed, or was skipped
-   * @param details - Optional additional information
-   * @param duration - How long it took in milliseconds
-   * 
-   * @example
-   * ```typescript
-   * info.addAction('Connect to database', 'success', 'Connected to prod DB', 150)
-   * info.addAction('Fetch user data', 'failed', 'Timeout after 30s', 30000)
-   * info.addAction('Send email', 'skipped', 'Email disabled in config')
-   * ```
-   */
-  addAction(event: string, result: Action['result'], details?: string, duration?: number): void {
-    this.actions.push({ event, result, details, duration })
+    }
   }
   
   /**
@@ -162,8 +165,9 @@ export class LLMInfo {
    * info.addFile('old-data.csv', 'deleted')
    * ```
    */
-  addFile(path: string, operation: FileOperation['operation'], size?: number): void {
-    this.files.push({ path, operation, size })
+  addFile(path: string, operation: FileOperation['operation'], size?: number): this {
+    this.files.push({ operation, path, size })
+    return this
   }
   
   /**
@@ -179,8 +183,76 @@ export class LLMInfo {
    * info.addInstruction('Highlight any critical issues in red')
    * ```
    */
-  addInstruction(instruction: string): void {
+  addInstruction(instruction: string): this {
     this.instructions.push(instruction)
+    return this
+  }
+  
+  /**
+   * Get the actions for testing or debugging
+   * @internal
+   */
+  getActions(): readonly Action[] {
+    return [...this.actions]
+  }
+  
+  /**
+   * Get the raw data for testing or debugging
+   * @internal
+   */
+  getData(): Record<string, string> {
+    return Object.fromEntries(this.data)
+  }
+  
+  /**
+   * Check if this response contains an error
+   */
+  hasError(): boolean {
+    return this.error !== undefined
+  }
+  
+  /**
+   * Merge another LLMInfo instance into this one.
+   * Used by orchestrators to combine results from multiple services.
+   * 
+   * @param other - The LLMInfo instance to merge
+   * @returns This instance for method chaining
+   * 
+   * @example
+   * ```typescript
+   * const result = LLMInfo.create()
+   * const serviceResult = await service.execute()
+   * result.merge(serviceResult)
+   * ```
+   */
+  merge(other: LLMInfo): this {
+    // If the other has an error, this should also have an error
+    if (other.hasError() && other.error) {
+      this.setError(other.error)
+      return this
+    }
+    
+    // Merge actions
+    for (const action of other.actions) {
+      this.actions.push(action)
+    }
+    
+    // Merge data
+    for (const [key, value] of other.data) {
+      this.data.set(key, value)
+    }
+    
+    // Merge files
+    for (const file of other.files) {
+      this.files.push(file)
+    }
+    
+    // Merge instructions
+    for (const instruction of other.instructions) {
+      this.instructions.push(instruction)
+    }
+    
+    return this
   }
   
   /**
@@ -198,31 +270,9 @@ export class LLMInfo {
    * ))
    * ```
    */
-  setError(error: CommandError): void {
+  setError(error: CommandError): this {
     this.error = error
-  }
-  
-  /**
-   * Check if this response contains an error
-   */
-  hasError(): boolean {
-    return this.error !== undefined
-  }
-  
-  /**
-   * Get the raw data for testing or debugging
-   * @internal
-   */
-  getData(): Record<string, string> {
-    return Object.fromEntries(this.data)
-  }
-  
-  /**
-   * Get the actions for testing or debugging
-   * @internal
-   */
-  getActions(): readonly Action[] {
-    return [...this.actions]
+    return this
   }
   
   /**
@@ -250,17 +300,17 @@ export class LLMInfo {
       // Debug info
       if (Object.keys(this.error.debugInfo).length > 0) {
         output += '\n=== DEBUG INFO ===\n'
-        Object.entries(this.error.debugInfo).forEach(([key, value]) => {
+        for (const [key, value] of Object.entries(this.error.debugInfo)) {
           output += `${key.toUpperCase()}=${JSON.stringify(value)}\n`
-        })
+        }
       }
       
       // Context if any
       if (Object.keys(this.error.context).length > 0) {
         output += '\n=== ERROR CONTEXT ===\n'
-        Object.entries(this.error.context).forEach(([key, value]) => {
+        for (const [key, value] of Object.entries(this.error.context)) {
           output += `${key.toUpperCase()}=${JSON.stringify(value)}\n`
-        })
+        }
       }
       
       if (this.debugLogPath) {
@@ -274,9 +324,9 @@ export class LLMInfo {
       }
       
       output += '\n=== RECOVERY INSTRUCTIONS ===\n'
-      this.error.recoveryInstructions.forEach(instruction => {
+      for (const instruction of this.error.recoveryInstructions) {
         output += `- ${instruction}\n`
-      })
+      }
       
       return output
     }
@@ -287,21 +337,24 @@ export class LLMInfo {
     if (this.debugLogPath) {
       output += `DEBUG_LOG=${this.debugLogPath}\n`
     }
+
     output += '\n'
     
     // Action log
     if (this.actions.length > 0) {
       output += '=== ACTION LOG ===\n'
-      this.actions.forEach((action, index) => {
+      for (const [index, action] of this.actions.entries()) {
         output += `ACTION_${index}_EVENT=${action.event}\n`
         output += `ACTION_${index}_RESULT=${action.result}\n`
         if (action.details) {
           output += `ACTION_${index}_DETAILS=${action.details}\n`
         }
+
         if (action.duration !== undefined) {
           output += `ACTION_${index}_DURATION_MS=${action.duration}\n`
         }
-      })
+      }
+
       output += `TOTAL_ACTIONS=${this.actions.length}\n`
       const successCount = this.actions.filter(a => a.result === 'success').length
       const failedCount = this.actions.filter(a => a.result === 'failed').length
@@ -315,13 +368,14 @@ export class LLMInfo {
     // File operations
     if (this.files.length > 0) {
       output += '=== FILES AFFECTED ===\n'
-      this.files.forEach((file, index) => {
+      for (const [index, file] of this.files.entries()) {
         output += `FILE_${index}_PATH=${file.path}\n`
         output += `FILE_${index}_OPERATION=${file.operation}\n`
         if (file.size !== undefined) {
           output += `FILE_${index}_SIZE=${file.size}\n`
         }
-      })
+      }
+
       output += `TOTAL_FILES=${this.files.length}\n`
       output += '\n'
     }
@@ -332,15 +386,16 @@ export class LLMInfo {
       for (const [key, value] of this.data) {
         output += `${key}=${value}\n`
       }
+
       output += '\n'
     }
     
     // Instructions
     if (this.instructions.length > 0) {
       output += '=== INSTRUCTIONS FOR LLM ===\n'
-      this.instructions.forEach(instruction => {
+      for (const instruction of this.instructions) {
         output += `- ${instruction}\n`
-      })
+      }
     }
     
     return output

@@ -11,9 +11,28 @@ export class GitRemoteParser {
   }
   
   /**
+   * Extract organization name from a GitHub URL
+   */
+  extractOrganizationFromUrl(url: string): null | string {
+    // Handle SSH format: git@github.com:org/repo.git
+    const sshMatch = url.match(/git@github\.com:([^/]+)\//)
+    if (sshMatch?.[1]) {
+      return sshMatch[1]
+    }
+    
+    // Handle HTTPS format: https://github.com/org/repo.git
+    const httpsMatch = url.match(/github\.com\/([^/]+)\//)
+    if (httpsMatch?.[1]) {
+      return httpsMatch[1]
+    }
+    
+    return null
+  }
+  
+  /**
    * Get the GitHub organization from the current repository's remote
    */
-  async getOrganizationFromRemote(remoteName: string = 'origin'): Promise<string | null> {
+  async getOrganizationFromRemote(remoteName: string = 'origin'): Promise<null | string> {
     try {
       const remotes = await this.git.getRemotes(true)
       const remote = remotes.find(r => r.name === remoteName)
@@ -31,51 +50,6 @@ export class GitRemoteParser {
   }
   
   /**
-   * Extract organization name from a GitHub URL
-   */
-  extractOrganizationFromUrl(url: string): string | null {
-    // Handle SSH format: git@github.com:org/repo.git
-    const sshMatch = url.match(/git@github\.com:([^/]+)\//)
-    if (sshMatch) {
-      return sshMatch[1]
-    }
-    
-    // Handle HTTPS format: https://github.com/org/repo.git
-    const httpsMatch = url.match(/github\.com\/([^/]+)\//)
-    if (httpsMatch) {
-      return httpsMatch[1]
-    }
-    
-    return null
-  }
-  
-  /**
-   * Parse a GitHub project URL to extract organization and project number
-   */
-  parseProjectUrl(url: string): { organization: string; projectNumber: number } | null {
-    // Match URLs like: https://github.com/orgs/MyOrg/projects/5
-    const match = url.match(/github\.com\/orgs\/([^/]+)\/projects\/(\d+)/)
-    
-    if (match) {
-      return {
-        organization: match[1],
-        projectNumber: parseInt(match[2], 10)
-      }
-    }
-    
-    // Also support user projects: https://github.com/users/username/projects/1
-    const userMatch = url.match(/github\.com\/users\/([^/]+)\/projects\/(\d+)/)
-    if (userMatch) {
-      return {
-        organization: userMatch[1],
-        projectNumber: parseInt(userMatch[2], 10)
-      }
-    }
-    
-    return null
-  }
-  
-  /**
    * Check if we're in a git repository
    */
   async isGitRepository(): Promise<boolean> {
@@ -85,5 +59,31 @@ export class GitRemoteParser {
     } catch {
       return false
     }
+  }
+  
+  /**
+   * Parse a GitHub project URL to extract organization and project number
+   */
+  parseProjectUrl(url: string): null | { organization: string; projectNumber: number } {
+    // Match URLs like: https://github.com/orgs/MyOrg/projects/5
+    const match = url.match(/github\.com\/orgs\/([^/]+)\/projects\/(\d+)/)
+    
+    if (match?.[1] && match?.[2]) {
+      return {
+        organization: match[1],
+        projectNumber: Number.parseInt(match[2], 10)
+      }
+    }
+    
+    // Also support user projects: https://github.com/users/username/projects/1
+    const userMatch = url.match(/github\.com\/users\/([^/]+)\/projects\/(\d+)/)
+    if (userMatch?.[1] && userMatch?.[2]) {
+      return {
+        organization: userMatch[1],
+        projectNumber: Number.parseInt(userMatch[2], 10)
+      }
+    }
+    
+    return null
   }
 }

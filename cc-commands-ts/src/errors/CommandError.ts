@@ -1,5 +1,5 @@
 /**
- * @fileoverview Command error handling with mandatory recovery instructions
+ * @file Command error handling with mandatory recovery instructions
  * 
  * ARCHITECTURAL PRINCIPLE:
  * All errors in cc-commands must include recovery instructions.
@@ -37,9 +37,11 @@
  * })
  * ```
  */
+import { DebugInfo, ErrorContext, JsonValue } from '../types/DataTypes.js'
+
 export class CommandError {
+  public readonly context: ErrorContext = {}
   public readonly timestamp: Date = new Date()
-  public readonly context: Record<string, any> = {}
   
   /**
    * Create a new CommandError
@@ -53,7 +55,7 @@ export class CommandError {
   constructor(
     public readonly originalError: Error | unknown,
     public readonly recoveryInstructions: string[],
-    public readonly debugInfo: Record<string, any> = {}
+    public readonly debugInfo: DebugInfo = {}
   ) {
     // Prevent extension - this class is final
     if (new.target !== CommandError) {
@@ -81,53 +83,6 @@ export class CommandError {
   }
   
   /**
-   * Get the error message
-   */
-  get message(): string {
-    if (this.originalError instanceof Error) {
-      return this.originalError.message
-    }
-    return String(this.originalError)
-  }
-  
-  /**
-   * Get the error type/class name
-   */
-  get type(): string {
-    if (this.originalError instanceof Error) {
-      return this.originalError.constructor.name
-    }
-    return 'UnknownError'
-  }
-  
-  /**
-   * Get the stack trace if available
-   */
-  get stack(): string | undefined {
-    if (this.originalError instanceof Error) {
-      return this.originalError.stack
-    }
-    return undefined
-  }
-  
-  /**
-   * Add additional context that might help with debugging.
-   * This can be called after creation to add more context as it becomes available.
-   * 
-   * @param key - Context key
-   * @param value - Context value
-   * 
-   * @example
-   * ```typescript
-   * error.addContext('userId', currentUser.id)
-   * error.addContext('requestId', req.id)
-   * ```
-   */
-  addContext(key: string, value: any): void {
-    this.context[key] = value
-  }
-  
-  /**
    * Create a CommandError from an unknown error with smart recovery suggestions.
    * This is useful when catching errors from third-party libraries.
    * 
@@ -150,21 +105,26 @@ export class CommandError {
    */
   static fromError(
     error: Error | unknown,
-    context: { 
-      command?: string
-      action?: string
-      [key: string]: any 
-    } = {}
+    context: ErrorContext = {}
   ): CommandError {
-    // Build debug info
-    const debugInfo = {
-      command: context.command,
-      action: context.action,
-      timestamp: new Date().toISOString(),
-      nodeVersion: process.version,
-      platform: process.platform,
-      cwd: process.cwd(),
-      ...context
+    // Build debug info, filtering out undefined values
+    const debugInfo: DebugInfo = {}
+    
+    // Add system info
+    debugInfo['cwd'] = process.cwd()
+    debugInfo['nodeVersion'] = process.version
+    debugInfo['platform'] = process.platform
+    debugInfo['timestamp'] = new Date().toISOString()
+    
+    // Add context info, filtering undefined
+    if (context.action !== undefined) debugInfo['action'] = context.action
+    if (context.command !== undefined) debugInfo['command'] = context.command
+    
+    // Add other context properties
+    for (const [key, value] of Object.entries(context)) {
+      if (value !== undefined && !['action', 'command'].includes(key)) {
+        debugInfo[key] = value as JsonValue
+      }
     }
     
     // Get smart recovery instructions based on error type
@@ -173,11 +133,11 @@ export class CommandError {
     const commandError = new CommandError(error, recoveryInstructions, debugInfo)
     
     // Add any additional context
-    Object.entries(context).forEach(([key, value]) => {
-      if (!['command', 'action'].includes(key)) {
+    for (const [key, value] of Object.entries(context)) {
+      if (value !== undefined && !['action', 'command'].includes(key)) {
         commandError.addContext(key, value)
       }
-    })
+    }
     
     return commandError
   }
@@ -190,7 +150,7 @@ export class CommandError {
    */
   private static getGenericRecoveryInstructions(
     error: Error | unknown, 
-    context: Record<string, any>
+    context: ErrorContext
   ): string[] {
     const instructions: string[] = []
     const errorMessage = error instanceof Error ? error.message : String(error)
@@ -199,56 +159,36 @@ export class CommandError {
     // File system errors
     if (errorMessage.includes('ENOENT')) {
       const path = context.path || context.file || context.directory || 'the specified path'
-      instructions.push(`Check if the file/directory exists: ${path}`)
-      instructions.push('Verify you are in the correct working directory')
-      instructions.push('Check for typos in the path')
+      instructions.push(`Check if the file/directory exists: ${path}`, 'Verify you are in the correct working directory', 'Check for typos in the path')
     } 
     else if (errorMessage.includes('EACCES') || errorLower.includes('permission')) {
       const resource = context.path || context.file || context.resource || 'the resource'
-      instructions.push(`Check permissions on: ${resource}`)
-      instructions.push('You may need to run with elevated privileges (sudo)')
-      instructions.push(`Try: chmod 755 ${resource} (adjust permissions as needed)`)
+      instructions.push(`Check permissions on: ${resource}`, 'You may need to run with elevated privileges (sudo)', `Try: chmod 755 ${resource} (adjust permissions as needed)`)
     }
     else if (errorMessage.includes('EEXIST')) {
-      instructions.push('The file or directory already exists')
-      instructions.push('Remove the existing file/directory or choose a different name')
-      instructions.push('Use --force flag if available to overwrite')
+      instructions.push('The file or directory already exists', 'Remove the existing file/directory or choose a different name', 'Use --force flag if available to overwrite')
     }
     // Network errors
     else if (errorMessage.includes('ECONNREFUSED')) {
       const host = context.host || context.url || 'the target service'
       const port = context.port ? `:${context.port}` : ''
-      instructions.push(`Check if the service is running on: ${host}${port}`)
-      instructions.push('Verify network connectivity')
-      instructions.push('Check firewall settings')
-      instructions.push('Ensure the correct host and port are specified')
+      instructions.push(`Check if the service is running on: ${host}${port}`, 'Verify network connectivity', 'Check firewall settings', 'Ensure the correct host and port are specified')
     }
     else if (errorMessage.includes('ETIMEDOUT') || errorLower.includes('timeout')) {
-      instructions.push('The operation timed out')
-      instructions.push('Check network connectivity')
-      instructions.push('Try increasing the timeout value')
-      instructions.push('Verify the remote service is responding')
+      instructions.push('The operation timed out', 'Check network connectivity', 'Try increasing the timeout value', 'Verify the remote service is responding')
     }
     // JSON/parsing errors
     else if (errorMessage.includes('JSON') || errorMessage.includes('parse')) {
-      instructions.push('Check that the data is valid JSON format')
-      instructions.push('Look for: trailing commas, unquoted keys, single quotes instead of double')
-      instructions.push('Use a JSON validator to check the syntax')
-      instructions.push('Ensure the file encoding is UTF-8')
+      instructions.push('Check that the data is valid JSON format', 'Look for: trailing commas, unquoted keys, single quotes instead of double', 'Use a JSON validator to check the syntax', 'Ensure the file encoding is UTF-8')
     }
     // Module/dependency errors
     else if (errorMessage.includes('Cannot find module') || errorMessage.includes('MODULE_NOT_FOUND')) {
       const module = errorMessage.match(/Cannot find module '([^']+)'/)?.[1] || 'the required module'
-      instructions.push(`Install missing dependency: npm install ${module}`)
-      instructions.push('Run: npm install (to install all dependencies)')
-      instructions.push('Check that you are in the correct directory')
-      instructions.push('Verify the module name is spelled correctly')
+      instructions.push(`Install missing dependency: npm install ${module}`, 'Run: npm install (to install all dependencies)', 'Check that you are in the correct directory', 'Verify the module name is spelled correctly')
     }
     // Generic catch-all
     else {
-      instructions.push('Check the error message above for specific details')
-      instructions.push('Verify all prerequisites are installed and configured')
-      instructions.push('Check the command syntax and arguments')
+      instructions.push('Check the error message above for specific details', 'Verify all prerequisites are installed and configured', 'Check the command syntax and arguments')
     }
     
     // Always add these
@@ -263,5 +203,57 @@ export class CommandError {
     }
     
     return instructions
+  }
+  
+  /**
+   * Get the error message
+   */
+  get message(): string {
+    if (this.originalError instanceof Error) {
+      return this.originalError.message
+    }
+
+    return String(this.originalError)
+  }
+  
+  /**
+   * Get the stack trace if available
+   */
+  get stack(): string | undefined {
+    if (this.originalError instanceof Error) {
+      return this.originalError.stack
+    }
+
+    return undefined
+  }
+  
+  /**
+   * Get the error type/class name
+   */
+  get type(): string {
+    if (this.originalError instanceof Error) {
+      return this.originalError.constructor.name
+    }
+
+    return 'UnknownError'
+  }
+  
+  /**
+   * Add additional context that might help with debugging.
+   * This can be called after creation to add more context as it becomes available.
+   * 
+   * @param key - Context key
+   * @param value - Context value
+   * 
+   * @example
+   * ```typescript
+   * error.addContext('userId', currentUser.id)
+   * error.addContext('requestId', req.id)
+   * ```
+   */
+  addContext(key: string, value: boolean | null | number | string | string[] | undefined): void {
+    if (value !== undefined) {
+      this.context[key] = value
+    }
   }
 }

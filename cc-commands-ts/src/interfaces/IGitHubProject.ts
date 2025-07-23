@@ -3,39 +3,9 @@
  */
 export interface IGitHubProject {
   /**
-   * The project's unique identifier
+   * Whether the project is closed
    */
-  id: number
-  
-  /**
-   * The project's title
-   */
-  title: string
-  
-  /**
-   * The full URL to the project
-   */
-  url: string
-  
-  /**
-   * The organization that owns the project
-   */
-  organization: string
-  
-  /**
-   * The project number within the organization
-   */
-  number: number
-  
-  /**
-   * When the project was last updated
-   */
-  updatedAt: Date
-  
-  /**
-   * Total number of items in the project
-   */
-  itemCount: number
+  closed: boolean
   
   /**
    * Optional description of the project
@@ -43,12 +13,42 @@ export interface IGitHubProject {
   description?: string
   
   /**
+   * The project's unique identifier
+   */
+  id: number
+  
+  /**
+   * Total number of items in the project
+   */
+  itemCount: number
+  
+  /**
+   * The project number within the organization
+   */
+  number: number
+  
+  /**
+   * The organization that owns the project
+   */
+  organization: string
+  
+  /**
    * Whether the project is public
    */
   public: boolean
   
   /**
-   * Whether the project is closed
+   * The project's title
    */
-  closed: boolean
+  title: string
+  
+  /**
+   * When the project was last updated
+   */
+  updatedAt: Date
+  
+  /**
+   * The full URL to the project
+   */
+  url: string
 }

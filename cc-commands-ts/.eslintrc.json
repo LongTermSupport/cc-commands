@@ -1,0 +1,225 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "module",
+    "project": "./tsconfig.json"
+  },
+  "plugins": [
+    "@typescript-eslint",
+    "import",
+    "jsdoc",
+    "prefer-arrow",
+    "unicorn",
+    "eslint-comments"
+  ],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended-requiring-type-checking",
+    "plugin:@typescript-eslint/strict",
+    "plugin:import/typescript",
+    "plugin:eslint-comments/recommended",
+    "prettier"
+  ],
+  "rules": {
+    // TypeScript strict rules
+    "@typescript-eslint/explicit-function-return-type": "error",
+    "@typescript-eslint/explicit-member-accessibility": "error",
+    "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/no-unused-vars": ["error", {
+      "argsIgnorePattern": "^_",
+      "varsIgnorePattern": "^_"
+    }],
+    "@typescript-eslint/no-use-before-define": "error",
+    "@typescript-eslint/strict-boolean-expressions": "error",
+    "@typescript-eslint/no-floating-promises": "error",
+    "@typescript-eslint/no-misused-promises": "error",
+    "@typescript-eslint/await-thenable": "error",
+    "@typescript-eslint/no-unnecessary-type-assertion": "error",
+    "@typescript-eslint/prefer-nullish-coalescing": "error",
+    "@typescript-eslint/prefer-optional-chain": "error",
+    "@typescript-eslint/prefer-readonly": "error",
+    "@typescript-eslint/prefer-string-starts-ends-with": "error",
+    "@typescript-eslint/no-non-null-assertion": "error",
+    "@typescript-eslint/consistent-type-definitions": ["error", "interface"],
+    "@typescript-eslint/member-ordering": ["error", {
+      "default": [
+        // Index signature
+        "signature",
+        
+        // Fields
+        "private-static-field",
+        "protected-static-field",
+        "public-static-field",
+        
+        "private-instance-field",
+        "protected-instance-field", 
+        "public-instance-field",
+        
+        // Constructors
+        "constructor",
+        
+        // Methods
+        "private-static-method",
+        "protected-static-method",
+        "public-static-method",
+        
+        "private-instance-method",
+        "protected-instance-method",
+        "public-instance-method"
+      ]
+    }],
+    
+    // Import rules
+    "import/order": ["error", {
+      "groups": ["builtin", "external", "internal", "parent", "sibling", "index"],
+      "newlines-between": "always",
+      "alphabetize": {
+        "order": "asc",
+        "caseInsensitive": true
+      }
+    }],
+    "import/no-duplicates": "error",
+    "import/no-unused-modules": "error",
+    "import/no-cycle": "error",
+    
+    // General best practices
+    "no-console": ["error", { "allow": ["warn", "error"] }],
+    "no-debugger": "error",
+    "no-alert": "error",
+    "prefer-const": "error",
+    "prefer-arrow/prefer-arrow-functions": "error",
+    "no-var": "error",
+    "object-shorthand": "error",
+    "quote-props": ["error", "as-needed"],
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-new-func": "error",
+    "no-iterator": "error",
+    "no-proto": "error",
+    "no-script-url": "error",
+    "no-with": "error",
+    
+    // JSDoc rules
+    "jsdoc/check-alignment": "error",
+    "jsdoc/check-param-names": "error",
+    "jsdoc/check-tag-names": "error",
+    "jsdoc/check-types": "error",
+    "jsdoc/implements-on-classes": "error",
+    "jsdoc/newline-after-description": "error",
+    "jsdoc/no-undefined-types": "error",
+    "jsdoc/require-description": "error",
+    "jsdoc/require-jsdoc": ["error", {
+      "require": {
+        "FunctionDeclaration": true,
+        "MethodDefinition": true,
+        "ClassDeclaration": true,
+        "ArrowFunctionExpression": false,
+        "FunctionExpression": false
+      }
+    }],
+    "jsdoc/require-param": "error",
+    "jsdoc/require-param-description": "error",
+    "jsdoc/require-param-type": "off",
+    "jsdoc/require-returns": "error",
+    "jsdoc/require-returns-description": "error",
+    "jsdoc/require-returns-type": "off",
+    
+    // Unicorn rules (opinionated best practices)
+    "unicorn/filename-case": "off", // PascalCase is fine for TypeScript classes
+    "unicorn/no-null": "error",
+    "unicorn/no-array-for-each": "error",
+    "unicorn/no-array-reduce": "error",
+    "unicorn/prefer-array-find": "error",
+    "unicorn/prefer-array-some": "error",
+    "unicorn/prefer-includes": "error",
+    "unicorn/prefer-string-slice": "error",
+    "unicorn/prefer-type-error": "error",
+    "unicorn/throw-new-error": "error",
+    "unicorn/error-message": "error",
+    "unicorn/no-instanceof-array": "error",
+    "unicorn/prefer-node-protocol": "error",
+    
+    // Architecture-specific rules
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "NewExpression",
+        "message": "Avoid using 'new' directly in orchestrators. Use dependency injection instead."
+      },
+      {
+        "selector": "Comment[value=/eslint-disable/]",
+        "message": "ESLint disable comments are not allowed. Fix the issue instead of disabling the rule."
+      }
+    ],
+    
+    // Prevent disabling ESLint rules - we should fix issues, not ignore them
+    "eslint-comments/disable-enable-pair": ["error", {"allowWholeFile": false}],
+    "eslint-comments/no-aggregating-enable": "error",
+    "eslint-comments/no-duplicate-disable": "error",
+    "eslint-comments/no-unlimited-disable": "error",
+    "eslint-comments/no-unused-disable": "error"
+  },
+  "overrides": [
+    {
+      // Orchestrator-specific rules
+      "files": ["**/orchestrators/**/*.ts", "**/commands/**/*.ts"],
+      "rules": {
+        // Enforce no 'new' in orchestrators except for LLMInfo.create()
+        "no-restricted-syntax": [
+          "error",
+          {
+            "selector": "NewExpression[callee.name!=/^(Error|Date|RegExp|Map|Set|WeakMap|WeakSet|Promise)$/]",
+            "message": "Orchestrators must not instantiate services. Use dependency injection. Only Error, Date, RegExp, collections, and Promise are allowed."
+          }
+        ],
+        
+        // Enforce explicit return types for execute methods
+        "@typescript-eslint/explicit-function-return-type": ["error", {
+          "allowExpressions": false,
+          "allowTypedFunctionExpressions": false,
+          "allowHigherOrderFunctions": false
+        }]
+      }
+    },
+    {
+      // Test file rules
+      "files": ["**/*.test.ts", "**/*.spec.ts"],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/no-non-null-assertion": "off",
+        "no-console": "off",
+        "jsdoc/require-jsdoc": "off"
+      }
+    },
+    {
+      // Service implementation rules
+      "files": ["**/services/**/*.ts"],
+      "rules": {
+        // Services can instantiate other objects
+        "no-restricted-syntax": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "dist/",
+    "lib/",
+    "node_modules/",
+    "coverage/",
+    "*.js",
+    "*.d.ts"
+  ],
+  "settings": {
+    "import/resolver": {
+      "typescript": {
+        "alwaysTryTypes": true,
+        "project": "./tsconfig.json"
+      }
+    },
+    "jsdoc": {
+      "mode": "typescript"
+    }
+  }
+}

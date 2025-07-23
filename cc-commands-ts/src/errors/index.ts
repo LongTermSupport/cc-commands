@@ -1,5 +1,5 @@
 /**
- * @fileoverview Central export point for all error-related classes
+ * @file Central export point for all error-related classes
  * 
  * This module provides:
  * - CommandError: The base error class that enforces recovery instructions

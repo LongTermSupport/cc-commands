@@ -1,5 +1,5 @@
 /**
- * @fileoverview Main entry point for cc-commands-ts
+ * @file Main entry point for cc-commands-ts
  * 
  * This file exports the core architectural components that all commands use.
  * 
@@ -14,12 +14,8 @@
  * @see CommandError - The only allowed error type
  */
 
-export { run } from '@oclif/core'
-
 // Core architectural components
 export { BaseCommand } from './commands/BaseCommand.js'
-export { LLMInfo } from './types/LLMInfo.js'
-export type { Action, FileOperation } from './types/LLMInfo.js'
 
 // Error handling
 export { 
@@ -27,6 +23,10 @@ export {
   GitHubErrorFactory,
   ValidationErrorFactory 
 } from './errors/index.js'
-
 // Type exports for commands to use
 export type { CommandArgs } from './types/ArgumentTypes.js'
+export { LLMInfo } from './types/LLMInfo.js'
+
+export type { Action, FileOperation } from './types/LLMInfo.js'
+
+export { run } from '@oclif/core'

@@ -2,33 +2,33 @@
  * Arguments for auto-detection mode
  */
 export type AutoDetectArgs = {
-  mode: 'auto'
   audience?: string
+  mode: 'auto'
 }
 
 /**
  * Arguments for URL-based mode
  */
 export type UrlArgs = {
+  audience?: string
   mode: 'url'
   url: string
-  audience?: string
 }
 
 /**
  * Arguments for manual specification mode
  */
 export type ManualArgs = {
+  audience?: string
   mode: 'manual'
   organization: string
   projectId: number
-  audience?: string
 }
 
 /**
  * Union type for all possible command argument combinations
  */
-export type CommandArgs = AutoDetectArgs | UrlArgs | ManualArgs
+export type CommandArgs = AutoDetectArgs | ManualArgs | UrlArgs
 
 /**
  * Type guard for AutoDetectArgs

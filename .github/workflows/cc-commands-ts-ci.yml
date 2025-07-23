@@ -1,0 +1,135 @@
+name: CC Commands TypeScript CI
+
+on:
+  push:
+    paths:
+      - 'cc-commands-ts/**'
+      - '.github/workflows/cc-commands-ts-ci.yml'
+  pull_request:
+    paths:
+      - 'cc-commands-ts/**'
+      - '.github/workflows/cc-commands-ts-ci.yml'
+
+jobs:
+  qa-check:
+    name: QA Check
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: cc-commands-ts/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd cc-commands-ts
+          npm ci
+
+      - name: Run TypeScript check
+        run: |
+          cd cc-commands-ts
+          npm run typecheck
+
+      - name: Run ESLint
+        run: |
+          cd cc-commands-ts
+          npm run lint
+
+      - name: Run tests
+        run: |
+          cd cc-commands-ts
+          npm run test
+        env:
+          CI: true
+
+      - name: Run full QA suite
+        run: |
+          cd cc-commands-ts
+          npm run qa
+        env:
+          CI: true
+
+  test-coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    needs: qa-check
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+          cache-dependency-path: cc-commands-ts/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd cc-commands-ts
+          npm ci
+
+      - name: Run test coverage
+        run: |
+          cd cc-commands-ts
+          npm run test:coverage
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: cc-commands-ts/coverage/
+          retention-days: 7
+
+  build-check:
+    name: Build Check
+    runs-on: ${{ matrix.os }}
+    needs: qa-check
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [20.x]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: cc-commands-ts/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd cc-commands-ts
+          npm ci
+
+      - name: Build project
+        run: |
+          cd cc-commands-ts
+          npm run build
+
+      - name: Generate oclif manifest
+        run: |
+          cd cc-commands-ts
+          npm run postpack || true  # Allow to fail if postpack doesn't exist
+          npx oclif manifest
+
+      - name: Test command execution
+        run: |
+          cd cc-commands-ts
+          node bin/run.js --help

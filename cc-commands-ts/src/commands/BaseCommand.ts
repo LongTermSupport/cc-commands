@@ -1,5 +1,5 @@
 /**
- * @fileoverview Base class for all cc-commands
+ * @file Base class for all cc-commands
  * 
  * ARCHITECTURAL PRINCIPLES:
  * 1. Commands do deterministic work and return raw data (LLMInfo)
@@ -17,12 +17,14 @@
  * @see CommandError for error handling
  */
 
-import { Command } from '@oclif/core'
-import { LLMInfo } from '../types/LLMInfo.js'
-import { CommandError } from '../errors/CommandError.js'
-import { writeFileSync, mkdirSync } from 'fs'
-import { join, dirname } from 'path'
+import { Command, Config } from '@oclif/core'
 import { format } from 'date-fns'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+
+import { CommandError } from '../errors/CommandError.js'
+import { JsonObject, JsonValue } from '../types/DataTypes.js'
+import { LLMInfo } from '../types/LLMInfo.js'
 
 /**
  * Debug logger that captures all command operations
@@ -32,18 +34,33 @@ class CommandDebugger {
   private startTime: number = Date.now()
   
   /**
+   * Get the debug log content
+   */
+  getContent(): string {
+    return this.logs.join('\n\n')
+  }
+  
+  /**
    * Log a debug message with optional data
    * 
    * @param message - The message to log
-   * @param data - Optional structured data to include
+   * @param data - Optional data to include (will be serialized)
    */
-  log(message: string, data?: any): void {
+  log(message: string, data?: unknown): void {
     const timestamp = new Date().toISOString()
     const elapsed = Date.now() - this.startTime
     
     let entry = `[${timestamp}] [+${elapsed}ms] ${message}`
     if (data !== undefined) {
-      entry += '\n' + JSON.stringify(data, null, 2)
+      try {
+        // Attempt to serialize the data
+        const serialized = this.serializeData(data)
+        entry += '\n' + JSON.stringify(serialized, null, 2)
+      } catch (error) {
+        // If serialization fails, just stringify what we can
+        entry += '\n[Serialization Error: ' + String(error) + ']'
+        entry += '\n' + String(data)
+      }
     }
     
     this.logs.push(entry)
@@ -61,10 +78,51 @@ class CommandDebugger {
   }
   
   /**
-   * Get the debug log content
+   * Serialize data for logging, handling complex types
    */
-  getContent(): string {
-    return this.logs.join('\n\n')
+  private serializeData(data: unknown): JsonValue {
+    if (data === null) return null
+    if (typeof data === 'string' || typeof data === 'number' || typeof data === 'boolean') {
+      return data
+    }
+
+    if (data instanceof Date) {
+      return data.toISOString()
+    }
+
+    if (data instanceof Error) {
+      return {
+        message: data.message,
+        name: data.name,
+        stack: data.stack || null
+      }
+    }
+
+    if (Array.isArray(data)) {
+      return data.map(item => {
+        try {
+          return this.serializeData(item)
+        } catch {
+          return String(item)
+        }
+      })
+    }
+
+    if (typeof data === 'object') {
+      const result: JsonObject = {}
+      for (const [key, value] of Object.entries(data)) {
+        try {
+          result[key] = this.serializeData(value)
+        } catch {
+          result[key] = String(value)
+        }
+      }
+
+      return result
+    }
+
+    // Fallback for functions, symbols, etc.
+    return String(data)
   }
 }
 
@@ -99,7 +157,7 @@ export abstract class BaseCommand extends Command {
   protected debugger: CommandDebugger
   protected debugLogPath: string
   
-  constructor(argv: string[], config: any) {
+  constructor(argv: string[], config: Config) {
     super(argv, config)
     this.debugger = new CommandDebugger()
     
@@ -144,17 +202,19 @@ export abstract class BaseCommand extends Command {
     try {
       // Log startup information
       this.debugger.log('Command started', {
-        command: this.id || this.constructor.name,
         args: this.argv,
+        command: this.id || this.constructor.name,
         cwd: process.cwd(),
         env: {
-          NODE_ENV: process.env.NODE_ENV,
-          DEBUG: process.env.DEBUG,
+          DEBUG: process.env['DEBUG'] || undefined,
+          NODE_ENV: process.env['NODE_ENV'] || undefined,
         }
       })
       
       // Parse arguments using oclif
-      const parsed = await this.parse(this.constructor as any)
+      // Note: this.constructor loses its type at runtime, so we need to cast
+      const CommandClass = this.constructor as typeof BaseCommand
+      const parsed = await this.parse(CommandClass)
       this.debugger.log('Arguments parsed', parsed)
       
       // Track execution
@@ -167,7 +227,7 @@ export abstract class BaseCommand extends Command {
       
       // Validate that execute() returned LLMInfo
       if (!(result instanceof LLMInfo)) {
-        throw new Error('execute() must return an LLMInfo instance')
+        throw new TypeError('execute() must return an LLMInfo instance')
       }
       
       // Merge the execution result into our info
@@ -196,20 +256,14 @@ export abstract class BaseCommand extends Command {
       
     } catch (error) {
       // Log the error
-      this.debugger.log('Command failed with error', {
-        error: error instanceof Error ? {
-          message: error.message,
-          stack: error.stack,
-          type: error.constructor.name,
-        } : error,
-      })
+      this.debugger.log('Command failed with error', error)
       
       // Ensure error is a CommandError
       const commandError = error instanceof CommandError 
         ? error 
         : CommandError.fromError(error, {
-            command: this.id || this.constructor.name,
-            args: this.argv
+            args: this.argv,
+            command: this.id || this.constructor.name
           })
       
       // Set error on LLMInfo

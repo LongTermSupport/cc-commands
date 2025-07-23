@@ -4,48 +4,48 @@ import { IGitHubProject } from './IGitHubProject.js'
  * Repository information from GitHub API
  */
 export interface IRepository {
-  name: string
+  defaultBranch: string
   fullName: string
+  name: string
   private: boolean
   updatedAt: string
-  defaultBranch: string
 }
 
 /**
  * Issue or Pull Request from GitHub API
  */
 export interface IIssue {
-  number: number
-  title: string
-  state: 'open' | 'closed'
   createdAt: string
-  updatedAt: string
   isPullRequest: boolean
+  number: number
   repository: {
     name: string
     owner: string
   }
+  state: 'closed' | 'open'
+  title: string
+  updatedAt: string
 }
 
 /**
  * Commit from GitHub API
  */
 export interface ICommit {
-  sha: string
-  message: string
   authorDate: string
+  message: string
   repository: {
     name: string
     owner: string
   }
+  sha: string
 }
 
 /**
  * Comment from GitHub API
  */
 export interface IComment {
-  id: number
   createdAt: string
+  id: number
   repository: {
     name: string
     owner: string
@@ -57,9 +57,9 @@ export interface IComment {
  */
 export interface IGitHubApiService {
   /**
-   * Get a list of projects for an organization
+   * Get the authenticated user (if any)
    */
-  listOrganizationProjects(org: string): Promise<IGitHubProject[]>
+  getAuthenticatedUser(): Promise<null | string>
   
   /**
    * Get a specific project by organization and number
@@ -72,9 +72,9 @@ export interface IGitHubApiService {
   getProjectRepositories(org: string, projectNumber: number): Promise<IRepository[]>
   
   /**
-   * Get issues and PRs for a repository updated since a given date
+   * Get comments for a repository since a given date
    */
-  getRepositoryIssues(owner: string, repo: string, since: Date): Promise<IIssue[]>
+  getRepositoryComments(owner: string, repo: string, since: Date): Promise<IComment[]>
   
   /**
    * Get commits for a repository since a given date
@@ -82,9 +82,9 @@ export interface IGitHubApiService {
   getRepositoryCommits(owner: string, repo: string, since: Date): Promise<ICommit[]>
   
   /**
-   * Get comments for a repository since a given date
+   * Get issues and PRs for a repository updated since a given date
    */
-  getRepositoryComments(owner: string, repo: string, since: Date): Promise<IComment[]>
+  getRepositoryIssues(owner: string, repo: string, since: Date): Promise<IIssue[]>
   
   /**
    * Check if the API is authenticated
@@ -92,7 +92,7 @@ export interface IGitHubApiService {
   isAuthenticated(): Promise<boolean>
   
   /**
-   * Get the authenticated user (if any)
+   * Get a list of projects for an organization
    */
-  getAuthenticatedUser(): Promise<string | null>
+  listOrganizationProjects(org: string): Promise<IGitHubProject[]>
 }

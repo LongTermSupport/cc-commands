@@ -20,6 +20,9 @@ This document outlines the migration strategy for converting cc-commands from Ba
 - [Claude Code SDK](https://docs.anthropic.com/en/docs/claude-code/sdk)
 - [Vitest Documentation](https://vitest.dev/)
 
+## Architecture Enforcement
+- [Issue #19: Enforce orchestrator architecture with ESLint rules](https://github.com/LongTermSupport/cc-commands/issues/19)
+
 ## Build System
 
 ### oclif Build Configuration

@@ -1,5 +1,5 @@
 /**
- * @fileoverview Factory for creating validation-specific CommandErrors
+ * @file Factory for creating validation-specific CommandErrors
  * 
  * This factory creates CommandError instances for input validation failures
  * with helpful recovery instructions specific to the validation problem.
@@ -13,12 +13,39 @@
  * ```
  */
 
+import { JsonValue } from '../types/DataTypes.js'
 import { CommandError } from './CommandError.js'
 
 /**
  * Factory for creating validation-related errors with appropriate recovery instructions
  */
 export class ValidationErrorFactory {
+  /**
+   * Create a dependent arguments error (A requires B)
+   * 
+   * @param providedArg - The argument that was provided
+   * @param requiredArg - The argument that is required when using providedArg
+   * @returns CommandError with dependency instructions
+   */
+  static dependentArgument(providedArg: string, requiredArg: string): CommandError {
+    return new CommandError(
+      new Error(`Argument '${providedArg}' requires '${requiredArg}' to also be specified`),
+      [
+        `Add the required argument: ${requiredArg}`,
+        `When using '${providedArg}', you must also provide '${requiredArg}'`,
+        'Check --help for argument dependencies',
+        'Some arguments work together as a group',
+        'Consider if you meant to use a different argument'
+      ],
+      {
+        errorDomain: 'validation',
+        errorType: 'dependentArgument',
+        providedArgument: providedArg,
+        requiredArgument: requiredArg
+      }
+    )
+  }
+  
   /**
    * Create an invalid argument format error
    * 
@@ -30,7 +57,7 @@ export class ValidationErrorFactory {
    */
   static invalidArgument(
     argName: string, 
-    providedValue: any, 
+    providedValue: JsonValue, 
     expectedFormat: string,
     examples?: string[]
   ): CommandError {
@@ -44,21 +71,88 @@ export class ValidationErrorFactory {
     
     if (examples && examples.length > 0) {
       instructions.push('Valid examples:')
-      examples.forEach(example => {
+      for (const example of examples) {
         instructions.push(`  ${example}`)
-      })
+      }
     }
     
     return new CommandError(
       new Error(`Invalid argument '${argName}': expected ${expectedFormat}, got '${providedValue}'`),
       instructions,
       {
+        argument: argName,
         errorDomain: 'validation',
         errorType: 'invalidArgument',
-        argument: argName,
-        providedValue,
+        examples: examples || [],
         expectedFormat,
-        examples
+        providedValue
+      }
+    )
+  }
+  
+  /**
+   * Create an invalid choice error (value not in allowed set)
+   * 
+   * @param argName - Name of the argument
+   * @param value - The invalid value provided
+   * @param validChoices - List of valid choices
+   * @returns CommandError with valid choices listed
+   */
+  static invalidChoice(
+    argName: string,
+    value: string,
+    validChoices: string[]
+  ): CommandError {
+    return new CommandError(
+      new Error(`Invalid choice for '${argName}': '${value}'`),
+      [
+        `Choose one of: ${validChoices.join(', ')}`,
+        `You provided: ${value}`,
+        'Check for typos or case sensitivity',
+        'Use --help to see all valid options',
+        'Some options may require specific permissions'
+      ],
+      {
+        argument: argName,
+        errorDomain: 'validation',
+        errorType: 'invalidChoice',
+        providedValue: value,
+        validChoices
+      }
+    )
+  }
+  
+  /**
+   * Create an invalid URL error
+   * 
+   * @param argName - Name of the URL argument
+   * @param providedValue - The invalid URL provided
+   * @param expectedPattern - Optional pattern description
+   * @returns CommandError with URL format instructions
+   */
+  static invalidUrl(
+    argName: string,
+    providedValue: string,
+    expectedPattern = 'https://example.com/path'
+  ): CommandError {
+    const pattern = expectedPattern
+    
+    return new CommandError(
+      new Error(`Invalid URL for '${argName}': ${providedValue}`),
+      [
+        'Check the URL format',
+        `Expected pattern: ${pattern}`,
+        'Ensure the URL includes the protocol (https://)',
+        'Check for typos or missing parts',
+        'URL encode special characters if needed',
+        'For GitHub URLs: https://github.com/owner/repo'
+      ],
+      {
+        argument: argName,
+        errorDomain: 'validation',
+        errorType: 'invalidUrl',
+        expectedPattern: pattern,
+        providedValue
       }
     )
   }
@@ -88,46 +182,35 @@ export class ValidationErrorFactory {
         'Arguments are position-sensitive unless using flags'
       ],
       {
+        argument: argName,
         errorDomain: 'validation',
         errorType: 'missingArgument',
-        argument: argName,
-        purpose,
-        position
+        position: position ?? null,
+        purpose
       }
     )
   }
   
   /**
-   * Create an invalid URL error
+   * Create a mutually exclusive arguments error
    * 
-   * @param argName - Name of the URL argument
-   * @param providedValue - The invalid URL provided
-   * @param expectedPattern - Optional pattern description
-   * @returns CommandError with URL format instructions
+   * @param args - The conflicting arguments
+   * @returns CommandError with conflict resolution instructions
    */
-  static invalidUrl(
-    argName: string,
-    providedValue: string,
-    expectedPattern?: string
-  ): CommandError {
-    const pattern = expectedPattern || 'https://example.com/path'
-    
+  static mutuallyExclusiveArgs(...args: string[]): CommandError {
     return new CommandError(
-      new Error(`Invalid URL for '${argName}': ${providedValue}`),
+      new Error(`Cannot use these arguments together: ${args.join(', ')}`),
       [
-        'Check the URL format',
-        `Expected pattern: ${pattern}`,
-        'Ensure the URL includes the protocol (https://)',
-        'Check for typos or missing parts',
-        'URL encode special characters if needed',
-        'For GitHub URLs: https://github.com/owner/repo'
+        'Use only one of these arguments at a time',
+        `Conflicting arguments: ${args.join(', ')}`,
+        'Check the command logic for which argument to use',
+        'Run with --help to understand argument relationships',
+        'Some arguments represent different modes of operation'
       ],
       {
+        conflictingArguments: args,
         errorDomain: 'validation',
-        errorType: 'invalidUrl',
-        argument: argName,
-        providedValue,
-        expectedPattern: pattern
+        errorType: 'mutuallyExclusive'
       }
     )
   }
@@ -166,95 +249,13 @@ export class ValidationErrorFactory {
         'Use --help to see valid value ranges'
       ],
       {
+        argument: argName,
         errorDomain: 'validation',
         errorType: 'outOfRange',
-        argument: argName,
-        value,
-        min,
-        max,
-        rangeDescription: rangeDesc
-      }
-    )
-  }
-  
-  /**
-   * Create an invalid choice error (value not in allowed set)
-   * 
-   * @param argName - Name of the argument
-   * @param value - The invalid value provided
-   * @param validChoices - List of valid choices
-   * @returns CommandError with valid choices listed
-   */
-  static invalidChoice(
-    argName: string,
-    value: string,
-    validChoices: string[]
-  ): CommandError {
-    return new CommandError(
-      new Error(`Invalid choice for '${argName}': '${value}'`),
-      [
-        `Choose one of: ${validChoices.join(', ')}`,
-        `You provided: ${value}`,
-        'Check for typos or case sensitivity',
-        'Use --help to see all valid options',
-        'Some options may require specific permissions'
-      ],
-      {
-        errorDomain: 'validation',
-        errorType: 'invalidChoice',
-        argument: argName,
-        providedValue: value,
-        validChoices
-      }
-    )
-  }
-  
-  /**
-   * Create a mutually exclusive arguments error
-   * 
-   * @param args - The conflicting arguments
-   * @returns CommandError with conflict resolution instructions
-   */
-  static mutuallyExclusiveArgs(...args: string[]): CommandError {
-    return new CommandError(
-      new Error(`Cannot use these arguments together: ${args.join(', ')}`),
-      [
-        'Use only one of these arguments at a time',
-        `Conflicting arguments: ${args.join(', ')}`,
-        'Check the command logic for which argument to use',
-        'Run with --help to understand argument relationships',
-        'Some arguments represent different modes of operation'
-      ],
-      {
-        errorDomain: 'validation',
-        errorType: 'mutuallyExclusive',
-        conflictingArguments: args
-      }
-    )
-  }
-  
-  /**
-   * Create a dependent arguments error (A requires B)
-   * 
-   * @param providedArg - The argument that was provided
-   * @param requiredArg - The argument that is required when using providedArg
-   * @returns CommandError with dependency instructions
-   */
-  static dependentArgument(providedArg: string, requiredArg: string): CommandError {
-    return new CommandError(
-      new Error(`Argument '${providedArg}' requires '${requiredArg}' to also be specified`),
-      [
-        `Add the required argument: ${requiredArg}`,
-        `When using '${providedArg}', you must also provide '${requiredArg}'`,
-        'Check --help for argument dependencies',
-        'Some arguments work together as a group',
-        'Consider if you meant to use a different argument'
-      ],
-      {
-        errorDomain: 'validation',
-        errorType: 'dependentArgument',
-        providedArgument: providedArg,
-        requiredArgument: requiredArg
+        max: max ?? null,
+        min: min ?? null,
+        rangeDescription: rangeDesc,
+        value
       }
     )
   }
@@ -266,6 +267,6 @@ export class ValidationErrorFactory {
   private static getOrdinalSuffix(n: number): string {
     const s = ['th', 'st', 'nd', 'rd']
     const v = n % 100
-    return s[(v - 20) % 10] || s[v] || s[0]
+    return s[(v - 20) % 10] || s[v] || s[0] || 'th'
   }
 }

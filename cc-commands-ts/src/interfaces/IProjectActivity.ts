@@ -3,9 +3,14 @@
  */
 export interface IRepositoryActivity {
   /**
-   * Repository name (without owner)
+   * Number of comments (issue + PR comments) in the time period
    */
-  name: string
+  comments: number
+  
+  /**
+   * Number of commits in the time period
+   */
+  commits: number
   
   /**
    * Full repository name (owner/name)
@@ -18,19 +23,14 @@ export interface IRepositoryActivity {
   issues: number
   
   /**
+   * Repository name (without owner)
+   */
+  name: string
+  
+  /**
    * Number of pull requests updated in the time period
    */
   pullRequests: number
-  
-  /**
-   * Number of commits in the time period
-   */
-  commits: number
-  
-  /**
-   * Number of comments (issue + PR comments) in the time period
-   */
-  comments: number
   
   /**
    * Total activity score (sum of all metrics)
@@ -43,29 +43,9 @@ export interface IRepositoryActivity {
  */
 export interface IProjectActivity {
   /**
-   * Activity data for each repository
-   */
-  repositories: IRepositoryActivity[]
-  
-  /**
-   * Total activity across all repositories
-   */
-  totalActivity: number
-  
-  /**
    * Number of repositories with activity
    */
   activeRepos: number
-  
-  /**
-   * Time period description (e.g., "last 24 hours")
-   */
-  timePeriod: string
-  
-  /**
-   * Start of the time period
-   */
-  startDate: Date
   
   /**
    * End of the time period
@@ -73,17 +53,37 @@ export interface IProjectActivity {
   endDate: Date
   
   /**
-   * Top repositories by activity (full names)
+   * Activity data for each repository
    */
-  topRepositories: string[]
+  repositories: IRepositoryActivity[]
+  
+  /**
+   * Start of the time period
+   */
+  startDate: Date
   
   /**
    * Summary statistics
    */
   summary: {
+    totalComments: number
+    totalCommits: number
     totalIssues: number
     totalPullRequests: number
-    totalCommits: number
-    totalComments: number
   }
+  
+  /**
+   * Time period description (e.g., "last 24 hours")
+   */
+  timePeriod: string
+  
+  /**
+   * Top repositories by activity (full names)
+   */
+  topRepositories: string[]
+  
+  /**
+   * Total activity across all repositories
+   */
+  totalActivity: number
 }
