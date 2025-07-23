@@ -116,8 +116,8 @@ export async function executeProjectSummary(
     // If org is provided, use it; otherwise detect from git/URL
     let organization: string | undefined = flags.org
     
-    if (!organization && (args.url || flags.repo)) {
-      // Try to detect from URL or git remote
+    if (!organization) {
+      // Try to detect from URL, flags, or current directory
       const detectResult = await services.projectDetector.execute({
         flags: {},
         params: {

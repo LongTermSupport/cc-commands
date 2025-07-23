@@ -18,16 +18,25 @@ import { executeProjectSummary } from '../../../../orchestrators/g/gh/project/ex
  */
 export default class Summary extends BaseCommand {
   static override args = {
-    url: Args.string({
-      description: 'GitHub repository URL (e.g., https://github.com/owner/repo)',
+    urlOrMode: Args.string({
+      description: 'GitHub URL for org detection OR mode (detect/collect)',
+      required: false,
+    }),
+    projectId: Args.string({
+      description: 'GitHub Project ID (for collect mode)',
       required: false,
     }),
   }
-static override description = 'Collect comprehensive data about a GitHub project for LLM processing'
+static override description = 'Analyze GitHub Projects v2 with multi-repository data collection'
 static override examples = [
-    '<%= config.bin %> <%= command.id %> https://github.com/facebook/react',
-    '<%= config.bin %> <%= command.id %> --owner facebook --repo react',
-    '<%= config.bin %> <%= command.id %> # auto-detect from current directory',
+    // Step 1: Detect projects for an organization
+    '<%= config.bin %> <%= command.id %> --org facebook',
+    '<%= config.bin %> <%= command.id %> https://github.com/facebook/react  # auto-detect org from URL',
+    '<%= config.bin %> <%= command.id %>  # auto-detect org from current git repo',
+    '',
+    // Step 2: Collect data from all repos in a project
+    '<%= config.bin %> <%= command.id %> collect PVT_kwDOAJy2Ks4Aa1b2',
+    '<%= config.bin %> <%= command.id %> collect PVT_kwDOAJy2Ks4Aa1b2 --days 90 --audience technical',
   ]
 static override flags = {
     audience: Flags.string({
@@ -39,6 +48,9 @@ static override flags = {
       char: 'd',
       default: 30,
       description: 'Number of days of activity to analyze',
+    }),
+    org: Flags.string({
+      description: 'GitHub organization name',
     }),
     owner: Flags.string({
       char: 'o',
@@ -63,7 +75,26 @@ static override flags = {
     // Create services using factory
     const services = ServiceFactory.createProjectSummaryServices(flags.token)
     
+    // Parse the first argument - could be URL or mode
+    let mode: 'collect' | 'detect' | undefined
+    let url: string | undefined
+    
+    if (args.urlOrMode) {
+      if (args.urlOrMode === 'detect' || args.urlOrMode === 'collect') {
+        mode = args.urlOrMode
+      } else {
+        url = args.urlOrMode
+      }
+    }
+    
+    // Build orchestrator args with proper structure
+    const orchArgs = {
+      mode,
+      projectId: args.projectId,
+      url
+    }
+    
     // Delegate to pure orchestration function
-    return executeProjectSummary(services, args, flags)
+    return executeProjectSummary(services, orchArgs, flags)
   }
 }
