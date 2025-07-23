@@ -7,11 +7,15 @@
 
 import type { IOrchestrationService } from '../interfaces/IOrchestrationService.js'
 
+import { DataFileService } from '../services/DataFileService.js'
 import { DataCollectionService } from '../services/github/DataCollectionService.js'
 import { GitHubApiService } from '../services/github/GitHubApiService.js'
+import { ProjectDataService } from '../services/github/ProjectDataService.js'
 import { RepoDetectionService } from '../services/github/RepoDetectionService.js'
 import { DataCollectionOrchestrationService } from '../services/orchestration/DataCollectionOrchestrationService.js'
+import { DataFileOrchestrationService } from '../services/orchestration/DataFileOrchestrationService.js'
 import { EnvironmentValidationService } from '../services/orchestration/EnvironmentValidationService.js'
+import { ProjectDiscoveryOrchestrationService } from '../services/orchestration/ProjectDiscoveryOrchestrationService.js'
 import { RepoDetectionOrchestrationService } from '../services/orchestration/RepoDetectionOrchestrationService.js'
 import { getGitHubToken } from '../utils/getGitHubToken.js'
 
@@ -20,8 +24,10 @@ import { getGitHubToken } from '../utils/getGitHubToken.js'
  */
 export interface ProjectSummaryServices {
   dataCollector: IOrchestrationService
+  dataFileService: IOrchestrationService
   envValidator: IOrchestrationService
   projectDetector: IOrchestrationService
+  projectDiscovery: IOrchestrationService
 }
 
 /**
@@ -83,6 +89,16 @@ export const ServiceFactory = {
             return result
           }
         },
+        dataFileService: {
+          async execute() {
+            const { LLMInfo } = await import('../types/LLMInfo.js')
+            const result = LLMInfo.create()
+            result.addFile('/var/test-data.json', 'created')
+            result.addData('DATA_FILE', '/var/test-data.json')
+            result.addAction('Save data file', 'success')
+            return result
+          }
+        },
         envValidator: {
           async execute() {
             const { LLMInfo } = await import('../types/LLMInfo.js')
@@ -111,6 +127,19 @@ export const ServiceFactory = {
             result.addAction('Repository detection', 'success')
             return result
           }
+        },
+        projectDiscovery: {
+          async execute() {
+            const { LLMInfo } = await import('../types/LLMInfo.js')
+            const result = LLMInfo.create()
+            result.addData('PROJECT_COUNT', '1')
+            result.addData('MOST_RECENT_PROJECT_ID', 'PVT_test123')
+            result.addData('MOST_RECENT_PROJECT_NUMBER', '1')
+            result.addData('MOST_RECENT_PROJECT_TITLE', 'Test Project')
+            result.addData('PROJECT_REPOSITORIES', '["testuser/testrepo"]')
+            result.addAction('Project discovery', 'success')
+            return result
+          }
         }
       }
     }
@@ -123,12 +152,16 @@ export const ServiceFactory = {
     // Create base services
     const repoDetectionService = new RepoDetectionService(githubApi)
     const dataCollectionService = new DataCollectionService(githubApi)
+    const projectDataService = new ProjectDataService(githubApi)
+    const dataFileService = new DataFileService()
     
     // Wrap in orchestration services
     return {
       dataCollector: new DataCollectionOrchestrationService(dataCollectionService),
+      dataFileService: new DataFileOrchestrationService(dataFileService),
       envValidator: new EnvironmentValidationService(),
-      projectDetector: new RepoDetectionOrchestrationService(repoDetectionService)
+      projectDetector: new RepoDetectionOrchestrationService(repoDetectionService),
+      projectDiscovery: new ProjectDiscoveryOrchestrationService(projectDataService)
     }
   },
 };
