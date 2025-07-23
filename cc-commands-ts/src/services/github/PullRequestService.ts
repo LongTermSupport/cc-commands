@@ -8,17 +8,17 @@ import type { IGitHubApiService } from '../../interfaces/IGitHubApiService.js'
  * Pull request data
  */
 export interface PullRequestData {
-  number: number
-  title: string
-  state: 'open' | 'closed' | 'merged'
   author: string
+  comments: number
   createdAt: Date
-  updatedAt: Date
-  mergedAt?: Date
   draft: boolean
   labels: string[]
+  mergedAt?: Date
+  number: number
   reviewers: string[]
-  comments: number
+  state: 'closed' | 'merged' | 'open'
+  title: string
+  updatedAt: Date
 }
 
 /**
@@ -28,64 +28,6 @@ export class PullRequestService {
   constructor(
     private githubApi: IGitHubApiService
   ) {}
-
-  /**
-   * Fetch pull requests for a repository
-   * 
-   * @param owner - Repository owner
-   * @param repo - Repository name
-   * @param options - Query options
-   * @returns Array of pull request data
-   */
-  async fetchPullRequests(
-    owner: string,
-    repo: string,
-    options: {
-      state?: 'open' | 'closed' | 'all'
-      limit?: number
-      since?: Date
-    } = {}
-  ): Promise<PullRequestData[]> {
-    try {
-      const { state = 'all', limit = 30, since } = options
-
-      // Build query parameters
-      const params: Record<string, any> = {
-        state,
-        per_page: limit,
-        sort: 'updated',
-        direction: 'desc'
-      }
-
-      if (since) {
-        params.since = since.toISOString()
-      }
-
-      const response = await (this.githubApi as unknown as {
-        request(route: string, params: any): Promise<{ data: any[] }>
-      }).request('GET /repos/{owner}/{repo}/pulls', {
-        owner,
-        repo,
-        ...params
-      })
-
-      return response.data.map(pr => ({
-        number: pr.number,
-        title: pr.title,
-        state: pr.merged_at ? 'merged' : pr.state,
-        author: pr.user?.login || 'unknown',
-        createdAt: new Date(pr.created_at),
-        updatedAt: new Date(pr.updated_at),
-        mergedAt: pr.merged_at ? new Date(pr.merged_at) : undefined,
-        draft: pr.draft || false,
-        labels: pr.labels?.map((l: any) => l.name) || [],
-        reviewers: pr.requested_reviewers?.map((r: any) => r.login) || [],
-        comments: pr.comments || 0
-      }))
-    } catch (error) {
-      throw new Error(`Failed to fetch pull requests: ${error}`)
-    }
-  }
 
   /**
    * Fetch recent pull request activity summary
@@ -100,20 +42,20 @@ export class PullRequestService {
     repo: string,
     days: number = 7
   ): Promise<{
-    total: number
-    open: number
-    merged: number
+    avgTimeToMerge?: number
     closed: number
     draft: number
-    avgTimeToMerge?: number
+    merged: number
+    open: number
+    total: number
   }> {
     const since = new Date()
     since.setDate(since.getDate() - days)
 
     const prs = await this.fetchPullRequests(owner, repo, {
-      state: 'all',
       limit: 100,
-      since
+      since,
+      state: 'all'
     })
 
     const open = prs.filter(pr => pr.state === 'open').length
@@ -134,12 +76,70 @@ export class PullRequestService {
     }
 
     return {
-      total: prs.length,
-      open,
-      merged,
+      avgTimeToMerge,
       closed,
       draft,
-      avgTimeToMerge
+      merged,
+      open,
+      total: prs.length
+    }
+  }
+
+  /**
+   * Fetch pull requests for a repository
+   * 
+   * @param owner - Repository owner
+   * @param repo - Repository name
+   * @param options - Query options
+   * @returns Array of pull request data
+   */
+  async fetchPullRequests(
+    owner: string,
+    repo: string,
+    options: {
+      limit?: number
+      since?: Date
+      state?: 'all' | 'closed' | 'open'
+    } = {}
+  ): Promise<PullRequestData[]> {
+    try {
+      const { limit = 30, since, state = 'all' } = options
+
+      // Build query parameters
+      const params: Record<string, any> = {
+        direction: 'desc',
+        per_page: limit,
+        sort: 'updated',
+        state
+      }
+
+      if (since) {
+        params['since'] = since.toISOString()
+      }
+
+      const response = await (this.githubApi as unknown as {
+        request(route: string, params: any): Promise<{ data: any[] }>
+      }).request('GET /repos/{owner}/{repo}/pulls', {
+        owner,
+        repo,
+        ...params
+      })
+
+      return response.data.map(pr => ({
+        author: pr.user?.login || 'unknown',
+        comments: pr.comments || 0,
+        createdAt: new Date(pr.created_at),
+        draft: pr.draft || false,
+        labels: pr.labels?.map((l: any) => l.name) || [],
+        mergedAt: pr.merged_at ? new Date(pr.merged_at) : undefined,
+        number: pr.number,
+        reviewers: pr.requested_reviewers?.map((r: any) => r.login) || [],
+        state: pr.merged_at ? 'merged' : pr.state,
+        title: pr.title,
+        updatedAt: new Date(pr.updated_at)
+      }))
+    } catch (error) {
+      throw new Error(`Failed to fetch pull requests: ${error}`)
     }
   }
 }

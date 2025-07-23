@@ -8,17 +8,17 @@ import type { IGitHubApiService } from '../../interfaces/IGitHubApiService.js'
  * Issue data
  */
 export interface IssueData {
-  number: number
-  title: string
-  state: 'open' | 'closed'
-  author: string
-  createdAt: Date
-  updatedAt: Date
-  closedAt?: Date
-  labels: string[]
   assignees: string[]
+  author: string
+  closedAt?: Date
   comments: number
+  createdAt: Date
   isPullRequest: boolean
+  labels: string[]
+  number: number
+  state: 'closed' | 'open'
+  title: string
+  updatedAt: Date
 }
 
 /**
@@ -28,72 +28,6 @@ export class IssueService {
   constructor(
     private githubApi: IGitHubApiService
   ) {}
-
-  /**
-   * Fetch issues for a repository
-   * 
-   * @param owner - Repository owner
-   * @param repo - Repository name
-   * @param options - Query options
-   * @returns Array of issue data
-   */
-  async fetchIssues(
-    owner: string,
-    repo: string,
-    options: {
-      state?: 'open' | 'closed' | 'all'
-      limit?: number
-      since?: Date
-      labels?: string[]
-    } = {}
-  ): Promise<IssueData[]> {
-    try {
-      const { state = 'all', limit = 30, since, labels } = options
-
-      // Build query parameters
-      const params: Record<string, any> = {
-        state,
-        per_page: limit,
-        sort: 'updated',
-        direction: 'desc'
-      }
-
-      if (since) {
-        params.since = since.toISOString()
-      }
-
-      if (labels && labels.length > 0) {
-        params.labels = labels.join(',')
-      }
-
-      const response = await (this.githubApi as unknown as {
-        request(route: string, params: any): Promise<{ data: any[] }>
-      }).request('GET /repos/{owner}/{repo}/issues', {
-        owner,
-        repo,
-        ...params
-      })
-
-      // Filter out pull requests (GitHub API returns both issues and PRs in issues endpoint)
-      return response.data
-        .filter(issue => !issue.pull_request)
-        .map(issue => ({
-          number: issue.number,
-          title: issue.title,
-          state: issue.state,
-          author: issue.user?.login || 'unknown',
-          createdAt: new Date(issue.created_at),
-          updatedAt: new Date(issue.updated_at),
-          closedAt: issue.closed_at ? new Date(issue.closed_at) : undefined,
-          labels: issue.labels?.map((l: any) => l.name) || [],
-          assignees: issue.assignees?.map((a: any) => a.login) || [],
-          comments: issue.comments || 0,
-          isPullRequest: false
-        }))
-    } catch (error) {
-      throw new Error(`Failed to fetch issues: ${error}`)
-    }
-  }
 
   /**
    * Fetch issue activity summary
@@ -108,20 +42,20 @@ export class IssueService {
     repo: string,
     days: number = 7
   ): Promise<{
-    total: number
-    open: number
+    avgTimeToClose?: number
     closed: number
     newIssues: number
-    avgTimeToClose?: number
-    topLabels: Array<{ label: string; count: number }>
+    open: number
+    topLabels: Array<{ count: number; label: string; }>
+    total: number
   }> {
     const since = new Date()
     since.setDate(since.getDate() - days)
 
     const issues = await this.fetchIssues(owner, repo, {
-      state: 'all',
       limit: 100,
-      since
+      since,
+      state: 'all'
     })
 
     const open = issues.filter(issue => issue.state === 'open').length
@@ -142,24 +76,90 @@ export class IssueService {
 
     // Calculate top labels
     const labelCounts = new Map<string, number>()
-    issues.forEach(issue => {
-      issue.labels.forEach(label => {
+    for (const issue of issues) {
+      for (const label of issue.labels) {
         labelCounts.set(label, (labelCounts.get(label) || 0) + 1)
-      })
-    })
+      }
+    }
 
-    const topLabels = Array.from(labelCounts.entries())
-      .map(([label, count]) => ({ label, count }))
+    const topLabels = [...labelCounts.entries()]
+      .map(([label, count]) => ({ count, label }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5)
 
     return {
-      total: issues.length,
-      open,
+      avgTimeToClose,
       closed,
       newIssues,
-      avgTimeToClose,
-      topLabels
+      open,
+      topLabels,
+      total: issues.length
+    }
+  }
+
+  /**
+   * Fetch issues for a repository
+   * 
+   * @param owner - Repository owner
+   * @param repo - Repository name
+   * @param options - Query options
+   * @returns Array of issue data
+   */
+  async fetchIssues(
+    owner: string,
+    repo: string,
+    options: {
+      labels?: string[]
+      limit?: number
+      since?: Date
+      state?: 'all' | 'closed' | 'open'
+    } = {}
+  ): Promise<IssueData[]> {
+    try {
+      const { labels, limit = 30, since, state = 'all' } = options
+
+      // Build query parameters
+      const params: Record<string, any> = {
+        direction: 'desc',
+        per_page: limit,
+        sort: 'updated',
+        state
+      }
+
+      if (since) {
+        params['since'] = since.toISOString()
+      }
+
+      if (labels && labels.length > 0) {
+        params['labels'] = labels.join(',')
+      }
+
+      const response = await (this.githubApi as unknown as {
+        request(route: string, params: any): Promise<{ data: any[] }>
+      }).request('GET /repos/{owner}/{repo}/issues', {
+        owner,
+        repo,
+        ...params
+      })
+
+      // Filter out pull requests (GitHub API returns both issues and PRs in issues endpoint)
+      return response.data
+        .filter(issue => !issue.pull_request)
+        .map(issue => ({
+          assignees: issue.assignees?.map((a: any) => a.login) || [],
+          author: issue.user?.login || 'unknown',
+          closedAt: issue.closed_at ? new Date(issue.closed_at) : undefined,
+          comments: issue.comments || 0,
+          createdAt: new Date(issue.created_at),
+          isPullRequest: false,
+          labels: issue.labels?.map((l: any) => l.name) || [],
+          number: issue.number,
+          state: issue.state,
+          title: issue.title,
+          updatedAt: new Date(issue.updated_at)
+        }))
+    } catch (error) {
+      throw new Error(`Failed to fetch issues: ${error}`)
     }
   }
 }

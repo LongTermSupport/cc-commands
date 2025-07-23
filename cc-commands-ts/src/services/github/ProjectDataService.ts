@@ -11,32 +11,32 @@ import type { IGitHubApiService } from '../../interfaces/IGitHubApiService.js'
  * GitHub Project data
  */
 export interface GitHubProjectData {
-  id: string
-  number: number
-  title: string
-  description?: string
-  url: string
-  public: boolean
   closed: boolean
   createdAt: Date
-  updatedAt: Date
+  description?: string
+  id: string
   itemCount: number
+  number: number
+  public: boolean
+  title: string
+  updatedAt: Date
+  url: string
 }
 
 /**
  * Project item data
  */
 export interface ProjectItemData {
-  id: string
-  type: 'ISSUE' | 'PULL_REQUEST' | 'DRAFT_ISSUE'
-  title: string
-  repository?: {
-    owner: string
-    name: string
-  }
-  url?: string
-  status?: string
   assignees: string[]
+  id: string
+  repository?: {
+    name: string
+    owner: string
+  }
+  status?: string
+  title: string
+  type: 'DRAFT_ISSUE' | 'ISSUE' | 'PULL_REQUEST'
+  url?: string
 }
 
 /**
@@ -48,84 +48,22 @@ export class ProjectDataService {
   ) {}
 
   /**
-   * Find GitHub Projects for an organization
+   * Extract unique repositories from project items
    * 
-   * @param org - Organization name
-   * @param options - Query options
-   * @returns Array of project data
+   * @param items - Array of project items
+   * @returns Array of unique repository references
    */
-  async findOrganizationProjects(
-    org: string,
-    options: {
-      limit?: number
-      includeArchived?: boolean
-    } = {}
-  ): Promise<GitHubProjectData[]> {
-    try {
-      const { limit = 20, includeArchived = false } = options
+  extractRepositories(items: ProjectItemData[]): Array<{ name: string; owner: string; }> {
+    const repoMap = new Map<string, { name: string; owner: string; }>()
 
-      // Use GraphQL to fetch projects v2
-      const query = `
-        query($org: String!, $limit: Int!) {
-          organization(login: $org) {
-            projectsV2(first: $limit, orderBy: {field: UPDATED_AT, direction: DESC}) {
-              nodes {
-                id
-                number
-                title
-                shortDescription
-                url
-                public
-                closed
-                createdAt
-                updatedAt
-                items {
-                  totalCount
-                }
-              }
-            }
-          }
-        }
-      `
-
-      const response = await (this.githubApi as unknown as {
-        graphql(query: string, variables: any): Promise<any>
-      }).graphql(query, { org, limit })
-
-      const projects = response.organization?.projectsV2?.nodes || []
-
-      return projects
-        .filter((p: any) => includeArchived || !p.closed)
-        .map((project: any) => ({
-          id: project.id,
-          number: project.number,
-          title: project.title,
-          description: project.shortDescription,
-          url: project.url,
-          public: project.public,
-          closed: project.closed,
-          createdAt: new Date(project.createdAt),
-          updatedAt: new Date(project.updatedAt),
-          itemCount: project.items.totalCount
-        }))
-    } catch (error) {
-      throw new Error(`Failed to fetch organization projects: ${error}`)
+    for (const item of items) {
+      if (item.repository) {
+        const key = `${item.repository.owner}/${item.repository.name}`
+        repoMap.set(key, item.repository)
+      }
     }
-  }
 
-  /**
-   * Get the most recently updated project for an organization
-   * 
-   * @param org - Organization name
-   * @returns Most recent project or null
-   */
-  async getMostRecentProject(org: string): Promise<GitHubProjectData | null> {
-    const projects = await this.findOrganizationProjects(org, {
-      limit: 1,
-      includeArchived: false
-    })
-
-    return projects[0] || null
+    return [...repoMap.values()]
   }
 
   /**
@@ -213,7 +151,7 @@ export class ProjectDataService {
 
       const response = await (this.githubApi as unknown as {
         graphql(query: string, variables: any): Promise<any>
-      }).graphql(query, { projectId, limit })
+      }).graphql(query, { limit, projectId })
 
       const items = response.node?.items?.nodes || []
 
@@ -230,17 +168,17 @@ export class ProjectDataService {
         })
 
         const result: ProjectItemData = {
-          id: item.id,
-          type: item.type,
-          title: content.title || 'Untitled',
           assignees,
-          status
+          id: item.id,
+          status,
+          title: content.title || 'Untitled',
+          type: item.type
         }
 
         if (content.repository) {
           result.repository = {
-            owner: content.repository.owner.login,
-            name: content.repository.name
+            name: content.repository.name,
+            owner: content.repository.owner.login
           }
         }
 
@@ -256,21 +194,83 @@ export class ProjectDataService {
   }
 
   /**
-   * Extract unique repositories from project items
+   * Find GitHub Projects for an organization
    * 
-   * @param items - Array of project items
-   * @returns Array of unique repository references
+   * @param org - Organization name
+   * @param options - Query options
+   * @returns Array of project data
    */
-  extractRepositories(items: ProjectItemData[]): Array<{ owner: string; name: string }> {
-    const repoMap = new Map<string, { owner: string; name: string }>()
+  async findOrganizationProjects(
+    org: string,
+    options: {
+      includeArchived?: boolean
+      limit?: number
+    } = {}
+  ): Promise<GitHubProjectData[]> {
+    try {
+      const { includeArchived = false, limit = 20 } = options
 
-    items.forEach(item => {
-      if (item.repository) {
-        const key = `${item.repository.owner}/${item.repository.name}`
-        repoMap.set(key, item.repository)
-      }
+      // Use GraphQL to fetch projects v2
+      const query = `
+        query($org: String!, $limit: Int!) {
+          organization(login: $org) {
+            projectsV2(first: $limit, orderBy: {field: UPDATED_AT, direction: DESC}) {
+              nodes {
+                id
+                number
+                title
+                shortDescription
+                url
+                public
+                closed
+                createdAt
+                updatedAt
+                items {
+                  totalCount
+                }
+              }
+            }
+          }
+        }
+      `
+
+      const response = await (this.githubApi as unknown as {
+        graphql(query: string, variables: any): Promise<any>
+      }).graphql(query, { limit, org })
+
+      const projects = response.organization?.projectsV2?.nodes || []
+
+      return projects
+        .filter((p: any) => includeArchived || !p.closed)
+        .map((project: any) => ({
+          closed: project.closed,
+          createdAt: new Date(project.createdAt),
+          description: project.shortDescription,
+          id: project.id,
+          itemCount: project.items.totalCount,
+          number: project.number,
+          public: project.public,
+          title: project.title,
+          updatedAt: new Date(project.updatedAt),
+          url: project.url
+        }))
+    } catch (error) {
+      throw new Error(`Failed to fetch organization projects: ${error}`)
+    }
+  }
+
+  /**
+   * Get the most recently updated project for an organization
+   * 
+   * @param org - Organization name
+   * @returns Most recent project or null
+   */
+  async getMostRecentProject(org: string): Promise<GitHubProjectData | null> {
+    const projects = await this.findOrganizationProjects(org, {
+      includeArchived: false,
+      limit: 1
     })
 
-    return Array.from(repoMap.values())
+    return projects[0] || null
   }
 }

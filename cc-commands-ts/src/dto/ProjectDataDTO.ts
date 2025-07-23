@@ -42,24 +42,36 @@ export class ProjectDataDTO implements ILLMDataDTO {
     public readonly updatedAt: Date,
     public readonly itemCount: number,
     public readonly description?: string,
-    public readonly repositories: Array<{ owner: string; name: string }> = []
+    public readonly repositories: Array<{ name: string; owner: string; }> = []
   ) {}
+
+  /**
+   * Create a DTO indicating no project found
+   */
+  static noProject(): Record<string, string> {
+    return {
+      [ProjectDataDTO.Keys.PROJECT_ITEM_COUNT]: '0',
+      [ProjectDataDTO.Keys.PROJECT_REPOSITORIES]: 'None',
+      [ProjectDataDTO.Keys.PROJECT_REPOSITORY_COUNT]: '0',
+      [ProjectDataDTO.Keys.PROJECT_TITLE]: 'No project found',
+    }
+  }
 
   /**
    * Convert to LLMInfo data format
    */
   toLLMData(): Record<string, string> {
     const data: Record<string, string> = {
-      [ProjectDataDTO.Keys.PROJECT_ID]: this.id,
-      [ProjectDataDTO.Keys.PROJECT_NUMBER]: String(this.number),
-      [ProjectDataDTO.Keys.PROJECT_TITLE]: this.title,
-      [ProjectDataDTO.Keys.PROJECT_URL]: this.url,
-      [ProjectDataDTO.Keys.PROJECT_PUBLIC]: String(this.isPublic),
       [ProjectDataDTO.Keys.PROJECT_CLOSED]: String(this.isClosed),
       [ProjectDataDTO.Keys.PROJECT_CREATED_AT]: this.createdAt.toISOString(),
-      [ProjectDataDTO.Keys.PROJECT_UPDATED_AT]: this.updatedAt.toISOString(),
+      [ProjectDataDTO.Keys.PROJECT_ID]: this.id,
       [ProjectDataDTO.Keys.PROJECT_ITEM_COUNT]: String(this.itemCount),
+      [ProjectDataDTO.Keys.PROJECT_NUMBER]: String(this.number),
+      [ProjectDataDTO.Keys.PROJECT_PUBLIC]: String(this.isPublic),
       [ProjectDataDTO.Keys.PROJECT_REPOSITORY_COUNT]: String(this.repositories.length),
+      [ProjectDataDTO.Keys.PROJECT_TITLE]: this.title,
+      [ProjectDataDTO.Keys.PROJECT_UPDATED_AT]: this.updatedAt.toISOString(),
+      [ProjectDataDTO.Keys.PROJECT_URL]: this.url,
     }
 
     if (this.description) {
@@ -76,17 +88,5 @@ export class ProjectDataDTO implements ILLMDataDTO {
     }
 
     return data
-  }
-
-  /**
-   * Create a DTO indicating no project found
-   */
-  static noProject(): Record<string, string> {
-    return {
-      [ProjectDataDTO.Keys.PROJECT_TITLE]: 'No project found',
-      [ProjectDataDTO.Keys.PROJECT_ITEM_COUNT]: '0',
-      [ProjectDataDTO.Keys.PROJECT_REPOSITORY_COUNT]: '0',
-      [ProjectDataDTO.Keys.PROJECT_REPOSITORIES]: 'None',
-    }
   }
 }

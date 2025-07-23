@@ -35,16 +35,29 @@ export class PullRequestDataDTO implements ILLMDataDTO {
   ) {}
 
   /**
+   * Create a DTO indicating no PR data available
+   */
+  static noPullRequests(): Record<string, string> {
+    return {
+      [PullRequestDataDTO.Keys.PR_CLOSED_COUNT]: '0',
+      [PullRequestDataDTO.Keys.PR_DRAFT_COUNT]: '0',
+      [PullRequestDataDTO.Keys.PR_MERGED_COUNT]: '0',
+      [PullRequestDataDTO.Keys.PR_OPEN_COUNT]: '0',
+      [PullRequestDataDTO.Keys.PR_TOTAL_COUNT]: '0',
+    }
+  }
+
+  /**
    * Convert to LLMInfo data format
    */
   toLLMData(): Record<string, string> {
     const data: Record<string, string> = {
-      [PullRequestDataDTO.Keys.PR_TOTAL_COUNT]: String(this.total),
-      [PullRequestDataDTO.Keys.PR_OPEN_COUNT]: String(this.open),
-      [PullRequestDataDTO.Keys.PR_MERGED_COUNT]: String(this.merged),
+      [PullRequestDataDTO.Keys.PR_ACTIVITY_PERIOD_DAYS]: String(this.periodDays),
       [PullRequestDataDTO.Keys.PR_CLOSED_COUNT]: String(this.closed),
       [PullRequestDataDTO.Keys.PR_DRAFT_COUNT]: String(this.draft),
-      [PullRequestDataDTO.Keys.PR_ACTIVITY_PERIOD_DAYS]: String(this.periodDays),
+      [PullRequestDataDTO.Keys.PR_MERGED_COUNT]: String(this.merged),
+      [PullRequestDataDTO.Keys.PR_OPEN_COUNT]: String(this.open),
+      [PullRequestDataDTO.Keys.PR_TOTAL_COUNT]: String(this.total),
     }
 
     if (this.avgTimeToMergeDays !== undefined) {
@@ -52,18 +65,5 @@ export class PullRequestDataDTO implements ILLMDataDTO {
     }
 
     return data
-  }
-
-  /**
-   * Create a DTO indicating no PR data available
-   */
-  static noPullRequests(): Record<string, string> {
-    return {
-      [PullRequestDataDTO.Keys.PR_TOTAL_COUNT]: '0',
-      [PullRequestDataDTO.Keys.PR_OPEN_COUNT]: '0',
-      [PullRequestDataDTO.Keys.PR_MERGED_COUNT]: '0',
-      [PullRequestDataDTO.Keys.PR_CLOSED_COUNT]: '0',
-      [PullRequestDataDTO.Keys.PR_DRAFT_COUNT]: '0',
-    }
   }
 }

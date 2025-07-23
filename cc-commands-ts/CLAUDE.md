@@ -253,6 +253,17 @@ export async function executeMyCommand(
 }
 ```
 
+## GitHub Issues Management
+
+**GitHub issues are managed using the `gh` CLI tool, not local files.**
+
+- View issues: `gh issue list`
+- Create issue: `gh issue create`
+- Update issue: `gh issue edit <number>`
+- Comment on issue: `gh issue comment <number> -b "comment"`
+
+Issues live on GitHub.com and should be referenced by number (e.g., #22). Do not create local markdown files for issue tracking.
+
 ## Remember
 
 1. **Quality over speed** - Well-tested code is easier to maintain
