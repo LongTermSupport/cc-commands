@@ -86,6 +86,10 @@ export interface GitHubRepositoryResponse {
   fork: boolean
   forks_count: number
   full_name: string
+  has_issues: boolean
+  has_projects: boolean
+  has_wiki: boolean
+  homepage?: null | string
   html_url: string
   id: number
   language?: null | string
@@ -106,6 +110,40 @@ export interface GitHubRepositoryResponse {
   updated_at: string
   url: string
   watchers_count: number
+}
+
+/**
+ * GitHub CLI repository output structure
+ */
+export interface GitHubCliRepositoryOutput {
+  createdAt?: string
+  defaultBranch?: string
+  description?: string
+  forksCount?: number
+  hasIssues?: boolean
+  hasProjects?: boolean
+  hasWiki?: boolean
+  homepage?: string
+  id?: number
+  isArchived?: boolean
+  isFork?: boolean
+  isPrivate?: boolean
+  languages?: string[]
+  license?: string
+  name: string
+  nameWithOwner?: string
+  openIssuesCount?: number
+  owner?: string
+  ownerType?: 'Organization' | 'User'
+  primaryLanguage?: string
+  pushedAt?: string
+  size?: number
+  stargazersCount?: number
+  topics?: string[]
+  updatedAt?: string
+  url?: string
+  visibility?: 'PRIVATE' | 'PUBLIC'
+  watchersCount?: number
 }
 
 /**
