@@ -7,7 +7,7 @@
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { CommitDataDTO } from '../../../../src/orchestrator-services/github/dto/CommitDataDTO.js'
+import { CommitDataDTO } from '../../../../src/orchestrator-services/github/dto/CommitDataDTO'
 
 describe('CommitDataDTO', () => {
   describe('constructor', () => {

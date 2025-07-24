@@ -14,8 +14,8 @@
 
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { OrchestratorError } from '../../src/core/error/OrchestratorError.js'
-import { LLMInfo } from '../../src/core/LLMInfo.js'
+import { OrchestratorError } from '../../src/core/error/OrchestratorError'
+import { LLMInfo } from '../../src/core/LLMInfo'
 
 describe('LLMInfo', () => {
   let llmInfo: LLMInfo

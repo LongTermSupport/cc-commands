@@ -17,61 +17,6 @@ export interface GitHubOwner {
   url?: string
 }
 
-/**
- * GitHub repository reference in project responses
- */
-export interface GitHubProjectRepository {
-  full_name?: string
-  id?: number
-  name?: string
-  nameWithOwner?: string
-  owner?: GitHubOwner
-  url?: string
-}
-
-/**
- * GitHub Projects v2 API response structure
- */
-export interface GitHubProjectV2Response {
-  closed?: boolean
-  createdAt: string
-  description?: null | string
-  id: string
-  items?: {
-    nodes?: unknown[]
-    totalCount: number
-  }
-  owner: GitHubOwner
-  public?: boolean
-  readme?: null | string
-  repositories?: GitHubProjectRepository[]
-  shortDescription?: null | string
-  title: string
-  updatedAt: string
-  url: string
-}
-
-/**
- * GitHub CLI project output structure
- */
-export interface GitHubCliProjectOutput {
-  body?: string
-  createdAt?: string
-  description?: string
-  id?: string
-  items?: unknown[]
-  name?: string
-  number?: number | string
-  owner?: GitHubOwner | string
-  readme?: string
-  repositories?: string[]
-  shortDescription?: string
-  state?: 'CLOSED' | 'OPEN'
-  title?: string
-  updatedAt?: string
-  url?: string
-  visibility?: 'PRIVATE' | 'PUBLIC'
-}
 
 /**
  * GitHub repository API response structure

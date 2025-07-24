@@ -6,7 +6,7 @@
  * relationships, and state information.
  */
 
-import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO.js'
+import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO'
 
 /**
  * Data Transfer Object for GitHub issues

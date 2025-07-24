@@ -5,7 +5,7 @@
  * OrchestratorErrors, including auto-detection failures and invalid project references.
  */
 
-import { OrchestratorError } from '../../../core/error/OrchestratorError.ts'
+import { OrchestratorError } from '../../../core/error/OrchestratorError'
 
 /**
  * Factory class for creating project-related errors

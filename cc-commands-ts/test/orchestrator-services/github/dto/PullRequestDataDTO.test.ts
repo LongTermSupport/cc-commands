@@ -7,7 +7,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { PullRequestDataDTO } from '../../../../src/orchestrator-services/github/dto/PullRequestDataDTO.js'
+import { PullRequestDataDTO } from '../../../../src/orchestrator-services/github/dto/PullRequestDataDTO'
 
 describe('PullRequestDataDTO', () => {
   const validPrData = {

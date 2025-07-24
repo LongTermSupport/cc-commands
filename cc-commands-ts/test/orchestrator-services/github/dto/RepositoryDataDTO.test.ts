@@ -7,7 +7,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { RepositoryDataDTO } from '../../../../src/orchestrator-services/github/dto/RepositoryDataDTO.js'
+import { RepositoryDataDTO } from '../../../../src/orchestrator-services/github/dto/RepositoryDataDTO'
 
 describe('RepositoryDataDTO', () => {
   const validRepositoryData = {

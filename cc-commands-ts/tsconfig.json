@@ -2,8 +2,8 @@
   "compilerOptions": {
     "declaration": true,
     "importHelpers": true,
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "outDir": "dist",
     "rootDir": "src",
     "strict": true,
@@ -32,8 +32,6 @@
     
     // Module settings
     "allowSyntheticDefaultImports": true,
-    "allowImportingTsExtensions": true,
-    "noEmit": false,
     "skipLibCheck": true,
     
     // Paths

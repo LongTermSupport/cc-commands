@@ -12,9 +12,9 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { BaseCommand } from '../../src/core/BaseCommand.js'
-import { OrchestratorError } from '../../src/core/error/OrchestratorError.js'
-import { LLMInfo } from '../../src/core/LLMInfo.js'
+import { BaseCommand } from '../../src/core/BaseCommand'
+import { OrchestratorError } from '../../src/core/error/OrchestratorError'
+import { LLMInfo } from '../../src/core/LLMInfo'
 
 // Mock process.stdout.write
 const mockStdoutWrite = vi.fn()

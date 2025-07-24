@@ -6,7 +6,7 @@
  * and API response errors.
  */
 
-import { OrchestratorError } from '../../../core/error/OrchestratorError.ts'
+import { OrchestratorError } from '../../../core/error/OrchestratorError'
 
 /**
  * Factory class for creating GitHub API-related errors

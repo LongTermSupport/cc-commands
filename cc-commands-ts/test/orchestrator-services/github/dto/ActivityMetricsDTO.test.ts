@@ -7,7 +7,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { ActivityMetricsDTO } from '../../../../src/orchestrator-services/github/dto/ActivityMetricsDTO.js'
+import { ActivityMetricsDTO } from '../../../../src/orchestrator-services/github/dto/ActivityMetricsDTO'
 
 describe('ActivityMetricsDTO', () => {
   const validActivityData = {

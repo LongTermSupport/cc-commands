@@ -6,7 +6,7 @@
  * This is the top-level DTO that combines all other DTOs for final LLM processing.
  */
 
-import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO.js'
+import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO'
 
 /**
  * Data Transfer Object for GitHub project summaries

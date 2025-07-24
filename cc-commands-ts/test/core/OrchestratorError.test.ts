@@ -13,7 +13,7 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { OrchestratorError } from '../../src/core/error/OrchestratorError.js'
+import { OrchestratorError } from '../../src/core/error/OrchestratorError'
 
 // Mock process properties for consistent testing
 const mockProcess = {

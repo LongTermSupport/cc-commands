@@ -8,7 +8,7 @@
 
 import { describe, expect, it, vi } from 'vitest'
 
-import { ProjectSummaryDTO } from '../../../../src/orchestrator-services/github/dto/ProjectSummaryDTO.js'
+import { ProjectSummaryDTO } from '../../../../src/orchestrator-services/github/dto/ProjectSummaryDTO'
 
 const createDtoWithScore = (score: number): ProjectSummaryDTO => 
   new ProjectSummaryDTO(

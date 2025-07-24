@@ -6,8 +6,8 @@
  * responses to the standardized LLMInfo data format.
  */
 
-import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO.js'
-import { GitHubCliRepositoryOutput, GitHubRepositoryResponse } from '../types/GitHubApiTypes.js'
+import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO'
+import { GitHubCliRepositoryOutput, GitHubRepositoryResponse } from '../types/GitHubApiTypes'
 
 /**
  * Data Transfer Object for GitHub repository information
