@@ -2,12 +2,12 @@
   "compilerOptions": {
     "declaration": true,
     "importHelpers": true,
-    "module": "Node16",
-    "moduleResolution": "Node16",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "outDir": "dist",
     "rootDir": "src",
     "strict": true,
-    "target": "ES2022",
+    "target": "ES2023",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
@@ -32,6 +32,8 @@
     
     // Module settings
     "allowSyntheticDefaultImports": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": false,
     "skipLibCheck": true,
     
     // Paths
