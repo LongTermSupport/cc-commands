@@ -47,9 +47,9 @@
     }
   },
   "include": [
-    "archive/src/**/*"
+    "src/**/*"
   ],
-  "exclude": ["node_modules", "dist", "lib", "coverage"],
+  "exclude": ["node_modules", "dist", "lib", "coverage", "archive"],
   "ts-node": {
     "esm": true,
     "require": ["tsconfig-paths/register"]

@@ -1,0 +1,160 @@
+import { RepoDataCollectionDTO } from '../../dto/RepoDataCollectionDTO';
+/**
+ * Service for collecting data from GitHub repositories
+ */
+export class DataCollectionService {
+    githubApi;
+    constructor(githubApi) {
+        this.githubApi = githubApi;
+    }
+    /**
+     * Collect comprehensive data for a repository
+     */
+    async collectData(owner, repo, options = {}) {
+        // Default all options to true
+        const opts = {
+            includeActivity: true,
+            includeContributors: true,
+            includeIssues: true,
+            includePullRequests: true,
+            includeReleases: true,
+            includeWorkflows: true,
+            ...options
+        };
+        try {
+            // Get basic repository data first
+            const repoData = await this.githubApi.getRepository(owner, repo);
+            // Collect activity metrics
+            const activity = {
+                // Summary counts (will be updated later)
+                commitCount: 0,
+                contributorCount: 0,
+                forks: repoData.forks_count || 0,
+                issueCount: 0,
+                lastCommitDate: repoData.pushed_at || repoData.updated_at,
+                lastReleaseDate: null,
+                openIssues: repoData.open_issues_count || 0,
+                prCount: 0,
+                recentCommits: 0,
+                recentIssues: 0,
+                recentPullRequests: 0,
+                releaseCount: 0,
+                stars: repoData.stargazers_count || 0,
+                watchers: repoData.watchers_count || 0
+            };
+            // Calculate recent activity (last 7 days)
+            if (opts.includeActivity) {
+                const sevenDaysAgo = new Date();
+                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                // Get recent issues and PRs
+                if (opts.includeIssues || opts.includePullRequests) {
+                    const issues = await this.githubApi.getRepositoryIssues(owner, repo, sevenDaysAgo);
+                    activity.recentIssues = issues.filter(i => !i.isPullRequest).length;
+                    activity.recentPullRequests = issues.filter(i => i.isPullRequest).length;
+                }
+                // Get recent commits
+                const commits = await this.githubApi.getRepositoryCommits(owner, repo, sevenDaysAgo);
+                activity.recentCommits = commits.length;
+            }
+            // Collect contributors
+            let contributors = [];
+            if (opts.includeContributors) {
+                try {
+                    const { data } = await this.githubApi.octokit.rest.repos.listContributors({
+                        owner,
+                        // eslint-disable-next-line camelcase -- GitHub API requires snake_case
+                        per_page: 100,
+                        repo,
+                    });
+                    contributors = data.map((c) => ({
+                        contributions: c.contributions,
+                        login: c.login,
+                    }));
+                }
+                catch (error) {
+                    console.error('Failed to fetch contributors:', error);
+                }
+            }
+            // Collect releases
+            let releases = [];
+            if (opts.includeReleases) {
+                try {
+                    const { data } = await this.githubApi.octokit.rest.repos.listReleases({
+                        owner,
+                        // eslint-disable-next-line camelcase -- GitHub API requires snake_case
+                        per_page: 10,
+                        repo,
+                    });
+                    releases = data.map((r) => ({
+                        isPrerelease: r.prerelease,
+                        name: r.name,
+                        publishedAt: r.published_at || '',
+                        tagName: r.tag_name,
+                    }));
+                    if (releases.length > 0) {
+                        activity.lastReleaseDate = releases[0]?.publishedAt ?? null;
+                    }
+                }
+                catch (error) {
+                    console.error('Failed to fetch releases:', error);
+                }
+            }
+            // Collect workflows
+            let workflows = [];
+            if (opts.includeWorkflows) {
+                try {
+                    const { data } = await this.githubApi.octokit.rest.actions.listRepoWorkflows({
+                        owner,
+                        repo,
+                    });
+                    workflows = data.workflows.map((w) => ({
+                        id: w.id,
+                        name: w.name,
+                        path: w.path,
+                        state: w.state,
+                    }));
+                }
+                catch (error) {
+                    console.error('Failed to fetch workflows:', error);
+                }
+            }
+            // Create project info from repository data
+            const project = {
+                createdAt: repoData.created_at,
+                defaultBranch: repoData.default_branch,
+                description: repoData.description,
+                fullName: repoData.full_name,
+                isArchived: repoData.archived,
+                isFork: repoData.fork,
+                license: repoData['license'] && typeof repoData['license'] === 'object' && 'spdx_id' in repoData['license']
+                    ? repoData['license']['spdx_id']
+                    : null,
+                name: repoData.name,
+                owner: repoData.owner.login,
+                primaryLanguage: repoData.language || 'Unknown',
+                topics: repoData.topics || [],
+                updatedAt: repoData.updated_at,
+                visibility: repoData.private ? 'private' : 'public',
+            };
+            // Update summary counts
+            activity.contributorCount = contributors.length;
+            activity.releaseCount = releases.length;
+            // Note: commitCount, issueCount, prCount would require additional API calls
+            // For now, using the recent counts as approximations
+            activity.commitCount = activity.recentCommits;
+            activity.issueCount = activity.recentIssues;
+            activity.prCount = activity.recentPullRequests;
+            const projectData = {
+                activity,
+                contributors,
+                project,
+                releases,
+                workflows,
+            };
+            return RepoDataCollectionDTO.fromProjectData(projectData);
+        }
+        catch (error) {
+            throw new Error(`Failed to collect repository data: ${error}`);
+        }
+    }
+}
