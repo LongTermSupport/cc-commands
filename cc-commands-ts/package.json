@@ -78,17 +78,17 @@
   "repository": "cc-commands/cc-commands-ts",
   "scripts": {
     "build": "shx rm -rf dist && tsc -b",
-    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --fix",
+    "lint": "eslint \"archive/src/**/*.ts\" \"test/**/*.ts\" --fix",
     "test": "npm run build && vitest run",
     "test:watch": "vitest",
     "test:coverage": "npm run build && vitest run --coverage",
-    "test:real": "npm run build && vitest run test/commands/g/gh/project/summary.real-integration.test.ts",
+    "test:real": "npm run build && vitest run archive/test/commands/g/gh/project/summary.real-integration.test.ts",
     "typecheck": "tsc -b --noEmit",
     "qa": "npm run build && npm run lint && npm run test",
     "postpack": "shx rm -f oclif.manifest.json",
     "posttest": "npm run lint",
     "prepack": "oclif manifest && oclif readme",
-    "version": "oclif readme && git add README.md"
+    "version": "oclif readme && git add archive/README.md"
   },
   "types": "dist/index.d.ts"
 }

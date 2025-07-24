@@ -1,21 +1,245 @@
-# CC Commands TypeScript - CLAUDE Guide
+# Claude Code Commands (Typescript)
 
-## Core Architecture Principle
+This project provides orchestrators which can be utilized by custom slash commands in claude code.
+
+The role of an cc-command is to provide rapid, reliable functionality that the LLM can utilize with simple CLI call
+
+A single custom slash command may call relevant the cc-command multiple times as it progresses through it's process.
+
+Generally this will be in the form of
+LLM -> setup
+    - parse arguments
+    - check environment, confirm required tools etc set up
+    - anything else that needs to be done or checked before proceeding
+LLM -> execution
+    - actually doing things
+        - API Calls
+        - Collecting data
+        - Performing Actions
+LLM -> other execution steps as required
+    - based on previous execution outcomes, the LLM might decide to call other execution steps
+
+# Development Practice
+
+You are a top tier typescript developer with a passion for best practice, strong types, test driven development, clear API, strong and clear organisation.
+
+We have this basic topography:
+
+## Command
+
+oclif command - very thin, handles CLI interaction. Passes off work to the orchestrator and then handles final output. 
+
+Very thin, only tested with end to end tests (no mocks)
+
+Will receive an $ARGUMENTS argument when called from the LLM. This is a simple string. It might represent multiple arguments. Arguments might include quoted strings. This to be passed verbatim to the orchestrator for parsing and processing.
+
+The Orchestrator will return an [@src/core/LLMInfo.ts](./src/core/LLMInfo.ts) object as a result. 
+
+LLMInfo has a toString method which should be called and sent to stdout.
+
+LLMInfo has a getExitCode method which should be called and then the command should exit with that code.
+
+### Orchestrator
+Akin to a controller in MVC. Has dependencies that do work, hinted by interfaces as much as possible. No functionality beyond returning LLMInfo.
+
+Should be very thin, only tested with integration tests (some mocking allowed for third party APIs), real functionality should be handled by services
+
+Orchestrator is an exported async function implementing the IOrchestrator interface
+
+```typescript
+// Orchestrator service function type - coordinates regular services
+export type IOrchestratorService = (
+  args: string,
+  services: TOrchestratorServiceMap
+) => Promise<LLMInfo>
+
+// Regular services return DTOs (used by orchestrator services)
+export interface IDataCollectorService {
+  collectRepositoryData(owner: string, repo: string): Promise<RepositoryDataDTO>
+  collectReleaseData(owner: string, repo: string): Promise<ReleaseDataDTO | null>
+}
+
+// Collection of orchestrator services, each implementing IOrchestratorService
+export type TOrchestratorServiceMap = {
+  [serviceName: string]: IOrchestratorService;
+}
+
+// The orchestrator function type: must be a function returning a Promise<LLMInfo>
+export type IOrchestrator = (
+  commandArgs: string, // this is the $ARGUMENTS string that the LLM passes to the command, which then passes it down to the orchestrator for parsing
+  services: TOrchestratorServiceMap, 
+) => Promise<LLMInfo>;
+```
+
+The Orchestrator in the form of a function in the functional dependency injection pattern.
+
+```typescript
+// Strictly typed project summary services
+export type TProjectSummaryServices = {
+  dataCollector: IDataCollectorService;
+  dataFileService?: IDataFileService;
+  envValidator: IEnvValidatorService;
+  projectDetector: IProjectDetectorService;
+  projectDiscovery?: IProjectDiscoveryService;
+} & TOrchestratorServiceMap;
+
+// Example service interfaces (illustrative only)
+export interface IDataCollectorService extends IOrchestratorService {
+  // methods
+}
+export interface IDataFileService extends IOrchestratorService {
+  // methods
+}
+export interface IEnvValidatorService extends IOrchestratorService {
+  // methods
+}
+export interface IProjectDetectorService extends IOrchestratorService {
+  // methods
+}
+export interface IProjectDiscoveryService extends IOrchestratorService {
+  // methods
+}
+
+// Usage in orchestrator:
+export const executeProjectSummary: IOrchestrator = async(
+  commandArgs: string,
+  services: TProjectSummaryServices,  // Injected
+): Promise<LLMInfo> => {
+  // Pure orchestration logic
+}
+```
+
+#### Orchestrator Services
+
+Orchestrator services are exported functions (like orchestrators) that sit between orchestrators and regular services. They follow the same functional pattern as orchestrators but focus on specific domains.
+
+```typescript
+// Orchestrator service function signature
+export type IOrchestratorService = (
+  args: string,  // Parsed arguments specific to this service
+  services: TServiceMap  // Regular services that return DTOs
+) => Promise<LLMInfo>
+
+// Example orchestrator service - coordinates multiple regular services
+export const executeGitHubProjectSummary: IOrchestratorService = async (
+  args: string,
+  services: TGitHubServices
+): Promise<LLMInfo> => {
+  const result = LLMInfo.create()
+  
+  // Parse arguments
+  const { owner, repo } = parseGitHubArgs(args)
+  
+  // Coordinate multiple regular services
+  const repoData = await services.dataCollector.collectRepositoryData(owner, repo)
+  const releaseData = await services.dataCollector.collectReleaseData(owner, repo)
+  const issueStats = await services.issueAnalyzer.analyzeIssues(owner, repo)
+  
+  // Combine all DTOs into single LLMInfo
+  result.addDataBulk(repoData.toLLMData())
+  if (releaseData) result.addDataBulk(releaseData.toLLMData())
+  result.addDataBulk(issueStats.toLLMData())
+  
+  result.addInstruction('Generate a comprehensive project summary report')
+  
+  return result
+}
+```
+
+**Key Principles:**
+- Single-purpose functions that do one thing well
+- Always return LLMInfo (never DTOs or mixed types)
+- Use regular services (that return DTOs) for actual work
+- Follow same functional DI pattern as orchestrators
+
+**Testing**: Integration tests with some mocking allowed for third-party APIs. Test the coordination logic and LLMInfo assembly.
+
+**Organization**: Each orchestrator service resides in its own subdirectory with its dependencies, errors, types etc. When working on a service, you should only need files within that directory plus src/core.
+
+## Folder Structure & Naming Conventions
+
+### Project Structure
+```
+src/
+├── core/                                    # Shared core types
+│   ├── LLMInfo.ts
+│   └── error/
+│       └── OrchestratorError.ts
+├── commands/                                # Command + Orchestrator pairs (co-located)
+│   └── g/
+│       └── gh/
+│           └── project/
+│               ├── summaryCmd.ts            # OCLIF command
+│               └── summaryOrch.ts           # Orchestrator function
+└── orchestrator-services/                  # Domain services
+    └── github/                              # Domain namespace
+        ├── dataCollectionOrchServ.ts        # Orchestrator service function
+        ├── issueAnalysisOrchServ.ts         # Orchestrator service function
+        ├── services/                        # Regular services (return DTOs)
+        │   ├── RepositoryService.ts         # Class with dependencies
+        │   ├── IssueService.ts              # Class with dependencies
+        │   └── ApiClientService.ts          # External API wrapper
+        ├── dto/                             # Domain DTOs
+        │   ├── RepositoryDataDTO.ts
+        │   └── IssueStatsDTO.ts
+        ├── types/                           # Domain-specific types
+        │   ├── GitHubApiTypes.ts
+        │   └── GitHubDataTypes.ts
+        ├── errors/                          # Domain-specific errors
+        │   ├── GitHubApiError.ts
+        │   └── GitHubValidationError.ts
+        ├── interfaces/                      # Service contracts
+        │   ├── IRepositoryService.ts
+        │   └── IApiClientService.ts
+        └── constants/                       # Domain constants
+            └── GitHubConstants.ts
+```
+
+### Naming Conventions
+
+**Commands**: 
+- File: `summaryCmd.ts`
+- Class: `export default class SummaryCmd extends Command`
+- CLI: `g:gh:project:summary`
+
+**Orchestrators**: 
+- File: `summaryOrch.ts` 
+- Function: `export const summaryOrch: IOrchestrator`
+
+**Orchestrator Services**:
+- File: `dataCollectionOrchServ.ts`
+- Function: `export const dataCollectionOrchServ: IOrchestratorService`
+
+**Regular Services**:
+- File: `services/RepositoryService.ts`
+- Class: `export class RepositoryService` (dependency injection ready)
+- Constructor: `constructor(private apiClient: IApiClient, private parser: IDataParser)`
+
+    
+
+# Core Architecture Principles
+
+## Data vs Decision Separation
 
 **Orchestrators provide raw data, LLMs make decisions.**
 
 TypeScript code (orchestrators) performs deterministic operations and returns raw KEY=value data. The LLM interprets commands and decides how to format output based on audience needs.
 
+## Dependency Injection & Testability
+
+**No `new` calls anywhere** except for DTO creation (`new RepositoryDataDTO(...)`)
+
+- All services receive dependencies via constructor injection for maximum testability
+- Services can depend on other services - no restrictions, but must be unit testable
+- Everything is designed for easy mocking and isolated testing
+
 ## 🚨 CRITICAL DISTINCTION: TypeScript vs LLM Responsibilities
 
-### What TypeScript Orchestrators DO:
+### What TypeScript Orchestrators (and their services) DO:
 - ✅ Fetch raw data from APIs
-- ✅ Return simple KEY=value pairs
-- ✅ Collect metrics and statistics
-- ✅ Perform deterministic calculations
-- ✅ Handle authentication and API calls
+- ✅ Return LLMInfo object that largely is used to store data in KEY=value pairs
 
-### What TypeScript Orchestrators DO NOT DO:
+### What TypeScript Orchestrators (and their services) DO NOT DO:
 - ❌ Generate summaries or reports
 - ❌ Format output for humans
 - ❌ Make decisions about data importance
@@ -32,6 +256,7 @@ TypeScript code (orchestrators) performs deterministic operations and returns ra
 
 ### Example:
 ```typescript
+//result=LLMInfo
 // ✅ CORRECT - Giving LLM instructions on what to do:
 result.addInstruction('Generate a project summary report')
 result.addInstruction('Adapt the report style based on the AUDIENCE parameter')
@@ -54,9 +279,9 @@ result.addData('SUMMARY', summary)
 
 ## 🚨 Key Principles
 
-### 1. NO MAGIC STRINGS
+### NO MAGIC STRINGS
 
-All data keys must be defined as constants. See [`docs/DTOArchitecture.md`](./docs/DTOArchitecture.md) for the complete guide.
+All data keys must be defined as constants. See [`docs/DTOArchitecture.md`](../docs/DTOArchitecture.md) for the complete guide.
 
 ```typescript
 // ❌ BAD - Magic string
@@ -67,7 +292,7 @@ const repoData = new RepositoryDataDTO(...)
 result.addDataFromDTO(repoData)
 ```
 
-### 2. FAIL FAST
+### FAIL FAST
 
 Never hide errors. When something is wrong, throw immediately with a clear error message.
 
@@ -87,7 +312,7 @@ if (!match || !match[1] || !match[2]) {
 return { owner: match[1], repo: match[2] }
 ```
 
-### 3. TYPE SAFETY EVERYWHERE
+### TYPE SAFETY EVERYWHERE
 
 All methods must have explicit return types. All data exchange uses DTOs.
 
@@ -101,6 +326,39 @@ async collectRepositoryData(
   return RepositoryDataDTO.fromGitHubResponse(response)
 }
 ```
+
+### NAMESPACING / FOLDER ORGANISATION
+
+taking inspiration from domain driven design, modular architecture etc
+
+code to be heavily namespaced, orchestrator services to be the "front controller" for a particular namespaced set of functionality
+
+examples of orchestrator services:
+ - GithubAPI
+ - Filesystem
+ - Git
+
+### STRICT NAMING CONVENTIONS
+
+#### Naming Conventions for Types and Interfaces
+
+- **Interfaces:** Prefix with `I` (e.g., `IOrchestratorService`, `IDataCollectorService`).
+- **Types:** Prefix with `T` (e.g., `TProjectSummaryServices`, `TOrchestratorServiceMap`).
+- This convention makes it clear at a glance whether a symbol is an interface or a type alias, improving code readability and maintainability.
+
+# Project Summary Services: Strict Typing and Structure
+
+- `TProjectSummaryServices` is a strictly typed object: each property is a specific service interface (not just the base `IOrchestratorService`).
+- Each service interface (e.g., `IDataCollectorService`, `IEnvValidatorService`) extends `IOrchestratorService` and can add its own methods if needed.
+- `TProjectSummaryServices` also conforms to the generic service map type `TOrchestratorServiceMap`, allowing dynamic access if needed.
+
+
+
+
+- This ensures:
+  - Each property is a specific, testable, and composable service.
+  - The object is compatible with the generic orchestrator service map for dynamic lookups.
+  - The naming convention is clear and consistent throughout the codebase.
 
 ## Quality Assurance Requirements
 
@@ -119,160 +377,83 @@ This runs:
 
 **If ANY step fails, fix immediately before proceeding.**
 
-## Development Workflow
+## Testing Strategy
 
-### 1. Creating New Features
+See [@docs/Testing.md](docs/Testing.md) for complete testing guide including TDD practices, three-tier testing approach, mocking strategies, and coverage requirements.
 
-Always follow this order:
+## Error Handling and CLI Integration
 
-1. **Create DTO first** - Define the data structure
-2. **Define service interface** - Clear contracts
-3. **Implement service** - Business logic with DTO returns
-4. **Create orchestrator** - Pure function coordinating services
-5. **Create command** - Thin wrapper calling orchestrator
-6. **Write tests** - Test orchestrator and services directly
+### How Errors Surface Through the System
 
-See [`docs/DevelopmentGuide.md`](./docs/DevelopmentGuide.md) for detailed steps.
-
-### 2. Testing Strategy
-
-Due to oclif subprocess isolation:
-
-1. **Prefer unit tests** - Test orchestrators directly with mocked services
-2. **Integration tests use TEST_MODE** - Environment variable for test doubles
-3. **Real integration tests** - Skip in CI to avoid rate limits
-
-See [`docs/TestingStrategy.md`](./docs/TestingStrategy.md) for complete guide.
-
-## Documentation
-
-All documentation is in the `docs/` folder:
-
-- [`docs/README.md`](./docs/README.md) - Start here
-- [`docs/DTOArchitecture.md`](./docs/DTOArchitecture.md) - DTO patterns and no-magic-strings
-- [`docs/TestingStrategy.md`](./docs/TestingStrategy.md) - Three-tier testing approach
-- [`docs/DevelopmentGuide.md`](./docs/DevelopmentGuide.md) - Day-to-day workflow
-- [`docs/CommandPatterns.md`](./docs/CommandPatterns.md) - Creating commands
-- [`docs/ServicePatterns.md`](./docs/ServicePatterns.md) - Creating services
-
-Old documentation has been moved to `docs/archive/` for reference.
-
-## Common Commands
-
-```bash
-# Full QA suite (ALWAYS run this)
-npm run qa
-
-# Individual checks
-npm run typecheck
-npm run lint        # Always auto-fixes
-npm run test
-
-# Development
-npm run test:watch  # TDD mode
-
-# Build
-npm run build
-
-# Coverage
-npm run test:coverage
-```
-
-## Architecture Enforcement
-
-ESLint rules enforce our architecture:
-
-1. **No `new` in orchestrators** - Use dependency injection
-2. **Explicit return types required** - No implicit any
-3. **DTOs must implement ILLMDataDTO** - Type safety
-4. **No magic strings in DTOs** - Use const keys
-5. **Prefer addDataFromDTO** - Over direct addData
-
-## Quick Reference
-
-### Creating a DTO
+Errors flow through the architecture in a structured way that ensures proper CLI exit codes and clear LLM feedback:
 
 ```typescript
-export class MyDataDTO implements ILLMDataDTO {
-  private static readonly Keys = {
-    FIELD_ONE: 'FIELD_ONE',
-    FIELD_TWO: 'FIELD_TWO',
-  } as const
-
-  constructor(
-    public readonly fieldOne: string,
-    public readonly fieldTwo: number
-  ) {}
-
-  toLLMData(): Record<string, string> {
-    return {
-      [MyDataDTO.Keys.FIELD_ONE]: this.fieldOne,
-      [MyDataDTO.Keys.FIELD_TWO]: String(this.fieldTwo)
-    }
+// 1. Services throw OrchestratorError when things fail
+async collectData(): Promise<LLMInfo> {
+  try {
+    const data = await this.api.fetch()
+    return LLMInfo.create().addData('RESULT', data)
+  } catch (error) {
+    throw new OrchestratorError(
+      'DATA_COLLECTION_FAILED',
+      'Failed to fetch data from API',
+      ['Check API credentials', 'Verify network connectivity'],
+      { apiUrl: this.apiUrl, statusCode: error.status }
+    )
   }
 }
-```
 
-### Creating a Service
-
-```typescript
-export interface IMyService {
-  getData(id: string): Promise<MyDataDTO>
-}
-
-export class MyService implements IMyService {
-  constructor(private readonly api: IApiClient) {}
-  
-  async getData(id: string): Promise<MyDataDTO> {
-    const response = await this.api.get(`/data/${id}`)
-    return MyDataDTO.fromApiResponse(response)
-  }
-}
-```
-
-### Creating an Orchestrator
-
-```typescript
-export async function executeMyCommand(
-  services: MyCommandServices,
-  args: MyCommandArgs,
-  flags: MyCommandFlags
-): Promise<LLMInfo> {
+// 2. Orchestrators catch errors and add them to LLMInfo
+export const executeCommand: IOrchestrator = async (args, services) => {
   const result = LLMInfo.create()
   
   try {
-    const data = await services.myService.getData(args.id)
-    result.addDataFromDTO(data)
-    result.addAction('Data retrieval', 'success')
+    const data = await services.dataCollector.collectData()
+    result.merge(data)
   } catch (error) {
-    result.setError(error)
-    result.addAction('Data retrieval', 'failed')
+    if (error instanceof OrchestratorError) {
+      result.setError(error)
+    } else {
+      // Wrap unexpected errors
+      result.setError(new OrchestratorError(
+        'UNEXPECTED_ERROR',
+        error.message || 'Unknown error occurred',
+        ['Check debug logs', 'Retry the operation']
+      ))
+    }
   }
   
   return result
 }
+
+// 3. Commands use LLMInfo methods to determine CLI behavior
+export default class MyCommand extends Command {
+  async run(): Promise<void> {
+    const { args } = await this.parse(MyCommand)
+    
+    const result = await executeCommand(args.arguments, services)
+    
+    // Explicit stdout output (preferred over this.log for data)
+    process.stdout.write(result.toString())
+    
+    // Exit code is determined by LLMInfo
+    process.exit(result.getExitCode()) // 0 for success, 1 for error
+  }
+}
 ```
 
-## GitHub Issues Management
+### Error Flow Summary
 
-**GitHub issues are managed using the `gh` CLI tool, not local files.**
+1. **Services**: Throw `OrchestratorError` with structured error info and recovery instructions
+2. **Orchestrators**: Catch errors and call `result.setError(error)` 
+3. **LLMInfo**: Formats error into `STOP PROCESSING` output with recovery instructions
+4. **Commands**: Use `result.getExitCode()` to set proper CLI exit code
+5. **CLI**: Non-zero exit codes signal failure to calling processes
 
-- View issues: `gh issue list`
-- Create issue: `gh issue create`
-- Update issue: `gh issue edit <number>`
-- Comment on issue: `gh issue comment <number> -b "comment"`
+### Key Benefits
 
-Issues live on GitHub.com and should be referenced by number (e.g., #22). Do not create local markdown files for issue tracking.
-
-## Remember
-
-1. **Quality over speed** - Well-tested code is easier to maintain
-2. **No magic strings** - Every string should be a const
-3. **Fail fast** - Clear errors are better than silent failures
-4. **Run QA frequently** - Catch issues early
-5. **DTOs everywhere** - Type safety prevents bugs
-6. **NO QUICK TEST SCRIPTS** - If you want to test something, write a proper test
-   - Use unit tests for testing services and orchestrators
-   - Use integration tests for testing commands
-   - Use E2E tests for testing full workflows
-   - NEVER create temporary test scripts - they bypass the test framework
+- **Fail Fast**: Errors stop processing immediately
+- **Structured**: All errors follow the same OrchestratorError format  
+- **Recoverable**: Every error includes specific recovery instructions
+- **CLI Compatible**: Proper exit codes for script/automation usage
+- **LLM Friendly**: Clear `STOP PROCESSING` signals prevent LLM confusion

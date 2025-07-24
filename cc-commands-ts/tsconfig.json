@@ -46,7 +46,9 @@
       "@errors/*": ["src/errors/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": [
+    "archive/src/**/*"
+  ],
   "exclude": ["node_modules", "dist", "lib", "coverage"],
   "ts-node": {
     "esm": true,

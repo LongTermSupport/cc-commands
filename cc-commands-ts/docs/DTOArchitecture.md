@@ -1,22 +1,24 @@
 # DTO Architecture Guide
 
+> **Scope**: This document covers DTO structure and usage patterns. For complete service architecture, see [CLAUDE.md](../CLAUDE.md).
+
 ## Core Principle: No Magic Strings
 
-This codebase follows a strict "no magic strings" policy. All data keys must be defined as constants, and all data exchange between services and orchestrators must use strongly-typed DTOs (Data Transfer Objects).
+This codebase follows a strict "no magic strings" policy. All data keys must be defined as constants, and all data exchange between services must use strongly-typed DTOs (Data Transfer Objects).
 
 ## Architecture Overview
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│    Commands     │     │  Orchestrators  │     │    Services     │
-│  (Thin Wrappers)│────▶│ (Pure Functions)│────▶│ (Business Logic)│
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-                               │                          │
-                               ▼                          ▼
-                        ┌─────────────┐           ┌─────────────┐
-                        │   LLMInfo   │◀──────────│     DTOs    │
-                        │ (Data Bag)  │           │ (Typed Data)│
-                        └─────────────┘           └─────────────┘
+┌─────────────────┐     ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│    Commands     │     │  Orchestrators  │     │ Orchestrator     │     │    Services     │
+│  (Thin Wrappers)│────▶│ (Pure Functions)│────▶│   Services       │────▶│ (Return DTOs)   │
+└─────────────────┘     └─────────────────┘     │ (Functions that  │     │                 │
+                               │                 │  Return LLMInfo) │     │                 │
+                               ▼                 └──────────────────┘     │                 │
+                        ┌─────────────┐                  │                │                 │
+                        │   LLMInfo   │◀─────────────────┘                │                 │
+                        │ (Data Bag)  │◀──────────────────────────────────┘                 │
+                        └─────────────┘        DTOs → toLLMData() → addDataBulk()
 ```
 
 ## DTO Structure
@@ -26,15 +28,14 @@ This codebase follows a strict "no magic strings" policy. All data keys must be 
 All DTOs must implement the `ILLMDataDTO` interface:
 
 ```typescript
-// src/interfaces/ILLMDataDTO.ts
+// Snippet from src/core/interfaces/ILLMDataDTO.ts
 export interface ILLMDataDTO {
-  /**
-   * Convert the DTO to key-value pairs for LLMInfo
-   * @returns Record of data keys to string values
-   */
   toLLMData(): Record<string, string>
+  // ... see full file for complete interface
 }
 ```
+
+See [src/core/interfaces/ILLMDataDTO.ts](../src/core/interfaces/ILLMDataDTO.ts) for the complete interface.
 
 ### 2. DTO Implementation Pattern
 
@@ -56,6 +57,7 @@ export class MyDataDTO implements ILLMDataDTO {
 
   // 3. Convert to LLMInfo data format
   toLLMData(): Record<string, string> {
+    // All keys must be UPPER_SNAKE_CASE (validated by LLMInfo.addData)
     return {
       [MyDataDTO.Keys.FIELD_ONE]: this.fieldOne,
       [MyDataDTO.Keys.FIELD_TWO]: String(this.fieldTwo)
@@ -76,24 +78,16 @@ export class MyDataDTO implements ILLMDataDTO {
 Only truly generic keys belong in `DataKeys`:
 
 ```typescript
-// src/constants/DataKeys.ts
+// Snippet from src/core/constants/DataKeys.ts
 export const DataKeys = {
-  // Generic validation/status
   VALID: 'VALID',
   STATUS: 'STATUS',
   MODE: 'MODE',
-  
-  // Generic identifiers
-  NAME: 'NAME',
-  OWNER: 'OWNER',
-  TYPE: 'TYPE',
-  URL: 'URL',
-  
-  // Error related
-  ERROR_TYPE: 'ERROR_TYPE',
-  ERROR_MESSAGE: 'ERROR_MESSAGE',
+  // ... see full file for all generic keys
 } as const
 ```
+
+See [src/core/constants/DataKeys.ts](../src/core/constants/DataKeys.ts) for all available generic keys.
 
 ### DTO-Specific Keys
 
@@ -107,29 +101,31 @@ private static readonly Keys = {
 } as const
 ```
 
-## Service Return Types
+## Service Integration with DTOs
 
-All service methods must have explicit return types using DTOs:
+Regular services return DTOs that are consumed by orchestrator services. See [CLAUDE.md](../CLAUDE.md) for the complete service architecture.
+
+DTOs are organized by domain within orchestrator service folders:
+
+```
+orchestrator-services/github/
+├── dto/
+│   ├── RepositoryDataDTO.ts        # Domain-specific DTOs
+│   └── IssueStatsDTO.ts
+└── services/
+    ├── RepositoryService.ts        # Regular services return DTOs
+    └── IssueService.ts
+```
 
 ```typescript
-export interface IDataCollectionService {
-  /**
-   * Collect repository data
-   * @returns Strongly-typed repository data
-   */
-  collectRepositoryData(
-    owner: string, 
-    repo: string
-  ): Promise<RepositoryDataDTO>
+// Example: Regular services return strongly-typed DTOs
+export class RepositoryService {
+  constructor(private readonly apiClient: IApiClient) {}
   
-  /**
-   * Collect release data
-   * @returns Release data or null if no releases
-   */
-  collectReleaseData(
-    owner: string, 
-    repo: string
-  ): Promise<ReleaseDataDTO | null>
+  async collectRepositoryData(owner: string, repo: string): Promise<RepositoryDataDTO> {
+    const response = await this.apiClient.getRepository(owner, repo)
+    return new RepositoryDataDTO(response.name, response.owner.login, ...)
+  }
 }
 ```
 
@@ -137,65 +133,36 @@ export interface IDataCollectionService {
 
 ### Adding DTO Data
 
-Use `addDataFromDTO()` instead of `addData()`:
+Use `addDataBulk()` with DTO's `toLLMData()` method:
 
 ```typescript
 const repoData = await service.collectRepositoryData(owner, repo)
 const result = LLMInfo.create()
-  .addDataFromDTO(repoData)  // Preferred
+  .addDataBulk(repoData.toLLMData())  // Converts DTO to key-value pairs
   .addAction('Data collected', 'success')
 ```
 
-### Direct Data Addition (Deprecated)
+### Direct Data Addition
 
-Direct `addData()` calls should only use generic DataKeys:
+Direct `addData()` calls should use generic DataKeys or be minimal:
 
 ```typescript
-// Only for truly generic data
+// For generic data
 result.addData(DataKeys.STATUS, 'complete')
+
+// Individual keys (validated as UPPER_SNAKE_CASE)
+result.addData('PROJECT_COUNT', '5')
 ```
 
-## Testing with DTOs
-
-DTOs make testing cleaner and more maintainable:
-
-```typescript
-describe('DataCollectionService', () => {
-  it('should return repository data', async () => {
-    // Create test DTO
-    const expectedData = new RepositoryDataDTO(
-      'test-repo',
-      'test-owner',
-      'Test description',
-      'TypeScript',
-      'public',
-      'main',
-      'MIT',
-      new Date('2025-01-01'),
-      new Date('2025-01-02'),
-      false,
-      false,
-      ['testing', 'typescript']
-    )
-    
-    // Mock service to return DTO
-    mockService.collectRepositoryData.mockResolvedValue(expectedData)
-    
-    // Test expects DTO
-    const result = await service.collectRepositoryData('test-owner', 'test-repo')
-    expect(result).toEqual(expectedData)
-  })
-})
-```
 
 ## ESLint Enforcement
 
-Custom ESLint rules enforce this architecture:
-
+<!-- TODO: Implement custom ESLint rules to enforce this architecture:
 1. **no-magic-strings-in-dto**: DTOs must use const keys in `toLLMData()`
-2. **prefer-dto-over-adddata**: Warn when using `addData()` instead of `addDataFromDTO()`
+2. **prefer-dto-bulk-data**: Warn when using individual `addData()` calls instead of `addDataBulk(dto.toLLMData())`
 3. **require-explicit-return-types**: All methods must declare return types
 4. **dto-must-implement-interface**: DTOs must implement `ILLMDataDTO`
+-->
 
 ## Migration Guide
 
@@ -206,9 +173,9 @@ Custom ESLint rules enforce this architecture:
    // Before
    result.addData('REPOSITORY_NAME', repo.name)
    
-   // After
+   // After  
    const repoData = new RepositoryDataDTO(...)
-   result.addDataFromDTO(repoData)
+   result.addDataBulk(repoData.toLLMData())
    ```
 
 2. **Create DTOs for Data Structures**
@@ -244,9 +211,11 @@ Custom ESLint rules enforce this architecture:
 
 ## Examples
 
-See the following files for implementation examples:
-- `src/dto/RepositoryDataDTO.ts` - Basic DTO structure
-- `src/dto/ProjectDetectionResultDTO.ts` - DTO with factory methods
-- `src/dto/ActivityMetricsDTO.ts` - DTO with complex data transformation
-- `src/services/github/DataCollectionService.ts` - Service returning DTOs
-- `src/orchestrators/g/gh/project/executeProjectSummary.ts` - Orchestrator using DTOs
+DTOs will be implemented following the patterns described in this document within domain-specific folders:
+
+<!-- TODO: Add references to real DTO implementations once they exist:
+- orchestrator-services/github/dto/RepositoryDataDTO.ts - Basic DTO structure
+- orchestrator-services/github/services/RepositoryService.ts - Service returning DTOs
+-->
+
+For complete folder structure, orchestrator and orchestrator service examples, see [CLAUDE.md](../CLAUDE.md).
