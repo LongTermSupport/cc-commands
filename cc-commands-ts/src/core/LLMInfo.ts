@@ -17,7 +17,7 @@
  * - Include comprehensive error recovery information
  */
 
-import { OrchestratorError } from './error/OrchestratorError';
+import { OrchestratorError } from './error/OrchestratorError.js';
 
 /**
  * Action performed by the command with its result
@@ -197,13 +197,6 @@ export class LLMInfo {
   }
 
   /**
-   * Returns 0 if no error, 1 if error is set.
-   */
-  getExitCode(): 0 | 1 {
-    return this.error ? 1 : 0
-  }
-
-  /**
    * Get the actions for testing or debugging
    * @internal
    */
@@ -217,6 +210,13 @@ export class LLMInfo {
    */
   getData(): Record<string, string> {
     return Object.fromEntries(this.data)
+  }
+
+  /**
+   * Returns 0 if no error, 1 if error is set.
+   */
+  getExitCode(): 0 | 1 {
+    return this.error ? 1 : 0
   }
 
   /**
@@ -292,54 +292,198 @@ export class LLMInfo {
    * - Success: Structured sections for actions, files, data, and instructions
    */
   toString(): string {
-    let output = ''
+    return this.error ? this.formatErrorOutput() : this.formatSuccessOutput()
+  }
 
-    // CRITICAL: Error handling must be first and unmissable
-    if (this.error) {
-      output += '================== COMMAND EXECUTION FAILED ==================\n'
-      output += '⚠️  STOP PROCESSING - DO NOT CONTINUE WITH OPERATION  ⚠️\n'
-      output += '==============================================================\n\n'
-
-      output += '=== ERROR DETAILS ===\n'
-      output += `ERROR_TYPE=${this.error.type}\n`
-      output += `ERROR_MESSAGE=${this.error.message}\n`
-      output += `ERROR_TIMESTAMP=${this.error.timestamp.toISOString()}\n`
-
-      // Debug info
-      if (Object.keys(this.error.debugInfo).length > 0) {
-        output += '\n=== DEBUG INFO ===\n'
-        for (const [key, value] of Object.entries(this.error.debugInfo)) {
-          output += `${key.toUpperCase()}=${JSON.stringify(value)}\n`
-        }
+  /**
+   * Format action log section
+   */
+  private formatActionLog(): string {
+    if (this.actions.length === 0) return ''
+    
+    let output = '=== ACTION LOG ===\n'
+    for (const [index, action] of this.actions.entries()) {
+      output += `ACTION_${index}_EVENT=${action.event}\n`
+      output += `ACTION_${index}_RESULT=${action.result}\n`
+      if (action.details) {
+        output += `ACTION_${index}_DETAILS=${action.details}\n`
       }
 
-      // Context if any
-      if (Object.keys(this.error.context).length > 0) {
-        output += '\n=== ERROR CONTEXT ===\n'
-        for (const [key, value] of Object.entries(this.error.context)) {
-          output += `${key.toUpperCase()}=${JSON.stringify(value)}\n`
-        }
+      if (action.duration !== undefined) {
+        output += `ACTION_${index}_DURATION_MS=${action.duration}\n`
       }
-
-      if (this.debugLogPath) {
-        output += `\nDEBUG_LOG=${this.debugLogPath}\n`
-        output += `To view full debug details: cat ${this.debugLogPath}\n`
-      }
-
-      if (this.error.stack) {
-        output += '\n=== STACK TRACE ===\n'
-        output += this.error.stack + '\n'
-      }
-
-      output += '\n=== RECOVERY INSTRUCTIONS ===\n'
-      for (const instruction of this.error.recoveryInstructions) {
-        output += `- ${instruction}\n`
-      }
-
-      return output
     }
 
-    // Normal output for successful execution
+    output += this.formatActionSummary()
+    return output
+  }
+
+  /**
+   * Format action summary statistics
+   */
+  private formatActionSummary(): string {
+    const successCount = this.actions.filter((a) => a.result === 'success').length
+    const failedCount = this.actions.filter((a) => a.result === 'failed').length
+    const skippedCount = this.actions.filter((a) => a.result === 'skipped').length
+    
+    let output = `TOTAL_ACTIONS=${this.actions.length}\n`
+    output += `ACTIONS_SUCCEEDED=${successCount}\n`
+    output += `ACTIONS_FAILED=${failedCount}\n`
+    output += `ACTIONS_SKIPPED=${skippedCount}\n`
+    output += '\n'
+    return output
+  }
+
+  /**
+   * Format data section
+   */
+  private formatDataSection(): string {
+    if (this.data.size === 0) return ''
+    
+    let output = '=== DATA ===\n'
+    for (const [key, value] of this.data) {
+      output += `${key}=${value}\n`
+    }
+
+    output += '\n'
+    return output
+  }
+
+  /**
+   * Format error context information
+   */
+  private formatErrorContext(): string {
+    if (!this.error || Object.keys(this.error.context).length === 0) return ''
+    
+    let output = '\n=== ERROR CONTEXT ===\n'
+    for (const [key, value] of Object.entries(this.error.context)) {
+      output += `${key.toUpperCase()}=${JSON.stringify(value)}\n`
+    }
+
+    return output
+  }
+
+  /**
+   * Format error debug information
+   */
+  private formatErrorDebugInfo(): string {
+    if (!this.error || Object.keys(this.error.debugInfo).length === 0) return ''
+    
+    let output = '\n=== DEBUG INFO ===\n'
+    for (const [key, value] of Object.entries(this.error.debugInfo)) {
+      output += `${key.toUpperCase()}=${JSON.stringify(value)}\n`
+    }
+
+    return output
+  }
+
+  /**
+   * Format error debug log information
+   */
+  private formatErrorDebugLog(): string {
+    if (!this.debugLogPath) return ''
+    
+    let output = `\nDEBUG_LOG=${this.debugLogPath}\n`
+    output += `To view full debug details: cat ${this.debugLogPath}\n`
+    return output
+  }
+
+  /**
+   * Format error details section
+   */
+  private formatErrorDetails(): string {
+    if (!this.error) return ''
+    
+    let output = '=== ERROR DETAILS ===\n'
+    output += `ERROR_TYPE=${this.error.type}\n`
+    output += `ERROR_MESSAGE=${this.error.message}\n`
+    output += `ERROR_TIMESTAMP=${this.error.timestamp.toISOString()}\n`
+    return output
+  }
+
+  /**
+   * Format output for error scenarios
+   */
+  private formatErrorOutput(): string {
+    let output = ''
+    output += '================== COMMAND EXECUTION FAILED ==================\n'
+    output += '⚠️  STOP PROCESSING - DO NOT CONTINUE WITH OPERATION  ⚠️\n'
+    output += '==============================================================\n\n'
+
+    output += this.formatErrorDetails()
+    output += this.formatErrorDebugInfo()
+    output += this.formatErrorContext()
+    output += this.formatErrorDebugLog()
+    output += this.formatErrorStackTrace()
+    output += this.formatRecoveryInstructions()
+
+    return output
+  }
+
+  /**
+   * Format error stack trace
+   */
+  private formatErrorStackTrace(): string {
+    if (!this.error?.stack) return ''
+    
+    let output = '\n=== STACK TRACE ===\n'
+    output += this.error.stack + '\n'
+    return output
+  }
+
+  /**
+   * Format file operations section
+   */
+  private formatFileOperations(): string {
+    if (this.files.length === 0) return ''
+    
+    let output = '=== FILES AFFECTED ===\n'
+    for (const [index, file] of this.files.entries()) {
+      output += `FILE_${index}_PATH=${file.path}\n`
+      output += `FILE_${index}_OPERATION=${file.operation}\n`
+      if (file.size !== undefined) {
+        output += `FILE_${index}_SIZE=${file.size}\n`
+      }
+    }
+    
+    output += `TOTAL_FILES=${this.files.length}\n`
+    output += '\n'
+    return output
+  }
+
+  /**
+   * Format instructions section
+   */
+  private formatInstructions(): string {
+    if (this.instructions.length === 0) return ''
+    
+    let output = '=== INSTRUCTIONS FOR LLM ===\n'
+    for (const instruction of this.instructions) {
+      output += `- ${instruction}\n`
+    }
+
+    return output
+  }
+
+  /**
+   * Format recovery instructions
+   */
+  private formatRecoveryInstructions(): string {
+    if (!this.error) return ''
+    
+    let output = '\n=== RECOVERY INSTRUCTIONS ===\n'
+    for (const instruction of this.error.recoveryInstructions) {
+      output += `- ${instruction}\n`
+    }
+
+    return output
+  }
+
+  /**
+   * Format output for successful execution
+   */
+  private formatSuccessOutput(): string {
+    let output = ''
     output += '=== EXECUTION SUMMARY ===\n'
     output += `EXECUTION_STATUS=SUCCESS\n`
     if (this.debugLogPath) {
@@ -348,63 +492,10 @@ export class LLMInfo {
 
     output += '\n'
 
-    // Action log
-    if (this.actions.length > 0) {
-      output += '=== ACTION LOG ===\n'
-      for (const [index, action] of this.actions.entries()) {
-        output += `ACTION_${index}_EVENT=${action.event}\n`
-        output += `ACTION_${index}_RESULT=${action.result}\n`
-        if (action.details) {
-          output += `ACTION_${index}_DETAILS=${action.details}\n`
-        }
-
-        if (action.duration !== undefined) {
-          output += `ACTION_${index}_DURATION_MS=${action.duration}\n`
-        }
-      }
-
-      output += `TOTAL_ACTIONS=${this.actions.length}\n`
-      const successCount = this.actions.filter((a) => a.result === 'success').length
-      const failedCount = this.actions.filter((a) => a.result === 'failed').length
-      const skippedCount = this.actions.filter((a) => a.result === 'skipped').length
-      output += `ACTIONS_SUCCEEDED=${successCount}\n`
-      output += `ACTIONS_FAILED=${failedCount}\n`
-      output += `ACTIONS_SKIPPED=${skippedCount}\n`
-      output += '\n'
-    }
-
-    // File operations
-    if (this.files.length > 0) {
-      output += '=== FILES AFFECTED ===\n'
-      for (const [index, file] of this.files.entries()) {
-        output += `FILE_${index}_PATH=${file.path}\n`
-        output += `FILE_${index}_OPERATION=${file.operation}\n`
-        if (file.size !== undefined) {
-          output += `FILE_${index}_SIZE=${file.size}\n`
-        }
-      }
-
-      output += `TOTAL_FILES=${this.files.length}\n`
-      output += '\n'
-    }
-
-    // Data
-    if (this.data.size > 0) {
-      output += '=== DATA ===\n'
-      for (const [key, value] of this.data) {
-        output += `${key}=${value}\n`
-      }
-
-      output += '\n'
-    }
-
-    // Instructions
-    if (this.instructions.length > 0) {
-      output += '=== INSTRUCTIONS FOR LLM ===\n'
-      for (const instruction of this.instructions) {
-        output += `- ${instruction}\n`
-      }
-    }
+    output += this.formatActionLog()
+    output += this.formatFileOperations()
+    output += this.formatDataSection()
+    output += this.formatInstructions()
 
     return output
   }

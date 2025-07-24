@@ -31,6 +31,11 @@ oclif command - very thin, handles CLI interaction. Passes off work to the orche
 
 Very thin, only tested with end to end tests (no mocks)
 
+**IMPORTANT**: Commands must use OCLIF exit methods, never direct `process.exit()`:
+- `this.exit(code)` - Silent exit with specific code
+- `this.error(message, {exit: code})` - Error exit with message
+- `return` - Normal success completion
+
 Will receive an $ARGUMENTS argument when called from the LLM. This is a simple string. It might represent multiple arguments. Arguments might include quoted strings. This to be passed verbatim to the orchestrator for parsing and processing.
 
 The Orchestrator will return an [@src/core/LLMInfo.ts](./src/core/LLMInfo.ts) object as a result. 
@@ -377,6 +382,37 @@ This runs:
 
 **If ANY step fails, fix immediately before proceeding.**
 
+### Git Commit Workflow Rules
+
+**🚨 CRITICAL: Commit on QA State Transitions**
+
+When working on development tasks, follow these commit rules:
+
+1. **QA Failing → QA Passing**: ALWAYS commit immediately
+   - This captures working state transitions
+   - Prevents losing progress when QA breaks again
+   - Creates checkpoints for reliable rollback points
+
+2. **Branch-based Development**: Apply commit rules when working in feature branches
+   - Main branch commits should be more deliberate
+   - Feature branches benefit from frequent checkpoint commits
+
+3. **Commit Message Format**:
+   ```bash
+   git commit -m "✅ QA passing: [brief description of changes]
+   
+   - Fixed ESLint errors in core test files
+   - Resolved OrchestratorError complexity warnings
+   - All 118 tests passing
+   
+   🤖 Generated with Claude Code"
+   ```
+
+**Why This Matters:**
+- Prevents work loss when refactoring breaks QA
+- Creates reliable restore points during development
+- Maintains development momentum by preserving working states
+
 ## Testing Strategy
 
 See [@docs/Testing.md](docs/Testing.md) for complete testing guide including TDD practices, three-tier testing approach, mocking strategies, and coverage requirements.
@@ -436,8 +472,8 @@ export default class MyCommand extends Command {
     // Explicit stdout output (preferred over this.log for data)
     process.stdout.write(result.toString())
     
-    // Exit code is determined by LLMInfo
-    process.exit(result.getExitCode()) // 0 for success, 1 for error
+    // Exit code is determined by LLMInfo - use OCLIF method, not process.exit()
+    this.exit(result.getExitCode()) // 0 for success, 1 for error
   }
 }
 ```

@@ -45,7 +45,14 @@ As per CLAUDE.md, this implementation MUST follow:
    - Test after each change
    - One file at a time approach
 
-3. **Test-Driven Development (TDD)**:
+3. **ESLint Compliance**:
+   - Follow patterns documented in `docs/ESLint.md`
+   - Respect complexity limits (max: 20) - refactor, don't ignore  
+   - DTOs automatically get unlimited constructor parameters via ESLint config
+   - Use OCLIF exit methods (`this.exit()`) never `process.exit()`
+   - Update ESLint documentation when encountering new patterns
+
+4. **Test-Driven Development (TDD)**:
    - Write failing tests FIRST
    - Then implement minimal code to pass
    - Refactor while keeping tests green

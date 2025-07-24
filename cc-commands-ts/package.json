@@ -78,7 +78,7 @@
   "repository": "cc-commands/cc-commands-ts",
   "scripts": {
     "build": "shx rm -rf dist && tsc -b",
-    "lint": "eslint \"archive/src/**/*.ts\" \"test/**/*.ts\" --fix",
+    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --fix",
     "test": "npm run build && vitest run",
     "test:watch": "vitest",
     "test:coverage": "npm run build && vitest run --coverage",

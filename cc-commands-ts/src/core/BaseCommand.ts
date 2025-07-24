@@ -17,6 +17,7 @@
  */
 
 import { Command } from '@oclif/core'
+
 import { LLMInfo } from './LLMInfo.js'
 
 /**
@@ -87,14 +88,14 @@ export abstract class BaseCommand extends Command {
       // Output exactly what LLMInfo provides
       process.stdout.write(result.toString())
       
-      // Exit with the code LLMInfo determines
-      process.exit(result.getExitCode())
+      // Exit with the code LLMInfo determines using OCLIF method
+      this.exit(result.getExitCode())
       
     } catch (error) {
       // If execute() throws, create error LLMInfo  
       const errorInfo = LLMInfo.create()
       
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+      const errorMessage = error instanceof Error ? error.message : String(error)
       
       // Add error information - LLMInfo will format appropriately
       errorInfo.addData('ERROR_TYPE', 'COMMAND_EXECUTION_ERROR')
@@ -105,9 +106,9 @@ export abstract class BaseCommand extends Command {
         errorInfo.addData('ERROR_STACK', error.stack)
       }
       
-      // Output error and exit with code 1
+      // Output error and exit with code 1 using OCLIF method
       process.stdout.write(errorInfo.toString())
-      process.exit(1)
+      this.exit(1)
     }
   }
 }

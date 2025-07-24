@@ -37,7 +37,7 @@
  * })
  * ```
  */
-import { DebugInfo, ErrorContext, JsonValue } from '../types/DataTypes'
+import { DebugInfo, ErrorContext, JsonValue } from '../types/DataTypes.js'
 
 export class OrchestratorError {
   public readonly context: ErrorContext = {}
@@ -130,18 +130,54 @@ export class OrchestratorError {
     // Get smart recovery instructions based on error type
     const recoveryInstructions = OrchestratorError.getGenericRecoveryInstructions(error, context)
     
-    const OrchestratorError = new OrchestratorError(error, recoveryInstructions, debugInfo)
+    const orchestratorError = new OrchestratorError(error, recoveryInstructions, debugInfo)
     
     // Add any additional context
     for (const [key, value] of Object.entries(context)) {
       if (value !== undefined && !['action', 'command'].includes(key)) {
-        OrchestratorError.addContext(key, value)
+        orchestratorError.addContext(key, value)
       }
     }
     
-    return OrchestratorError
+    return orchestratorError
   }
   
+  private static getConnectionRefusedInstructions(context: ErrorContext): string[] {
+    const host = context.host || context.url || 'the target service'
+    const port = context.port ? `:${context.port}` : ''
+    return [
+      `Check if the service is running on: ${host}${port}`,
+      'Verify network connectivity',
+      'Check firewall settings',
+      'Ensure the correct host and port are specified'
+    ]
+  }
+
+  private static getFileExistsInstructions(): string[] {
+    return [
+      'The file or directory already exists',
+      'Remove the existing file/directory or choose a different name',
+      'Use --force flag if available to overwrite'
+    ]
+  }
+
+  private static getFileNotFoundInstructions(context: ErrorContext): string[] {
+    const path = context.path || context.file || context.directory || 'the specified path'
+    return [
+      `Check if the file/directory exists: ${path}`,
+      'Verify you are in the correct working directory',
+      'Check for typos in the path'
+    ]
+  }
+
+  private static getGenericErrorInstructions(): string[] {
+    return [
+      'Check the error message above for specific details',
+      'Verify all prerequisites are installed and configured',
+      'Check the command syntax and arguments'
+    ]
+  }
+
   /**
    * Get generic recovery instructions based on common error patterns.
    * These are fallbacks when domain-specific error factories aren't used.
@@ -156,48 +192,82 @@ export class OrchestratorError {
     const errorMessage = error instanceof Error ? error.message : String(error)
     const errorLower = errorMessage.toLowerCase()
     
-    // File system errors
+    // Detect error type and get specific instructions
     if (errorMessage.includes('ENOENT')) {
-      const path = context.path || context.file || context.directory || 'the specified path'
-      instructions.push(`Check if the file/directory exists: ${path}`, 'Verify you are in the correct working directory', 'Check for typos in the path')
+      instructions.push(...this.getFileNotFoundInstructions(context))
     } 
     else if (errorMessage.includes('EACCES') || errorLower.includes('permission')) {
-      const resource = context.path || context.file || context.resource || 'the resource'
-      instructions.push(`Check permissions on: ${resource}`, 'You may need to run with elevated privileges (sudo)', `Try: chmod 755 ${resource} (adjust permissions as needed)`)
+      instructions.push(...this.getPermissionErrorInstructions(context))
     }
     else if (errorMessage.includes('EEXIST')) {
-      instructions.push('The file or directory already exists', 'Remove the existing file/directory or choose a different name', 'Use --force flag if available to overwrite')
+      instructions.push(...this.getFileExistsInstructions())
     }
-    // Network errors
     else if (errorMessage.includes('ECONNREFUSED')) {
-      const host = context.host || context.url || 'the target service'
-      const port = context.port ? `:${context.port}` : ''
-      instructions.push(`Check if the service is running on: ${host}${port}`, 'Verify network connectivity', 'Check firewall settings', 'Ensure the correct host and port are specified')
+      instructions.push(...this.getConnectionRefusedInstructions(context))
     }
     else if (errorMessage.includes('ETIMEDOUT') || errorLower.includes('timeout')) {
-      instructions.push('The operation timed out', 'Check network connectivity', 'Try increasing the timeout value', 'Verify the remote service is responding')
+      instructions.push(...this.getTimeoutInstructions())
     }
-    // JSON/parsing errors
     else if (errorMessage.includes('JSON') || errorMessage.includes('parse')) {
-      instructions.push('Check that the data is valid JSON format', 'Look for: trailing commas, unquoted keys, single quotes instead of double', 'Use a JSON validator to check the syntax', 'Ensure the file encoding is UTF-8')
+      instructions.push(...this.getJsonErrorInstructions())
     }
-    // Module/dependency errors
     else if (errorMessage.includes('Cannot find module') || errorMessage.includes('MODULE_NOT_FOUND')) {
-      const module = errorMessage.match(/Cannot find module '([^']+)'/)?.[1] || 'the required module'
-      instructions.push(`Install missing dependency: npm install ${module}`, 'Run: npm install (to install all dependencies)', 'Check that you are in the correct directory', 'Verify the module name is spelled correctly')
+      instructions.push(...this.getModuleNotFoundInstructions(errorMessage))
     }
-    // Generic catch-all
     else {
-      instructions.push('Check the error message above for specific details', 'Verify all prerequisites are installed and configured', 'Check the command syntax and arguments')
+      instructions.push(...this.getGenericErrorInstructions())
     }
     
-    // Always add these
-    instructions.push('Review the debug log for full error context')
+    // Add universal instructions
+    instructions.push(...this.getUniversalInstructions(error, context))
+    
+    return instructions
+  }
+
+  private static getJsonErrorInstructions(): string[] {
+    return [
+      'Check that the data is valid JSON format',
+      'Look for: trailing commas, unquoted keys, single quotes instead of double',
+      'Use a JSON validator to check the syntax',
+      'Ensure the file encoding is UTF-8'
+    ]
+  }
+
+  private static getModuleNotFoundInstructions(errorMessage: string): string[] {
+    const module = errorMessage.match(/Cannot find module '([^']+)'/)?.[1] || 'the required module'
+    return [
+      `Install missing dependency: npm install ${module}`,
+      'Run: npm install (to install all dependencies)',
+      'Check that you are in the correct directory',
+      'Verify the module name is spelled correctly'
+    ]
+  }
+
+  private static getPermissionErrorInstructions(context: ErrorContext): string[] {
+    const resource = context.path || context.file || context.resource || 'the resource'
+    return [
+      `Check permissions on: ${resource}`,
+      'You may need to run with elevated privileges (sudo)',
+      `Try: chmod 755 ${resource} (adjust permissions as needed)`
+    ]
+  }
+
+  private static getTimeoutInstructions(): string[] {
+    return [
+      'The operation timed out',
+      'Check network connectivity',
+      'Try increasing the timeout value',
+      'Verify the remote service is responding'
+    ]
+  }
+
+  private static getUniversalInstructions(error: Error | unknown, context: ErrorContext): string[] {
+    const instructions = ['Review the debug log for full error context']
+    
     if (error instanceof Error && error.stack) {
       instructions.push('Check the stack trace to identify where the error occurred')
     }
     
-    // Add command-specific help if available
     if (context.command) {
       instructions.push(`Run: ${context.command} --help (for command usage)`)
     }

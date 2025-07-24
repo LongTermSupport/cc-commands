@@ -23,6 +23,14 @@ This codebase follows a strict "no magic strings" policy. All data keys must be 
 
 ## DTO Structure
 
+### Core DTO Rules
+
+1. **Immutability**: All DTO properties must be `readonly` - DTOs are immutable once created
+2. **Interface Compliance**: All DTOs must implement `ILLMDataDTO`
+3. **Constructor Parameters**: DTOs can have unlimited constructor parameters (ESLint exception for `*DTO.ts` files)
+4. **No Magic Strings**: All data keys must be defined as private static constants
+5. **Factory Methods**: Provide static factory methods for common creation patterns
+
 ### 1. Base Interface
 
 All DTOs must implement the `ILLMDataDTO` interface:

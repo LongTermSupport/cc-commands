@@ -26,7 +26,16 @@ export default [
       }],
       // Disable dot-notation rule to respect TypeScript's noPropertyAccessFromIndexSignature
       'dot-notation': 'off',
-      '@typescript-eslint/dot-notation': 'off'
+      '@typescript-eslint/dot-notation': 'off',
+      // Allow unlimited constructor parameters for DTO classes
+      'max-params': ['error', { max: 4 }] // Default max for regular classes
+    }
+  },
+  {
+    // Special rules for DTO classes - allow unlimited constructor parameters
+    files: ['**/*DTO.ts'],
+    rules: {
+      'max-params': 'off' // DTOs can have any number of constructor parameters
     }
   }
 ]
