@@ -2,6 +2,22 @@
 
 > **Scope**: This document covers testing strategy, principles, and patterns. For architecture details, see [CLAUDE.md](../CLAUDE.md).
 
+## Testing Framework
+
+This project uses **Vitest** as the testing framework. Vitest provides Jest compatibility while being faster and more modern.
+
+### Vitest Imports
+
+```typescript
+import { describe, expect, it, vi, beforeEach } from 'vitest'
+
+// Mock types
+let mockApiClient: vi.Mocked<IApiClient>
+
+// Mock creation
+mockApiClient = vi.mocked(createMock<IApiClient>())
+```
+
 ## Core Testing Principles
 
 ### Test-Driven Development (TDD)
@@ -160,10 +176,10 @@ describe('dataCollectionOrchServ', () => {
 ```typescript
 describe('RepositoryService', () => {
   let service: RepositoryService
-  let mockApiClient: jest.Mocked<IApiClient>
+  let mockApiClient: vi.Mocked<IApiClient>
 
   beforeEach(() => {
-    mockApiClient = createMock<IApiClient>()
+    mockApiClient = vi.mocked(createMock<IApiClient>())
     service = new RepositoryService(mockApiClient)
   })
 

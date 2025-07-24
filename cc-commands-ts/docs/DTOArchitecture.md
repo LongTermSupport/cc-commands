@@ -163,14 +163,210 @@ result.addData('PROJECT_COUNT', '5')
 ```
 
 
-## ESLint Enforcement
+## Code Quality Patterns
 
-<!-- TODO: Implement custom ESLint rules to enforce this architecture:
-1. **no-magic-strings-in-dto**: DTOs must use const keys in `toLLMData()`
-2. **prefer-dto-bulk-data**: Warn when using individual `addData()` calls instead of `addDataBulk(dto.toLLMData())`
-3. **require-explicit-return-types**: All methods must declare return types
-4. **dto-must-implement-interface**: DTOs must implement `ILLMDataDTO`
--->
+### ESLint Compliance for External APIs
+
+#### GitHub API Snake_Case Properties
+
+When working with external APIs (like GitHub) that use `snake_case` properties, use the "GitHubData" naming convention to manage ESLint camelcase violations:
+
+```typescript
+// ✅ CORRECT - Use "GitHubData" suffix and eslint-disable comments
+describe('fromGitHubApiResponse', () => {
+  it('should handle GitHub API response', () => {
+    /* eslint-disable camelcase */
+    const apiResponseGitHubData = {
+      full_name: 'owner/repo',
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T12:00:00Z',
+      default_branch: 'main'
+    }
+    /* eslint-enable camelcase */
+
+    const dto = MyDTO.fromGitHubApiResponse(apiResponseGitHubData)
+    expect(dto.name).toBe('repo')
+  })
+})
+```
+
+**Key Rules:**
+1. **Naming Convention**: Use `*GitHubData` suffix for variables containing GitHub API responses
+2. **Scoped Disable**: Use `/* eslint-disable camelcase */` around the object definition only
+3. **Re-enable**: Always follow with `/* eslint-enable camelcase */`
+4. **Minimal Scope**: Keep the disable/enable as close to the violating code as possible
+
+#### Why This Works
+- Clear naming convention signals intent to other developers
+- Scoped disabling doesn't affect other code
+- ESLint violations are contained and manageable
+- Maintains code quality while accommodating external API constraints
+
+### Complexity Management in Factory Methods
+
+DTO factory methods often become complex due to extensive data transformation. Use the **Data Extraction Pattern** to maintain complexity under ESLint limits (≤20):
+
+#### Problem: Complex Factory Method
+```typescript
+// ❌ BAD - Complexity > 20
+static fromGitHubApiResponse(apiResponse: GitHubResponse): PullRequestDataDTO {
+  return new PullRequestDataDTO(
+    String(apiResponse.id || 0),
+    apiResponse.number || 0,
+    apiResponse.title || 'Untitled',
+    apiResponse.body || '',
+    apiResponse.state?.toLowerCase() === 'closed' ? 'closed' : 'open',
+    Boolean(apiResponse.draft),
+    Boolean(apiResponse.locked),
+    Boolean(apiResponse.merged),
+    apiResponse.mergeable || null,
+    apiResponse.assignees?.map(a => a.login || '').filter(Boolean) || [],
+    apiResponse.requested_reviewers?.map(r => r.login || '').filter(Boolean) || [],
+    apiResponse.labels?.map(l => l.name || '').filter(Boolean) || [],
+    apiResponse.milestone?.title || null,
+    apiResponse.user?.login || 'unknown',
+    apiResponse.merged_by?.login || null,
+    this.extractRepository(apiResponse.repository?.full_name, apiResponse.repository_url),
+    apiResponse.html_url || '',
+    apiResponse.head?.ref || 'unknown',
+    apiResponse.base?.ref || 'main',
+    apiResponse.comments || 0,
+    apiResponse.review_comments || 0,
+    apiResponse.commits || 0,
+    apiResponse.additions || 0,
+    apiResponse.deletions || 0,
+    apiResponse.changed_files || 0,
+    new Date(apiResponse.created_at || Date.now()),
+    new Date(apiResponse.updated_at || Date.now()),
+    apiResponse.closed_at ? new Date(apiResponse.closed_at) : null,
+    apiResponse.merged_at ? new Date(apiResponse.merged_at) : null
+  )
+}
+```
+
+#### Solution: Data Extraction Pattern
+```typescript
+// ✅ GOOD - Complexity ≤20, clear separation of concerns
+static fromGitHubApiResponse(apiResponse: GitHubResponse): PullRequestDataDTO {
+  this.validateApiResponse(apiResponse)
+  
+  const basicData = this.extractApiBasicData(apiResponse)
+  const relationships = this.extractApiRelationships(apiResponse)
+  const dates = this.extractApiDates(apiResponse)
+  
+  return new PullRequestDataDTO(
+    basicData.id, basicData.number, basicData.title, basicData.body,
+    basicData.state, basicData.draft, basicData.locked, basicData.merged,
+    basicData.mergeable, relationships.assignees, relationships.requestedReviewers,
+    relationships.labels, relationships.milestone, relationships.creator,
+    relationships.mergedBy, relationships.repository, basicData.url,
+    basicData.headBranch, basicData.baseBranch, basicData.commentsCount,
+    basicData.reviewCommentsCount, basicData.commitsCount, basicData.additions,
+    basicData.deletions, basicData.changedFiles, dates.createdAt,
+    dates.updatedAt, dates.closedAt, dates.mergedAt
+  )
+}
+
+// Extract grouped data with clear return types
+private static extractApiBasicData(apiResponse: GitHubResponse): {
+  id: string
+  number: number
+  title: string
+  body: string
+  state: 'closed' | 'open'
+  draft: boolean
+  locked: boolean
+  merged: boolean
+  mergeable: boolean | null
+  url: string
+  headBranch: string
+  baseBranch: string
+  commentsCount: number
+  reviewCommentsCount: number
+  commitsCount: number
+  additions: number
+  deletions: number
+  changedFiles: number
+} {
+  return {
+    id: String(apiResponse.id || 0),
+    number: apiResponse.number || 0,
+    title: apiResponse.title || 'Untitled Pull Request',
+    body: apiResponse.body || '',
+    state: this.normalizeState(apiResponse.state),
+    draft: Boolean(apiResponse.draft),
+    locked: Boolean(apiResponse.locked),
+    merged: Boolean(apiResponse.merged),
+    mergeable: apiResponse.mergeable || null,
+    url: apiResponse.html_url || '',
+    headBranch: apiResponse.head?.ref || 'unknown',
+    baseBranch: apiResponse.base?.ref || 'main',
+    commentsCount: apiResponse.comments || 0,
+    reviewCommentsCount: apiResponse.review_comments || 0,
+    commitsCount: apiResponse.commits || 0,
+    additions: apiResponse.additions || 0,
+    deletions: apiResponse.deletions || 0,
+    changedFiles: apiResponse.changed_files || 0
+  }
+}
+
+private static extractApiRelationships(apiResponse: GitHubResponse): {
+  assignees: string[]
+  requestedReviewers: string[]
+  labels: string[]
+  milestone: string | null
+  creator: string
+  mergedBy: string | null
+  repository: string
+} {
+  return {
+    assignees: this.extractAssignees(apiResponse.assignees),
+    requestedReviewers: this.extractRequestedReviewers(apiResponse.requested_reviewers),
+    labels: this.extractLabels(apiResponse.labels),
+    milestone: apiResponse.milestone?.title || null,
+    creator: apiResponse.user?.login || 'unknown',
+    mergedBy: apiResponse.merged_by?.login || null,
+    repository: this.extractRepository(apiResponse.repository?.full_name, apiResponse.repository_url)
+  }
+}
+
+private static extractApiDates(apiResponse: GitHubResponse): {
+  createdAt: Date
+  updatedAt: Date
+  closedAt: Date | null
+  mergedAt: Date | null
+} {
+  return {
+    createdAt: new Date(apiResponse.created_at || Date.now()),
+    updatedAt: new Date(apiResponse.updated_at || Date.now()),
+    closedAt: apiResponse.closed_at ? new Date(apiResponse.closed_at) : null,
+    mergedAt: apiResponse.merged_at ? new Date(apiResponse.merged_at) : null
+  }
+}
+```
+
+#### Data Extraction Pattern Benefits
+
+1. **Complexity Management**: Each method stays under ESLint complexity limit (≤20)
+2. **Separation of Concerns**: 
+   - Basic data (IDs, strings, numbers)
+   - Relationships (users, labels, references)
+   - Dates (parsing and null handling)
+3. **Type Safety**: Each extraction method has explicit return types
+4. **Testability**: Helper methods can be tested independently
+5. **Readability**: Intent is clear from method names
+6. **Maintainability**: Changes isolated to specific data types
+7. **Reusability**: Helper patterns work across CLI, REST API, and GraphQL factories
+
+#### When to Apply
+- Factory methods approaching complexity limit (>15)
+- Large constructor calls with >10 parameters
+- Multiple data source transformations (API + CLI + GraphQL)
+- Complex conditional logic in data mapping
+
+## ESLint Integration
+
+For ESLint configuration and additional rules, see the **DTO Quality Patterns** section in the main project documentation. The patterns documented here work within the existing ESLint configuration without requiring rule changes.
 
 ## Migration Guide
 

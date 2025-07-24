@@ -382,6 +382,8 @@ This runs:
 
 **If ANY step fails, fix immediately before proceeding.**
 
+**ESLint Quality Patterns**: For DTO-specific ESLint patterns including complexity management and external API handling, see [`docs/DTOArchitecture.md`](docs/DTOArchitecture.md#code-quality-patterns).
+
 ### Git Commit Workflow Rules
 
 **🚨 CRITICAL: Commit on QA State Transitions**
