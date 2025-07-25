@@ -386,11 +386,11 @@ This runs:
 
 ### Git Commit Workflow Rules
 
-**🚨 CRITICAL: Commit on QA State Transitions**
+**🚨 CRITICAL: Commit and Push on QA State Transitions**
 
 When working on development tasks, follow these commit rules:
 
-1. **QA Failing → QA Passing**: ALWAYS commit immediately
+1. **QA Failing → QA Passing**: ALWAYS commit and push immediately
    - This captures working state transitions
    - Prevents losing progress when QA breaks again
    - Creates checkpoints for reliable rollback points
@@ -407,7 +407,7 @@ When working on development tasks, follow these commit rules:
    - Resolved OrchestratorError complexity warnings
    - All 118 tests passing
    
-   🤖 Generated with Claude Code"
+   🤖 Generated with Claude Code" && git push 
    ```
 
 **Why This Matters:**

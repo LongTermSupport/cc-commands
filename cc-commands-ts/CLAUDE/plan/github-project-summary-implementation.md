@@ -194,9 +194,92 @@ As per CLAUDE.md, this implementation MUST follow:
 - Add GraphQL-specific constants (node IDs, field types, etc.)
 - Update error messages to reflect real API constraints
 
-### Phase 2: API Services Layer (COMPLETE REWRITE)
+## 🚨 CRITICAL QA ISSUES DISCOVERED (2025-07-25 08:17)
 
-#### - [x] TODO 2.1: Implement GitHubRestApiService ✓ 2025-01-24 - Real implementation completed with proper error handling
+**IMMEDIATE ACTION REQUIRED**: QA pipeline is failing with 299 lint issues:
+- 5 ESLint errors (blocking deployment)
+- 294 ESLint warnings (mostly JSDoc parameter issues)
+- Performance issues: `no-await-in-loop` violations
+- Type safety issues: `@typescript-eslint/no-explicit-any` errors
+- Missing type imports: `OrchestratorError` undefined warnings
+
+**PLAN STATUS CORRECTION**: Services marked as "complete" are actually failing QA and need immediate fixes.
+
+### Phase -1: QA Stabilization (IMMEDIATE PRIORITY)
+
+#### - [x] TODO -1.1: Fix Critical ESLint Errors ✓ 2025-07-25 12:55 - All 5 blocking errors fixed, QA passing
+**Priority**: CRITICAL
+**Dependencies**: None
+
+**ESLint Errors Fixed:**
+- ✓ `@typescript-eslint/no-explicit-any` in orchestrator services (3 errors in activityAnalysisOrchServ.ts) - Fixed by using proper DTO types
+- ✓ `no-await-in-loop` performance violations (2 errors in projectDataCollectionOrchServ.ts) - Refactored to use Promise.all for parallel execution
+- ✓ Missing type imports (`OrchestratorError` undefined) - Actually warnings, not errors
+- ✓ All tests passing (118 tests)
+
+#### - [ ] TODO -1.2: Fix ESLint Warnings (294 JSDoc issues)
+**Priority**: HIGH
+**Dependencies**: TODO -1.1
+
+**JSDoc Warnings to Fix:**
+- 294 parameter documentation warnings
+- Incomplete method documentation
+- Type annotation issues
+
+#### - [ ] TODO -1.3: Performance Loop Optimization
+**Priority**: HIGH
+**Dependencies**: TODO -1.1
+
+**Performance Issues:**
+- Convert sequential await loops to parallel processing
+- Implement proper rate limiting for GitHub API
+- Optimize GraphQL queries for bulk operations
+
+### Phase 0: Missing Architecture Recovery (URGENT)
+
+#### - [ ] TODO 0.1: Implement Missing Command Layer
+**Priority**: CRITICAL
+**Dependencies**: QA fixes complete
+
+**Current State**: Command layer is completely missing - no way to execute CLI
+**Files to Create:**
+- `src/commands/g/gh/project/summaryCmd.ts` - OCLIF command interface
+- Command registration and argument parsing
+- Integration with orchestrator layer
+
+#### - [ ] TODO 0.2: Implement Missing Orchestrator Layer
+**Priority**: CRITICAL
+**Dependencies**: TODO 0.1
+
+**Current State**: Orchestrator layer is completely missing - no coordination logic
+**Files to Create:**
+- `src/orchestrators/g/gh/project/summaryOrch.ts` - Main orchestration function
+- Service coordination and error handling
+- LLMInfo assembly and return
+
+### Phase 1: Foundation & Core DTOs (CORRECTED STATUS)
+
+#### - [~] TODO 1.1: Fix Repository/Issue/PR/Commit DTOs (Started: 2025-01-24 19:30, Updated: 2025-07-25 08:17 - QA failing, needs lint fixes)
+**Priority**: High
+**Dependencies**: QA fixes
+
+**Status Correction**: Previously marked complete but QA is failing
+**What's GOOD and stays:**
+- ✅ `RepositoryDataDTO.ts` - Logic works, needs lint fixes
+- ✅ `IssueDataDTO.ts` - Logic works, needs lint fixes
+- ✅ `PullRequestDataDTO.ts` - Logic works, needs lint fixes
+- ✅ `CommitDataDTO.ts` - Logic works, needs lint fixes
+- ✅ `ActivityMetricsDTO.ts` - Logic works, needs lint fixes
+- ✅ `ProjectSummaryDTO.ts` - Logic works, needs lint fixes
+
+**What needs FIXING:**
+- ❌ ESLint violations in all DTOs
+- ❌ JSDoc parameter warnings
+- ❌ Type safety issues
+
+### Phase 2: API Services Layer (CORRECTED STATUS)
+
+#### - [~] TODO 2.1: Fix GitHubRestApiService (Started: 2025-01-24 19:30, Updated: 2025-07-25 08:17 - Implementation exists but QA failing)
 **Priority**: High  
 **Dependencies**: TODO 1.1
 
@@ -222,7 +305,11 @@ class GitHubRestApiService {
 - Rate limiting with exponential backoff
 - Transform Octokit responses to DTOs
 
-#### - [x] TODO 2.2: Implement GitHubGraphQLService ✓ 2025-01-24 - Real GraphQL implementation with corrected types and proper error handling  
+#### - [~] TODO 2.2: Fix GitHubGraphQLService (Started: 2025-01-24 19:30, Updated: 2025-07-25 08:17 - Implementation exists but QA failing)
+**Priority**: High
+**Dependencies**: TODO -1.1 (ESLint fixes)
+
+**Status Correction**: Previously marked complete but has quality issues  
 **Priority**: High  
 **Dependencies**: TODO 1.2, TODO 1.3
 
@@ -246,7 +333,11 @@ class GitHubGraphQLService {
 - Proper error handling for GraphQL errors
 - Transform GraphQL responses to DTOs
 
-#### - [x] TODO 2.3: Implement AuthService ✓ 2025-01-24 - Complete implementation with proper error handling, token masking, and comprehensive tests
+#### - [~] TODO 2.3: Fix AuthService (Started: 2025-01-24 19:30, Updated: 2025-07-25 08:17 - Implementation exists but QA failing)
+**Priority**: High
+**Dependencies**: TODO -1.1 (ESLint fixes)
+
+**Status Correction**: Previously marked complete but has quality issues
 **Priority**: High  
 **Dependencies**: None
 
@@ -266,7 +357,11 @@ class AuthService {
 - All validation via Octokit APIs
 - No other CLI dependencies
 
-#### - [x] TODO 2.4: Implement ProjectService ✓ 2025-01-24 - Complete implementation with git remote detection, project sorting by date, repository extraction, and comprehensive tests
+#### - [~] TODO 2.4: Fix ProjectService (Started: 2025-01-24 19:30, Updated: 2025-07-25 08:17 - Implementation exists but QA failing)
+**Priority**: High
+**Dependencies**: TODO -1.1 (ESLint fixes)
+
+**Status Correction**: Previously marked complete but has quality issues
 **Priority**: High  
 **Dependencies**: TODO 2.2, TODO 2.3
 
@@ -498,17 +593,18 @@ export const summaryOrch: IOrchestrator = async (
 
 ## Implementation Order & Dependencies
 
-### Critical Path:
-1. **Phase 0** (Cleanup) - Delete wrong code FIRST
-2. **Phase 1** (Fixed DTOs, Real Types) - Correct foundation  
-3. **Phase 2** (Services) - Core business logic with proper APIs
-4. **Phase 3** (Interfaces) - Contracts and DI
-5. **Phase 4** (Orchestrator Services) - Coordination
-6. **Phase 5** (Orchestrator) - Main orchestration
-7. **Phase 6** (Command) - CLI interface
-8. **Phase 7** (Testing) - Quality assurance
-9. **Phase 8** (Utilities) - Helper functions
-10. **Phase 9** (Documentation) - Final polish
+### CORRECTED Critical Path (Updated: 2025-07-25 08:17):
+1. **Phase -1** (QA Stabilization) - Fix 299 lint issues FIRST
+2. **Phase 0** (Missing Architecture) - Build command/orchestrator layers
+3. **Phase 1** (Fix DTOs) - Correct quality issues in existing code
+4. **Phase 2** (Fix Services) - Resolve quality issues in service layer
+5. **Phase 3** (Interfaces) - Contracts and DI
+6. **Phase 4** (Orchestrator Services) - Coordination
+7. **Phase 5** (Integration) - End-to-end testing
+8. **Phase 6** (Utilities) - Helper functions
+9. **Phase 7** (Documentation) - Final polish
+
+**BLOCKING ISSUE**: Cannot proceed with new development until QA passes (`npm run qa` currently failing).
 
 ### Parallel Work Opportunities:
 - REST DTOs can be fixed while GraphQL research happens
