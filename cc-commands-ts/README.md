@@ -33,7 +33,7 @@ This project follows a strict type-safe architecture designed for maintainabilit
 We enforce strict type safety through custom ESLint rules:
 
 - ✅ No `as unknown as` type casting
-- ✅ No string-based argument passing between services
+- ✅ **NO string-based argument passing between services** (use typed interfaces)
 - ✅ No direct use of abstract types as parameters
 - ✅ No `any` types for API responses
 - ✅ Safe property access with null checks
@@ -134,18 +134,28 @@ function myOrch(services: TMySpecificServices) { }
 ```
 
 ### 3. Type-Safe Communication
-Services communicate via typed objects, not strings:
+**CRITICAL**: Services communicate ONLY via typed objects, NEVER strings:
 
 ```typescript
-// ❌ BAD - String arguments
+// ❌ BAD - String arguments (NEVER ALLOWED)
 const args = `${projectId} ${commandArgs}`
+const params = "owner:foo|repo:bar|days:30"
 
-// ✅ GOOD - Typed arguments
+// ✅ GOOD - Typed arguments (REQUIRED PATTERN)
 interface ProjectArgs {
   projectId: string
   commandArgs: string
 }
+
+interface ActivityArgs {
+  owner: string
+  repo: string
+  timeWindowDays: number
+}
+
+// All orchestrators and services use typed interfaces
 const args: ProjectArgs = { projectId, commandArgs }
+const params: ActivityArgs = { owner: 'foo', repo: 'bar', timeWindowDays: 30 }
 ```
 
 ## Documentation

@@ -18,6 +18,7 @@ import { GitHubGraphQLService } from '../services/GitHubGraphQLService'
 import { GitHubRestApiService } from '../services/GitHubRestApiService'
 import { ProjectService } from '../services/ProjectService'
 import { RepositoryService } from '../services/RepositoryService'
+import { ArgumentParser, IActivityAnalysisArgs } from '../types/ArgumentTypes'
 import { TGitHubServices } from '../types/ServiceTypes'
 
 /**
@@ -74,8 +75,11 @@ export async function createGitHubServices(): Promise<TOrchestratorServiceMap> {
     // Note: orchestrator services receive only the regular services they need,
     // not other orchestrator services, to avoid circular dependencies
     const orchestratorServices: TOrchestratorServiceMap = {
-      activityAnalysisOrchServ: (args: string, _services: TOrchestratorServiceMap) => 
-        activityAnalysisOrchServ(args, githubServices),
+      activityAnalysisOrchServ(args: string, _services: TOrchestratorServiceMap) {
+        // Parse string args to typed object for migration compatibility
+        const typedArgs = parseActivityAnalysisArgs(args)
+        return activityAnalysisOrchServ(typedArgs, githubServices)
+      },
       projectDataCollectionOrchServ: (args: string, _services: TOrchestratorServiceMap) => 
         projectDataCollectionOrchServ(args, githubServices),
       projectDetectionOrchServ: (args: string, _services: TOrchestratorServiceMap) => 
@@ -97,5 +101,47 @@ export async function createGitHubServices(): Promise<TOrchestratorServiceMap> {
         error: error instanceof Error ? error.message : String(error) 
       }
     )
+  }
+}
+
+/**
+ * Parse string arguments to typed ActivityAnalysisArgs
+ * Temporary function during string-to-object migration
+ */
+function parseActivityAnalysisArgs(args: string): IActivityAnalysisArgs {
+  // Try JSON parsing first
+  if (args.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(args)
+      return {
+        owner: parsed.owner,
+        repositories: parsed.repositories,
+        timeWindowDays: parsed.timeWindowDays || ArgumentParser.parseTimeWindow(parsed.since)
+      }
+    } catch {
+      // Fall through to legacy parsing
+    }
+  }
+  
+  // Legacy pipe-delimited parsing
+  const parts = args.split('|')
+  const params = new Map<string, string>()
+  
+  for (const part of parts) {
+    const colonIndex = part.indexOf(':')
+    if (colonIndex > 0) {
+      const key = part.slice(0, Math.max(0, colonIndex))
+      const value = part.slice(Math.max(0, colonIndex + 1))
+      params.set(key, value)
+    }
+  }
+  
+  const repositories = (params.get('repositories') || '').split(',').map(repo => repo.trim()).filter(Boolean)
+  const timeWindowDays = ArgumentParser.parseTimeWindow(params.get('timeWindow'))
+  
+  return {
+    owner: params.get('owner') || '',
+    repositories,
+    timeWindowDays
   }
 }

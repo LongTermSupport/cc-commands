@@ -8,6 +8,7 @@
 import { OrchestratorError } from '../../../../core/error/OrchestratorError'
 import { IOrchestratorService } from '../../../../core/interfaces/IOrchestratorService'
 import { LLMInfo } from '../../../../core/LLMInfo'
+import { ArgumentParser, IActivityAnalysisArgs } from '../../../../orchestrator-services/github/types/ArgumentTypes'
 
 /**
  * Service collection for GitHub project summary orchestrator
@@ -130,8 +131,10 @@ export const summaryOrch = async (
     }
     
     const analysisArgs = buildAnalysisArgs(repositories, commandArgs)
+    // Convert typed args to JSON string for service map compatibility during migration
+    const analysisArgsString = JSON.stringify(analysisArgs)
     const analysisResult = await activityAnalysisOrchServ(
-      analysisArgs,
+      analysisArgsString,
       services
     )
     
@@ -193,17 +196,27 @@ function extractRepositories(collectionResult: LLMInfo): string[] {
 /**
  * Build analysis arguments from repositories and command args
  */
-function buildAnalysisArgs(repositories: string[], originalArgs: string): string {
+function buildAnalysisArgs(repositories: string[], originalArgs: string): IActivityAnalysisArgs {
   // Extract time window from original args
   const sinceMatch = originalArgs.match(/--since\s+(\S+)/)
   const since = sinceMatch ? sinceMatch[1] : '30d'
   
   // Extract owner from first repository
   const [owner] = repositories[0]?.split('/') || ['']
+  if (!owner) {
+    throw new OrchestratorError(
+      new Error('Unable to extract owner from repository list'),
+      ['Ensure repositories are in format: owner/repo'],
+      { repositories }
+    )
+  }
   
-  return JSON.stringify({
+  // Parse time window to days
+  const timeWindowDays = ArgumentParser.parseTimeWindow(since)
+  
+  return {
     owner,
     repositories,
-    since
-  })
+    timeWindowDays
+  }
 }

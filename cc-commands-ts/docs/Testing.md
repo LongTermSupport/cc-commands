@@ -30,11 +30,11 @@ mockApiClient = vi.mocked(createMock<IApiClient>())
 
 ```typescript
 // 1. RED - Write failing test first
-describe('RepositoryService', () => {
+describe('ExampleService', () => {
   it('should transform API response into DTO', async () => {
-    const service = new RepositoryService(mockApiClient)
-    const result = await service.collectRepositoryData('owner', 'repo')
-    expect(result).toBeInstanceOf(RepositoryDataDTO)
+    const service = new ExampleService(mockApiClient)
+    const result = await service.collectSampleData('owner', 'repo')
+    expect(result).toBeInstanceOf(ExampleDataDTO)
   })
 })
 
@@ -48,17 +48,17 @@ describe('RepositoryService', () => {
 
 ```typescript
 // ❌ WRONG - Tautological test (testing the mock)
-const expectedData = new RepositoryDataDTO('test-repo', 'test-owner')
-mockService.getData.mockResolvedValue(expectedData)
-const result = await mockService.getData()
+const expectedData = new ExampleDataDTO('test-sample', 'test-owner')
+mockService.getSampleData.mockResolvedValue(expectedData)
+const result = await mockService.getSampleData()
 expect(result).toEqual(expectedData) // This proves nothing
 
 // ✅ CORRECT - Test actual behavior
-const mockApiResponse = { name: 'test-repo', owner: { login: 'test-owner' } }
-mockApiClient.getRepository.mockResolvedValue(mockApiResponse)
-const service = new RepositoryService(mockApiClient)
-const result = await service.collectRepositoryData('test-owner', 'test-repo')
-expect(result.name).toBe('test-repo') // Tests actual transformation logic
+const mockApiResponse = { name: 'test-sample', owner: { login: 'test-owner' } }
+mockApiClient.getSampleData.mockResolvedValue(mockApiResponse)
+const service = new ExampleService(mockApiClient)
+const result = await service.collectSampleData('test-owner', 'test-sample')
+expect(result.name).toBe('test-sample') // Tests actual transformation logic
 ```
 
 ### Mock Real Dependencies, Test Real Code
@@ -67,17 +67,17 @@ expect(result.name).toBe('test-repo') // Tests actual transformation logic
 
 ```typescript
 // ✅ CORRECT - Mock external dependency, test real service
-describe('RepositoryService', () => {
+describe('ExampleService', () => {
   it('should handle API errors gracefully', async () => {
     // Mock external dependency to force error scenario
-    mockApiClient.getRepository.mockRejectedValue(new Error('API Error'))
+    mockApiClient.getSampleData.mockRejectedValue(new Error('API Error'))
     
     // Test real service logic
-    const service = new RepositoryService(mockApiClient)
+    const service = new ExampleService(mockApiClient)
     
     // Verify real error handling behavior
-    await expect(service.collectRepositoryData('owner', 'repo'))
-      .rejects.toThrow('Failed to fetch repository data')
+    await expect(service.collectSampleData('owner', 'sample'))
+      .rejects.toThrow('Failed to fetch sample data')
   })
 })
 ```
@@ -98,14 +98,14 @@ describe('RepositoryService', () => {
 **Test the complete CLI workflow with no mocks.**
 
 ```typescript
-describe('SummaryCmd', () => {
+describe('ExampleSummaryCmd', () => {
   it('should output project summary for valid repository', async () => {
     // No mocks - test against real orchestrator and services
-    const result = await runCommand('g:gh:project:summary', ['owner/repo'])
+    const result = await runCommand('example:project:summary', ['owner/repo'])
     
     expect(result.exitCode).toBe(0)
-    expect(result.stdout).toContain('PROJECT_NAME=repo')
-    expect(result.stdout).toContain('OWNER=owner')
+    expect(result.stdout).toContain('EXAMPLE_NAME=repo')
+    expect(result.stdout).toContain('SAMPLE_OWNER=owner')
   })
 })
 ```
@@ -123,15 +123,15 @@ describe('SummaryCmd', () => {
 **Test service coordination with some external mocking allowed.**
 
 ```typescript
-describe('summaryOrch', () => {
+describe('exampleSummaryOrch', () => {
   it('should coordinate services and return LLMInfo', async () => {
     // Mock external APIs, use real services
-    mockGitHubApi.getRepository.mockResolvedValue(repoApiResponse)
+    mockExternalApi.getSampleData.mockResolvedValue(sampleApiResponse)
     
-    const result = await summaryOrch('owner/repo', services)
+    const result = await exampleSummaryOrch('owner/repo', services)
     
     expect(result).toBeInstanceOf(LLMInfo)
-    expect(result.getData()).toHaveProperty('REPOSITORY_NAME', 'repo')
+    expect(result.getData()).toHaveProperty('EXAMPLE_NAME', 'repo')
     expect(result.getExitCode()).toBe(0)
   })
 })
@@ -151,22 +151,22 @@ describe('summaryOrch', () => {
 #### Orchestrator Services
 
 ```typescript
-describe('dataCollectionOrchServ', () => {
+describe('exampleDataCollectionOrchServ', () => {
   it('should combine multiple service results into LLMInfo', async () => {
     // Mock regular services
-    const mockRepoData = new RepositoryDataDTO('repo', 'owner', ...)
-    const mockIssueStats = new IssueStatsDTO(10, 5, ...)
+    const mockSampleData = new ExampleDataDTO('sample', 'owner', ...)
+    const mockStats = new SampleStatsDTO(10, 5, ...)
     
-    mockRepositoryService.collectRepositoryData.mockResolvedValue(mockRepoData)
-    mockIssueService.analyzeIssues.mockResolvedValue(mockIssueStats)
+    mockExampleService.collectSampleData.mockResolvedValue(mockSampleData)
+    mockStatsService.analyzeData.mockResolvedValue(mockStats)
     
     // Test orchestrator service coordination
-    const result = await dataCollectionOrchServ('owner/repo', services)
+    const result = await exampleDataCollectionOrchServ('owner/sample', services)
     
     // Verify LLMInfo assembly
     expect(result).toBeInstanceOf(LLMInfo)
-    expect(result.getData()).toHaveProperty('REPOSITORY_NAME', 'repo')
-    expect(result.getData()).toHaveProperty('TOTAL_ISSUES', '10')
+    expect(result.getData()).toHaveProperty('EXAMPLE_NAME', 'sample')
+    expect(result.getData()).toHaveProperty('TOTAL_COUNT', '10')
   })
 })
 ```
@@ -174,40 +174,40 @@ describe('dataCollectionOrchServ', () => {
 #### Regular Services
 
 ```typescript
-describe('RepositoryService', () => {
-  let service: RepositoryService
-  let mockApiClient: vi.Mocked<IApiClient>
+describe('ExampleService', () => {
+  let service: ExampleService
+  let mockApiClient: vi.Mocked<IExampleApiClient>
 
   beforeEach(() => {
-    mockApiClient = vi.mocked(createMock<IApiClient>())
-    service = new RepositoryService(mockApiClient)
+    mockApiClient = vi.mocked(createMock<IExampleApiClient>())
+    service = new ExampleService(mockApiClient)
   })
 
   it('should transform API response into DTO', async () => {
     // Mock external dependency
     const mockApiResponse = {
-      name: 'test-repo',
+      name: 'test-sample',
       owner: { login: 'test-owner' },
       description: 'Test description',
       language: 'TypeScript'
     }
-    mockApiClient.getRepository.mockResolvedValue(mockApiResponse)
+    mockApiClient.getSampleData.mockResolvedValue(mockApiResponse)
     
     // Test real service logic
-    const result = await service.collectRepositoryData('test-owner', 'test-repo')
+    const result = await service.collectSampleData('test-owner', 'test-sample')
     
     // Verify proper DTO construction from API response
-    expect(result).toBeInstanceOf(RepositoryDataDTO)
-    expect(result.name).toBe('test-repo')
+    expect(result).toBeInstanceOf(ExampleDataDTO)
+    expect(result.name).toBe('test-sample')
     expect(result.owner).toBe('test-owner')
-    expect(mockApiClient.getRepository).toHaveBeenCalledWith('test-owner', 'test-repo')
+    expect(mockApiClient.getSampleData).toHaveBeenCalledWith('test-owner', 'test-sample')
   })
 
   it('should handle API errors with meaningful messages', async () => {
-    mockApiClient.getRepository.mockRejectedValue(new Error('Not Found'))
+    mockApiClient.getSampleData.mockRejectedValue(new Error('Not Found'))
     
-    await expect(service.collectRepositoryData('invalid', 'repo'))
-      .rejects.toThrow('Failed to fetch repository data')
+    await expect(service.collectSampleData('invalid', 'sample'))
+      .rejects.toThrow('Failed to fetch sample data')
   })
 })
 ```
@@ -242,24 +242,24 @@ describe('RepositoryService', () => {
 ### Example: GitHub Domain Service Testing
 
 ```typescript
-describe('GitHubDataCollectionOrchServ', () => {
+describe('ExampleDataCollectionOrchServ', () => {
   it('should collect comprehensive project data', async () => {
-    // ✅ Mock external boundary (GitHub API)
-    mockGitHubApi.getRepository.mockResolvedValue(repoResponse)
-    mockGitHubApi.getIssues.mockResolvedValue(issuesResponse)
+    // ✅ Mock external boundary (External API)
+    mockExternalApi.getSampleData.mockResolvedValue(sampleResponse)
+    mockExternalApi.getStats.mockResolvedValue(statsResponse)
     
     // ✅ Use real domain services
-    const repositoryService = new RepositoryService(mockGitHubApi)
-    const issueService = new IssueService(mockGitHubApi)
-    const services = { repositoryService, issueService }
+    const exampleService = new ExampleService(mockExternalApi)
+    const statsService = new StatsService(mockExternalApi)
+    const services = { exampleService, statsService }
     
     // Test real orchestrator service logic
-    const result = await dataCollectionOrchServ('owner/repo', services)
+    const result = await exampleDataCollectionOrchServ('owner/sample', services)
     
     expect(result.getData()).toMatchObject({
-      REPOSITORY_NAME: 'repo',
-      TOTAL_ISSUES: '15',
-      OPEN_ISSUES: '10'
+      EXAMPLE_NAME: 'sample',
+      TOTAL_COUNT: '15',
+      ACTIVE_COUNT: '10'
     })
   })
 })
@@ -268,21 +268,21 @@ describe('GitHubDataCollectionOrchServ', () => {
 ### Force Error Scenarios with Minimal Mocking
 
 ```typescript
-it('should handle repository service failures', async () => {
+it('should handle example service failures', async () => {
   // Mock internal service ONLY to force error scenario
-  const mockRepositoryService = createMock<RepositoryService>()
-  mockRepositoryService.collectRepositoryData.mockRejectedValue(
-    new Error('Repository not found')
+  const mockExampleService = createMock<ExampleService>()
+  mockExampleService.collectSampleData.mockRejectedValue(
+    new Error('Sample not found')
   )
   
-  // Use real issue service
-  const realIssueService = new IssueService(mockGitHubApi)
+  // Use real stats service
+  const realStatsService = new StatsService(mockExternalApi)
   const services = { 
-    repositoryService: mockRepositoryService, 
-    issueService: realIssueService 
+    exampleService: mockExampleService, 
+    statsService: realStatsService 
   }
   
-  const result = await dataCollectionOrchServ('owner/repo', services)
+  const result = await exampleDataCollectionOrchServ('owner/sample', services)
   
   expect(result.hasError()).toBe(true)
   expect(result.getExitCode()).toBe(1)
@@ -333,17 +333,17 @@ it('should handle API errors gracefully', async () => { /* ... */ })
 ```
 test/
 ├── commands/                    # E2E tests
-│   └── g/gh/project/
-│       └── summaryCmd.e2e.test.ts
+│   └── example/domain/
+│       └── exampleSummaryCmd.e2e.test.ts
 ├── orchestrators/               # Integration tests
-│   └── g/gh/project/
-│       └── summaryOrch.test.ts
+│   └── example/domain/
+│       └── exampleSummaryOrch.test.ts
 └── orchestrator-services/       # Unit tests
-    └── github/
-        ├── dataCollectionOrchServ.test.ts
+    └── example-domain/
+        ├── exampleDataCollectionOrchServ.test.ts
         └── services/
-            ├── RepositoryService.test.ts
-            └── IssueService.test.ts
+            ├── ExampleService.test.ts
+            └── StatsService.test.ts
 ```
 
 ### Naming Conventions
@@ -359,17 +359,17 @@ Create reusable test utilities for common patterns:
 
 ```typescript
 // test/utils/createMockServices.ts
-export function createMockGitHubServices(): TMockGitHubServices {
+export function createMockExampleServices(): TMockExampleServices {
   return {
-    repositoryService: createMock<RepositoryService>(),
-    issueService: createMock<IssueService>(),
-    apiClient: createMock<IGitHubApiClient>()
+    exampleService: createMock<ExampleService>(),
+    statsService: createMock<StatsService>(),
+    apiClient: createMock<IExampleApiClient>()
   }
 }
 
 // test/utils/createTestData.ts
-export function createTestRepositoryDTO(): RepositoryDataDTO {
-  return new RepositoryDataDTO('test-repo', 'test-owner', ...)
+export function createTestExampleDTO(): ExampleDataDTO {
+  return new ExampleDataDTO('test-sample', 'test-owner', ...)
 }
 ```
 

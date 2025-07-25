@@ -1,27 +1,30 @@
-# Claude Code Commands (Typescript)
+# Claude Code Commands (TypeScript)
 
-This project provides orchestrators which can be utilized by custom slash commands in claude code.
+This project provides orchestrators which can be utilized by custom slash commands in Claude Code.
 
-The role of an cc-command is to provide rapid, reliable functionality that the LLM can utilize with simple CLI call
+The role of a cc-command is to provide rapid, reliable functionality that the LLM can utilize with simple CLI calls. A single custom slash command may call the relevant cc-command multiple times as it progresses through its process.
 
-A single custom slash command may call relevant the cc-command multiple times as it progresses through it's process.
+## Development Philosophy
 
-Generally this will be in the form of
-LLM -> setup
-    - parse arguments
-    - check environment, confirm required tools etc set up
-    - anything else that needs to be done or checked before proceeding
-LLM -> execution
-    - actually doing things
-        - API Calls
-        - Collecting data
-        - Performing Actions
-LLM -> other execution steps as required
-    - based on previous execution outcomes, the LLM might decide to call other execution steps
+You are a top-tier TypeScript developer with a passion for best practices, strong types, test-driven development, clear APIs, and strong organization.
 
-# Development Practice
+## Command Execution Flow
 
-You are a top tier typescript developer with a passion for best practice, strong types, test driven development, clear API, strong and clear organisation.
+Generally this will be in the form of:
+
+1. **LLM → Setup**
+   - Parse arguments
+   - Check environment, confirm required tools are set up
+   - Perform any prerequisite validation before proceeding
+
+2. **LLM → Execution**
+   - Actually doing things:
+     - API Calls
+     - Collecting data
+     - Performing Actions
+
+3. **LLM → Additional execution steps as required**
+   - Based on previous execution outcomes, the LLM might decide to call other execution steps
 
 ## CRITICAL: File Editing Policy
 
@@ -78,31 +81,7 @@ Should be very thin, only tested with integration tests (some mocking allowed fo
 
 Orchestrator is an exported async function implementing the IOrchestrator interface
 
-```typescript
-// Orchestrator service function type - coordinates regular services
-export type IOrchestratorService<TServices = any> = (
-  args: string,
-  services: TServices  // Each orchestrator service defines its own specific service requirements
-) => Promise<LLMInfo>
-
-// Regular services return DTOs (used by orchestrator services)
-export interface IDataCollectorService {
-  collectRepositoryData(owner: string, repo: string): Promise<RepositoryDataDTO>
-  collectReleaseData(owner: string, repo: string): Promise<ReleaseDataDTO | null>
-}
-
-// Abstract service map type - NEVER use this directly in orchestrators or type parameters!
-// This is an abstract type meant only for type composition via intersection (&)
-export type TAbstractOrchestratorServiceMap = {
-  [serviceName: string]: IOrchestratorService<any>;
-}
-
-// The orchestrator function type with generic service parameter
-export type IOrchestrator<TServices = any> = (
-  commandArgs: string, // this is the $ARGUMENTS string that the LLM passes to the command, which then passes it down to the orchestrator for parsing
-  services: TServices,  // MUST be a specific type defined by each orchestrator, NEVER TAbstractOrchestratorServiceMap
-) => Promise<LLMInfo>;
-```
+**Core Interfaces**: See [src/core/interfaces/IOrchestratorService.ts](src/core/interfaces/IOrchestratorService.ts) for the actual interface definitions.
 
 The Orchestrator in the form of a function in the functional dependency injection pattern.
 
@@ -241,7 +220,8 @@ src/
 **Commands**: 
 - File: `summaryCmd.ts`
 - Class: `export default class SummaryCmd extends Command`
-- CLI: `g:gh:project:summary`
+- CLI: `g:gh:project:summary` (set via `static override id = 'g:gh:project:summary'`)
+- Pattern: Class/file names include `Cmd` suffix, CLI commands are clean without suffix
 
 **Orchestrators**: 
 - File: `summaryOrch.ts` 
@@ -249,7 +229,8 @@ src/
 
 **Orchestrator Services**:
 - File: `dataCollectionOrchServ.ts`
-- Function: `export const dataCollectionOrchServ: IOrchestratorService<TDataCollectionServices>`
+- Function: `export const dataCollectionOrchServ: IOrchestratorService<TArgsInterface, TDataCollectionServices>`
+- Pattern: Use typed argument interfaces, not strings
 
 **Regular Services**:
 - File: `services/RepositoryService.ts`
@@ -302,11 +283,10 @@ TypeScript code (orchestrators) performs deterministic operations and returns ra
 result.addInstruction('Generate a project summary report')
 result.addInstruction('Adapt the report style based on the AUDIENCE parameter')
 
-// ✅ CORRECT - Providing raw data:
-result.addData('REPO_COUNT', '5')
-result.addData('TOTAL_ISSUES', '47')
-result.addData('TOTAL_PRS', '12')
-result.addData('AUDIENCE', 'technical')
+// ✅ CORRECT - Providing raw data via DTOs:
+const projectData = new ProjectSummaryDTO(repositories, issues, pullRequests)
+result.addDataBulk(projectData.toLLMData())
+result.addData(DataKeys.AUDIENCE, 'technical')
 
 // ❌ WRONG - Orchestrator making decisions for the LLM:
 if (issueCount > 100) {
@@ -591,6 +571,30 @@ These rules work together to ensure:
 - No abstract types leak into function signatures
 - Services are always strictly typed for their specific use case
 - Full IDE support and compile-time type checking
+
+# Code Quality & Standards
+
+## Documentation Standards
+
+**Documentation declares current best practices and guidelines only.**
+
+- All documentation should reflect the current, correct way to implement patterns
+- Never include "legacy" patterns or "old way vs new way" comparisons in main documentation
+- Migration instructions belong in separate plan documents (CLAUDE/plan/ directory)
+- Focus on clarity and actionable guidance for current development
+- Remove outdated patterns immediately when better approaches are adopted
+- Examples should demonstrate real, working patterns from the current codebase
+
+### Plan Workflow
+
+The CLAUDE/plan/ directory contains implementation and migration plans:
+
+- **Implementation Plans**: Step-by-step guides for new features or major changes
+- **Migration Plans**: Detailed procedures for updating existing code to new patterns
+- **Architecture Decisions**: Documentation of major architectural changes and rationale
+- **Temporary Guidelines**: Instructions that will be integrated into main docs once complete
+
+Plans are temporary documents that guide transitions. Once migrations are complete, successful patterns move to main documentation and plan documents are archived.
 
 ## Quality Assurance Requirements
 

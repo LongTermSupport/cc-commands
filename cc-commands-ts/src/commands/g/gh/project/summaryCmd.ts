@@ -25,6 +25,8 @@ import { summaryOrch, TSummaryOrchestratorServices } from '../../../../orchestra
  * - Manual: g:gh:project:summary "myorg/project-name"
  */
 export default class SummaryCmd extends BaseCommand {
+  static override id = 'g:gh:project:summary'
+  
   static override args = {
     arguments: Args.string({
       description: 'Project identifier (URL, org/project, or auto-detect)',

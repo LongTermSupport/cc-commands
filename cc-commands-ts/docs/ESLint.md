@@ -282,10 +282,12 @@ const code = bad() // No explanation
 
 ### DTO-Specific Rules
 
-The project's ESLint configuration automatically exempts DTO files from certain rules:
+The project's ESLint configuration automatically exempts DTO files from certain rules.
+
+See the complete configuration in the project's eslint.config.mjs file.
 
 ```javascript
-// eslint.config.mjs
+// Snippet from eslint.config.mjs - see full file for complete configuration
 {
   // Special rules for DTO classes - allow unlimited constructor parameters
   files: ['**/*DTO.ts'],
@@ -308,49 +310,49 @@ This custom rule enforces strict service typing for orchestrators and orchestrat
 
 **❌ Problem:**
 ```typescript
-// Using generic TOrchestratorServiceMap - violates architectural principles
-export const myOrch = async (args: string, services: TOrchestratorServiceMap) => {
+// Using generic service map - violates architectural principles
+export const exampleOrch = async (args: string, services: TGenericServiceMap) => {
   // Loses type safety for services
 }
 
-export const myOrchServ = async (args: string, services: TOrchestratorServiceMap) => {
+export const exampleOrchServ = async (args: string, services: TGenericServiceMap) => {
   // No compile-time checking of service dependencies
 }
 
-// Type aliases extending TOrchestratorServiceMap
-type TMyServices = TOrchestratorServiceMap & {
-  myService: IMyService
+// Type aliases extending generic service map
+type TExampleServices = TGenericServiceMap & {
+  exampleService: IExampleService
 }
 ```
 
 **✅ Solution:**
 ```typescript
 // Define specific service types for each orchestrator
-type TMyOrchServices = {
-  projectService: IProjectService
-  authService: IAuthService
+type TExampleOrchServices = {
+  exampleService: IExampleService
+  sampleService: ISampleService
   // Only the services this orchestrator actually needs
 }
 
-export const myOrch = async (args: string, services: TMyOrchServices) => {
+export const exampleOrch = async (args: string, services: TExampleOrchServices) => {
   // Full type safety and intellisense for services
 }
 
 // For orchestrator services
-type TMyOrchServServices = {
-  dataService: IDataService
-  apiService: IApiService
+type TExampleOrchServServices = {
+  dataService: IExampleDataService
+  apiService: IExampleApiService
 }
 
-export const myOrchServ = async (args: string, services: TMyOrchServServices) => {
+export const exampleOrchServ = async (args: string, services: TExampleOrchServServices) => {
   // Clear dependencies and type checking
 }
 
 // Service types should be defined directly, not extended
-type TMyServices = {
-  projectService: IProjectService
-  authService: IAuthService
-  [key: string]: IOrchestratorService // If dynamic access needed
+type TExampleServices = {
+  exampleService: IExampleService
+  sampleService: ISampleService
+  [key: string]: IExampleOrchestratorService // If dynamic access needed
 }
 ```
 
@@ -401,9 +403,9 @@ type TMyServices = {
 **❌ Problem:**
 ```typescript
 // Using abstract type directly
-export const myOrch: IOrchestrator = async (
+export const exampleOrch: IExampleOrchestrator = async (
   args: string,
-  services: TOrchestratorServiceMap // ESLint error! Abstract type used directly
+  services: TAbstractServiceMap // ESLint error! Abstract type used directly
 ) => {
   // No type safety for services
 }
@@ -417,25 +419,25 @@ function processConfig(config: TAbstractBaseConfig) { // ESLint error!
 **✅ Solution:**
 ```typescript
 // Extend abstract type to create concrete type
-export type TMyOrchServices = TOrchestratorServiceMap & {
-  dataCollector: IDataCollectorService
-  projectService: IProjectService
+export type TExampleOrchServices = TAbstractServiceMap & {
+  dataCollector: IExampleDataCollectorService
+  exampleService: IExampleService
 }
 
-export const myOrch: IOrchestrator = async (
+export const exampleOrch: IExampleOrchestrator = async (
   args: string,
-  services: TMyOrchServices // Concrete type that extends abstract
+  services: TExampleOrchServices // Concrete type that extends abstract
 ) => {
   // Full type safety and autocomplete
 }
 
 // Another example
-export type TMyConfig = TAbstractBaseConfig & {
+export type TExampleConfig = TAbstractBaseConfig & {
   apiKey: string
   timeout: number
 }
 
-function processConfig(config: TMyConfig) { // Concrete type
+function processConfig(config: TExampleConfig) { // Concrete type
   // Proper type safety
 }
 ```
@@ -443,7 +445,7 @@ function processConfig(config: TMyConfig) { // Concrete type
 **Abstract Types Convention:**
 - Abstract types should be prefixed with `TAbstract` for clarity
 - Currently tracked abstract types:
-  - `TOrchestratorServiceMap` (should be renamed to `TAbstractOrchestratorServiceMap`)
+  - `TAbstractServiceMap` (example of abstract service mapping)
   - Future abstract types should follow the `TAbstract` prefix convention
 
 **Why This Rule Exists:**
@@ -496,30 +498,30 @@ const response = await api.get<ApiResponse>(url)
 **❌ Problem:**
 ```typescript
 // String concatenation for arguments
-const args = projectId + ' ' + commandArgs
-const params = `${owner}|${repo}|${since}`
+const args = exampleId + ' ' + commandArgs
+const params = `${owner}|${sample}|${since}`
 
 // String parsing
-const [owner, repo] = args.split(' ')
+const [owner, sample] = args.split(' ')
 const parts = params.split('|')
 ```
 
 **✅ Solution:**
 ```typescript
 // Use typed interfaces
-interface ProjectArgs {
-  projectId: string
+interface ExampleArgs {
+  exampleId: string
   commandArgs: string
 }
 
-interface ActivityArgs {
+interface SampleActivityArgs {
   owner: string
-  repo: string
+  sample: string
   since: Date
 }
 
 // Pass objects
-const args: ProjectArgs = { projectId, commandArgs }
+const args: ExampleArgs = { exampleId, commandArgs }
 ```
 
 ### require-typed-data-access
@@ -529,7 +531,7 @@ const args: ProjectArgs = { projectId, commandArgs }
 **❌ Problem:**
 ```typescript
 // Unsafe bracket notation
-const value = data['SOME_KEY']  // What if undefined?
+const value = data['EXAMPLE_KEY']  // What if undefined?
 
 // Array access without bounds checking
 const first = array[0]  // What if empty?
@@ -541,7 +543,7 @@ const prop = obj[variable]  // No type checking
 **✅ Solution:**
 ```typescript
 // Use optional chaining
-const value = data['SOME_KEY'] ?? defaultValue
+const value = data['EXAMPLE_KEY'] ?? defaultValue
 
 // Safe array access
 const first = array[0] ?? defaultItem
@@ -570,16 +572,16 @@ static fromGitHubResponse(response: any) { }
 **✅ Solution:**
 ```typescript
 // Define response types
-interface GitHubRepoResponse {
+interface ExampleApiResponse {
   name: string
   owner: { login: string }
   // ... other fields
 }
 
-const data = response.data as GitHubRepoResponse
+const data = response.data as ExampleApiResponse
 
 // Typed DTO methods
-static fromGitHubResponse(response: GitHubRepoResponse) { }
+static fromApiResponse(response: ExampleApiResponse) { }
 ```
 
 ## Updating This Document

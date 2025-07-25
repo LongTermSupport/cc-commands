@@ -14,17 +14,17 @@ Use integration tests that call real APIs to drive implementation. Let test fail
 ### 1. Write Integration Test That Calls Real API
 
 ```typescript
-describe('GitHubGraphQLService - Integration', () => {
-  let service: GitHubGraphQLService
+describe('ExternalGraphQLService - Integration', () => {
+  let service: ExternalGraphQLService
   
   beforeEach(() => {
-    const token = process.env.GITHUB_TOKEN || execSync('gh auth token').toString().trim()
-    service = new GitHubGraphQLService(token)
+    const token = process.env.API_TOKEN || getAuthToken()
+    service = new ExternalGraphQLService(token)
   })
 
   it('should fetch project by ID', async () => {
     // This will fail initially - we don't know the real structure yet
-    const project = await service.getProject('PVT_kwDOABXVks4Af-jq')
+    const project = await service.getProject('EXAMPLE_PROJECT_ID')
     
     expect(project.title).toBe('Test Project')
     expect(project.description).toBeDefined() // Will fail - field is shortDescription
@@ -36,7 +36,7 @@ describe('GitHubGraphQLService - Integration', () => {
 ### 2. Implement Service Method (Will Fail)
 
 ```typescript
-async getProject(projectNodeId: string): Promise<ProjectV2DTO> {
+async getProject(projectNodeId: string): Promise<ExampleProjectDTO> {
   const query = `
     query($projectId: ID!) {
       node(id: $projectId) {
@@ -51,7 +51,7 @@ async getProject(projectNodeId: string): Promise<ProjectV2DTO> {
   `
   
   const result = await this.executeQuery(query, { projectId: projectNodeId })
-  return ProjectV2DTO.fromGraphQLResponse(result)
+  return ExampleProjectDTO.fromGraphQLResponse(result)
 }
 ```
 
@@ -60,13 +60,13 @@ async getProject(projectNodeId: string): Promise<ProjectV2DTO> {
 ```bash
 ❯ npm test
 GraphQL Error: Field 'description' doesn't exist on type 'ProjectV2'
-# Test failure tells us: field is called 'shortDescription'
+# Test failure reveals: field is called 'shortDescription'
 ```
 
 ### 4. Fix Service Based on Test Failure
 
 ```typescript
-async getProject(projectNodeId: string): Promise<ProjectV2DTO> {
+async getProject(projectNodeId: string): Promise<ExampleProjectDTO> {
   const query = `
     query($projectId: ID!) {
       node(id: $projectId) {
@@ -81,15 +81,15 @@ async getProject(projectNodeId: string): Promise<ProjectV2DTO> {
   `
   
   const result = await this.executeQuery(query, { projectId: projectNodeId })
-  return ProjectV2DTO.fromGraphQLResponse(result)
+  return ExampleProjectDTO.fromGraphQLResponse(result)
 }
 ```
 
 ### 5. Update DTO and Types
 
 ```typescript
-static fromGraphQLResponse(response: ProjectV2GraphQLResponse): ProjectV2DTO {
-  return new ProjectV2DTO(
+static fromGraphQLResponse(response: ExampleGraphQLResponse): ExampleProjectDTO {
+  return new ExampleProjectDTO(
     response.node.id,
     response.node.title,
     response.node.shortDescription, // FIXED - was description
@@ -102,12 +102,12 @@ static fromGraphQLResponse(response: ProjectV2GraphQLResponse): ProjectV2DTO {
 
 ```typescript
 it('should handle projects with no items', async () => {
-  const project = await service.getProject('PVT_empty')
+  const project = await service.getProject('EMPTY_PROJECT_ID')
   expect(project.itemCount).toBe(0) // Drives empty handling
 })
 
 it('should handle organization vs user projects', async () => {
-  const orgProject = await service.getProject('PVT_org')
+  const orgProject = await service.getProject('ORG_PROJECT_ID')
   expect(orgProject.ownerType).toBe('ORGANIZATION') // Drives owner type logic
 })
 ```
@@ -118,7 +118,7 @@ Each test failure teaches you something new about the API:
 
 ```typescript
 it('should handle field values correctly', async () => {
-  const project = await service.getProject('PVT_withFields')
+  const project = await service.getProject('PROJECT_WITH_FIELDS_ID')
   const item = project.items[0]
   
   expect(item.fieldValues['Status']).toBe('In Progress') // Fails, reveals field structure

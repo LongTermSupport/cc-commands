@@ -33,48 +33,40 @@ This codebase follows a strict "no magic strings" policy. All data keys must be 
 
 ### 1. Base Interface
 
-All DTOs must implement the `ILLMDataDTO` interface:
+All DTOs must implement the `ILLMDataDTO` interface.
 
-```typescript
-// Snippet from src/core/interfaces/ILLMDataDTO.ts
-export interface ILLMDataDTO {
-  toLLMData(): Record<string, string>
-  // ... see full file for complete interface
-}
-```
-
-See [src/core/interfaces/ILLMDataDTO.ts](../src/core/interfaces/ILLMDataDTO.ts) for the complete interface.
+See [src/core/interfaces/ILLMDataDTO.ts](../src/core/interfaces/ILLMDataDTO.ts) for the complete interface definition.
 
 ### 2. DTO Implementation Pattern
 
 Each DTO follows this pattern:
 
 ```typescript
-export class MyDataDTO implements ILLMDataDTO {
+export class ExampleDataDTO implements ILLMDataDTO {
   // 1. Define keys as private static constants
   private static readonly Keys = {
-    FIELD_ONE: 'FIELD_ONE',
-    FIELD_TWO: 'FIELD_TWO',
+    SAMPLE_FIELD: 'SAMPLE_FIELD',
+    EXAMPLE_COUNT: 'EXAMPLE_COUNT',
   } as const
 
   // 2. Constructor with strongly-typed properties
   constructor(
-    public readonly fieldOne: string,
-    public readonly fieldTwo: number
+    public readonly sampleField: string,
+    public readonly exampleCount: number
   ) {}
 
   // 3. Convert to LLMInfo data format
   toLLMData(): Record<string, string> {
     // All keys must be UPPER_SNAKE_CASE (validated by LLMInfo.addData)
     return {
-      [MyDataDTO.Keys.FIELD_ONE]: this.fieldOne,
-      [MyDataDTO.Keys.FIELD_TWO]: String(this.fieldTwo)
+      [ExampleDataDTO.Keys.SAMPLE_FIELD]: this.sampleField,
+      [ExampleDataDTO.Keys.EXAMPLE_COUNT]: String(this.exampleCount)
     }
   }
 
   // 4. Factory methods for common creation patterns
-  static fromApiResponse(response: any): MyDataDTO {
-    return new MyDataDTO(response.field1, response.field2)
+  static fromApiResponse(response: SampleApiResponse): ExampleDataDTO {
+    return new ExampleDataDTO(response.sampleField, response.count)
   }
 }
 ```
@@ -83,17 +75,7 @@ export class MyDataDTO implements ILLMDataDTO {
 
 ### Generic Keys (Minimal Set)
 
-Only truly generic keys belong in `DataKeys`:
-
-```typescript
-// Snippet from src/core/constants/DataKeys.ts
-export const DataKeys = {
-  VALID: 'VALID',
-  STATUS: 'STATUS',
-  MODE: 'MODE',
-  // ... see full file for all generic keys
-} as const
-```
+Only truly generic keys belong in `DataKeys`.
 
 See [src/core/constants/DataKeys.ts](../src/core/constants/DataKeys.ts) for all available generic keys.
 
@@ -103,8 +85,8 @@ Each DTO defines its own keys as private static constants:
 
 ```typescript
 private static readonly Keys = {
-  REPOSITORY_NAME: 'REPOSITORY_NAME',
-  REPOSITORY_OWNER: 'REPOSITORY_OWNER',
+  EXAMPLE_NAME: 'EXAMPLE_NAME',
+  SAMPLE_OWNER: 'SAMPLE_OWNER',
   // ... other DTO-specific keys
 } as const
 ```
@@ -116,23 +98,23 @@ Regular services return DTOs that are consumed by orchestrator services. See [CL
 DTOs are organized by domain within orchestrator service folders:
 
 ```
-orchestrator-services/github/
+orchestrator-services/example-domain/
 ├── dto/
-│   ├── RepositoryDataDTO.ts        # Domain-specific DTOs
-│   └── IssueStatsDTO.ts
+│   ├── ExampleDataDTO.ts           # Domain-specific DTOs
+│   └── SampleStatsDTO.ts
 └── services/
-    ├── RepositoryService.ts        # Regular services return DTOs
-    └── IssueService.ts
+    ├── ExampleService.ts           # Regular services return DTOs
+    └── SampleService.ts
 ```
 
 ```typescript
 // Example: Regular services return strongly-typed DTOs
-export class RepositoryService {
-  constructor(private readonly apiClient: IApiClient) {}
+export class ExampleService {
+  constructor(private readonly apiClient: IExampleApiClient) {}
   
-  async collectRepositoryData(owner: string, repo: string): Promise<RepositoryDataDTO> {
-    const response = await this.apiClient.getRepository(owner, repo)
-    return new RepositoryDataDTO(response.name, response.owner.login, ...)
+  async collectSampleData(owner: string, repo: string): Promise<ExampleDataDTO> {
+    const response = await this.apiClient.getSampleData(owner, repo)
+    return new ExampleDataDTO(response.name, response.owner.login, ...)
   }
 }
 ```
@@ -144,9 +126,9 @@ export class RepositoryService {
 Use `addDataBulk()` with DTO's `toLLMData()` method:
 
 ```typescript
-const repoData = await service.collectRepositoryData(owner, repo)
+const sampleData = await service.collectSampleData(owner, repo)
 const result = LLMInfo.create()
-  .addDataBulk(repoData.toLLMData())  // Converts DTO to key-value pairs
+  .addDataBulk(sampleData.toLLMData())  // Converts DTO to key-value pairs
   .addAction('Data collected', 'success')
 ```
 
@@ -159,7 +141,7 @@ Direct `addData()` calls should use generic DataKeys or be minimal:
 result.addData(DataKeys.STATUS, 'complete')
 
 // Individual keys (validated as UPPER_SNAKE_CASE)
-result.addData('PROJECT_COUNT', '5')
+result.addData('EXAMPLE_COUNT', '5')
 ```
 
 
@@ -167,31 +149,31 @@ result.addData('PROJECT_COUNT', '5')
 
 ### ESLint Compliance for External APIs
 
-#### GitHub API Snake_Case Properties
+#### External API Snake_Case Properties
 
-When working with external APIs (like GitHub) that use `snake_case` properties, use the "GitHubData" naming convention to manage ESLint camelcase violations:
+When working with external APIs that use `snake_case` properties, use descriptive naming conventions to manage ESLint camelcase violations:
 
 ```typescript
-// ✅ CORRECT - Use "GitHubData" suffix and eslint-disable comments
-describe('fromGitHubApiResponse', () => {
-  it('should handle GitHub API response', () => {
+// ✅ CORRECT - Use "ApiData" suffix and eslint-disable comments
+describe('fromExternalApiResponse', () => {
+  it('should handle external API response', () => {
     /* eslint-disable camelcase */
-    const apiResponseGitHubData = {
-      full_name: 'owner/repo',
+    const apiResponseExternalData = {
+      full_name: 'owner/sample',
       created_at: '2025-01-01T00:00:00Z',
       updated_at: '2025-01-01T12:00:00Z',
       default_branch: 'main'
     }
     /* eslint-enable camelcase */
 
-    const dto = MyDTO.fromGitHubApiResponse(apiResponseGitHubData)
-    expect(dto.name).toBe('repo')
+    const dto = ExampleDTO.fromExternalApiResponse(apiResponseExternalData)
+    expect(dto.name).toBe('sample')
   })
 })
 ```
 
 **Key Rules:**
-1. **Naming Convention**: Use `*GitHubData` suffix for variables containing GitHub API responses
+1. **Naming Convention**: Use `*ApiData` suffix for variables containing external API responses
 2. **Scoped Disable**: Use `/* eslint-disable camelcase */` around the object definition only
 3. **Re-enable**: Always follow with `/* eslint-enable camelcase */`
 4. **Minimal Scope**: Keep the disable/enable as close to the violating code as possible
@@ -209,7 +191,7 @@ DTO factory methods often become complex due to extensive data transformation. U
 #### Problem: Complex Factory Method
 ```typescript
 // ❌ BAD - Complexity > 20
-static fromGitHubApiResponse(apiResponse: GitHubResponse): PullRequestDataDTO {
+static fromExternalApiResponse(apiResponse: ExternalApiResponse): ExampleDataDTO {
   return new PullRequestDataDTO(
     String(apiResponse.id || 0),
     apiResponse.number || 0,
@@ -247,14 +229,14 @@ static fromGitHubApiResponse(apiResponse: GitHubResponse): PullRequestDataDTO {
 #### Solution: Data Extraction Pattern
 ```typescript
 // ✅ GOOD - Complexity ≤20, clear separation of concerns
-static fromGitHubApiResponse(apiResponse: GitHubResponse): PullRequestDataDTO {
+static fromExternalApiResponse(apiResponse: ExternalApiResponse): ExampleDataDTO {
   this.validateApiResponse(apiResponse)
   
   const basicData = this.extractApiBasicData(apiResponse)
   const relationships = this.extractApiRelationships(apiResponse)
   const dates = this.extractApiDates(apiResponse)
   
-  return new PullRequestDataDTO(
+  return new ExampleDataDTO(
     basicData.id, basicData.number, basicData.title, basicData.body,
     basicData.state, basicData.draft, basicData.locked, basicData.merged,
     basicData.mergeable, relationships.assignees, relationships.requestedReviewers,
@@ -268,7 +250,7 @@ static fromGitHubApiResponse(apiResponse: GitHubResponse): PullRequestDataDTO {
 }
 
 // Extract grouped data with clear return types
-private static extractApiBasicData(apiResponse: GitHubResponse): {
+private static extractApiBasicData(apiResponse: ExternalApiResponse): {
   id: string
   number: number
   title: string
@@ -310,7 +292,7 @@ private static extractApiBasicData(apiResponse: GitHubResponse): {
   }
 }
 
-private static extractApiRelationships(apiResponse: GitHubResponse): {
+private static extractApiRelationships(apiResponse: ExternalApiResponse): {
   assignees: string[]
   requestedReviewers: string[]
   labels: string[]
@@ -330,7 +312,7 @@ private static extractApiRelationships(apiResponse: GitHubResponse): {
   }
 }
 
-private static extractApiDates(apiResponse: GitHubResponse): {
+private static extractApiDates(apiResponse: ExternalApiResponse): {
   createdAt: Date
   updatedAt: Date
   closedAt: Date | null
@@ -375,24 +357,24 @@ For ESLint configuration and additional rules, see the **DTO Quality Patterns** 
 1. **Identify Magic Strings**
    ```typescript
    // Before
-   result.addData('REPOSITORY_NAME', repo.name)
+   result.addData('EXAMPLE_NAME', sample.name)
    
    // After  
-   const repoData = new RepositoryDataDTO(...)
-   result.addDataBulk(repoData.toLLMData())
+   const exampleData = new ExampleDataDTO(...)
+   result.addDataBulk(exampleData.toLLMData())
    ```
 
 2. **Create DTOs for Data Structures**
    ```typescript
    // Before
    return {
-     name: repo.name,
-     owner: repo.owner.login,
-     description: repo.description
+     name: sample.name,
+     owner: sample.owner.login,
+     description: sample.description
    }
    
    // After
-   return RepositoryDataDTO.fromGitHubResponse(repo)
+   return ExampleDataDTO.fromApiResponse(sample)
    ```
 
 3. **Update Service Interfaces**
@@ -401,7 +383,7 @@ For ESLint configuration and additional rules, see the **DTO Quality Patterns** 
    collectData(owner: string, repo: string): Promise<any>
    
    // After
-   collectRepositoryData(owner: string, repo: string): Promise<RepositoryDataDTO>
+   collectSampleData(owner: string, repo: string): Promise<ExampleDataDTO>
    ```
 
 ## Benefits
@@ -418,8 +400,8 @@ For ESLint configuration and additional rules, see the **DTO Quality Patterns** 
 DTOs will be implemented following the patterns described in this document within domain-specific folders:
 
 <!-- TODO: Add references to real DTO implementations once they exist:
-- orchestrator-services/github/dto/RepositoryDataDTO.ts - Basic DTO structure
-- orchestrator-services/github/services/RepositoryService.ts - Service returning DTOs
+- orchestrator-services/example-domain/dto/ExampleDataDTO.ts - Basic DTO structure
+- orchestrator-services/example-domain/services/ExampleService.ts - Service returning DTOs
 -->
 
 For complete folder structure, orchestrator and orchestrator service examples, see [CLAUDE.md](../CLAUDE.md).

@@ -17,30 +17,20 @@ import { safeArrayAccess } from './utils/TypeGuards'
  * Activity Analysis Orchestrator Service
  * 
  * This orchestrator service coordinates comprehensive activity analysis
- * across multiple repositories. It handles time window parsing, activity
- * data collection, cross-repository aggregation, and summary generation.
+ * across multiple repositories. It handles activity data collection, 
+ * cross-repository aggregation, and summary generation.
  * 
- * Expected input format:
- * - "repositories:repo1,repo2,repo3|owner:orgname|timeWindow:30"
- * - All parameters are required for analysis
- * 
- * @param args - Formatted string with repositories, owner, and time window
+ * @param args - Typed arguments with repositories, owner, and time window
  * @param services - Activity analysis services (repository, activity, auth)
  * @returns LLMInfo with comprehensive activity analysis and insights
  */
 export const activityAnalysisOrchServ = async (
-  args: string,
+  args: IActivityAnalysisArgs,
   services: TActivityAnalysisServices
-): Promise<LLMInfo> => {
-  // Parse string arguments into typed structure
-  const parsedArgs = parseActivityAnalysisArgs(args)
-  
-  // Delegate to typed implementation
-  return activityAnalysisOrchServImpl(parsedArgs, services)
-}
+): Promise<LLMInfo> => activityAnalysisOrchServImpl(args, services)
 
 /**
- * Internal implementation with typed arguments
+ * Implementation of activity analysis orchestrator service
  */
 async function activityAnalysisOrchServImpl(
   args: IActivityAnalysisArgs,
@@ -149,108 +139,6 @@ async function activityAnalysisOrchServImpl(
   }
 }
 
-/**
- * Parse activity analysis arguments
- */
-function parseActivityAnalysisArgs(args: string): IActivityAnalysisArgs {
-  // If args is JSON, parse it
-  if (args.startsWith('{')) {
-    try {
-      const parsed = JSON.parse(args)
-      return {
-        owner: parsed.owner,
-        repositories: parsed.repositories,
-        timeWindowDays: parsed.timeWindowDays || 30
-      }
-    } catch {
-      // Fall through to legacy parsing
-    }
-  }
-  
-  // Legacy pipe-delimited parsing for backward compatibility
-  const parts = args.split('|')
-  const params = new Map<string, string>()
-  
-  for (const part of parts) {
-    const colonIndex = part.indexOf(':')
-    if (colonIndex > 0) {
-      const key = part.slice(0, Math.max(0, colonIndex))
-      const value = part.slice(Math.max(0, colonIndex + 1))
-      params.set(key, value)
-    }
-  }
-  
-  // Validate required parameters
-  if (!params.get('repositories')) {
-    throw new OrchestratorError(
-      new Error('Repositories parameter is required'),
-      [
-        'Include repositories in format: repositories:repo1,repo2,repo3',
-        'Provide at least one repository for analysis',
-        'Use comma-separated list for multiple repositories'
-      ],
-      { args }
-    )
-  }
-  
-  if (!params.get('owner')) {
-    throw new OrchestratorError(
-      new Error('Owner parameter is required'),
-      [
-        'Include owner in format: owner:orgname',
-        'Provide the GitHub username or organization name',
-        'Ensure the owner has access to the specified repositories'
-      ],
-      { args }
-    )
-  }
-  
-  if (!params.get('timeWindow')) {
-    throw new OrchestratorError(
-      new Error('Time window parameter is required'),
-      [
-        'Include time window in format: timeWindow:30',
-        'Specify the number of days for analysis (1-365)',
-        'Common values: 7 (week), 30 (month), 90 (quarter)'
-      ],
-      { args }
-    )
-  }
-  
-  // Parse and validate values
-  const repositories = (params.get('repositories') || '').split(',').map(repo => repo.trim()).filter(Boolean)
-  const timeWindowDays = Number.parseInt(params.get('timeWindow') || '0', 10)
-  
-  if (repositories.length === 0) {
-    throw new OrchestratorError(
-      new Error('At least one repository is required'),
-      [
-        'Provide valid repository names',
-        'Use format: repositories:repo1,repo2,repo3',
-        'Remove empty entries from repository list'
-      ],
-      { repositories: params.get('repositories') || '' }
-    )
-  }
-  
-  if (Number.isNaN(timeWindowDays) || timeWindowDays < 1 || timeWindowDays > 365) {
-    throw new OrchestratorError(
-      new Error('Time window must be between 1 and 365 days'),
-      [
-        'Use a numeric value for time window',
-        'Choose a reasonable analysis period (7-90 days recommended)',
-        'Consider API rate limits for longer time windows'
-      ],
-      { timeWindow: params.get('timeWindow') || '' }
-    )
-  }
-  
-  return {
-    owner: params.get('owner') || '',
-    repositories,
-    timeWindowDays
-  }
-}
 
 /**
  * Generate activity insights based on analysis results
