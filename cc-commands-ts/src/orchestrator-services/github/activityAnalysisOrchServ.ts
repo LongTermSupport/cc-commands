@@ -6,10 +6,10 @@
  */
 
 import { OrchestratorError } from '../../core/error/OrchestratorError'
-import { IOrchestratorService , TOrchestratorServiceMap } from '../../core/interfaces/IOrchestratorService'
 import { LLMInfo } from '../../core/LLMInfo'
 import { ActivityMetricsDTO } from './dto/ActivityMetricsDTO'
 import { ProjectSummaryDTO } from './dto/ProjectSummaryDTO'
+import { IActivityAnalysisArgs } from './types/ArgumentTypes'
 import { TActivityAnalysisServices } from './types/ServiceTypes'
 
 /**
@@ -27,40 +27,52 @@ import { TActivityAnalysisServices } from './types/ServiceTypes'
  * @param services - Activity analysis services (repository, activity, auth)
  * @returns LLMInfo with comprehensive activity analysis and insights
  */
-export const activityAnalysisOrchServ: IOrchestratorService = async (
+export const activityAnalysisOrchServ = async (
   args: string,
-  services: TOrchestratorServiceMap
+  services: TActivityAnalysisServices
 ): Promise<LLMInfo> => {
-  const typedServices = services as unknown as TActivityAnalysisServices
+  // Parse string arguments into typed structure
+  const parsedArgs = parseActivityAnalysisArgs(args)
+  
+  // Delegate to typed implementation
+  return activityAnalysisOrchServImpl(parsedArgs, services)
+}
+
+/**
+ * Internal implementation with typed arguments
+ */
+async function activityAnalysisOrchServImpl(
+  args: IActivityAnalysisArgs,
+  services: TActivityAnalysisServices
+): Promise<LLMInfo> {
   const result = LLMInfo.create()
   
   try {
-    // Parse and validate input arguments
-    const parsedArgs = parseActivityAnalysisArgs(args)
-    result.addData('ANALYSIS_OWNER', parsedArgs.owner)
-    result.addData('ANALYSIS_TIME_WINDOW_DAYS', String(parsedArgs.timeWindowDays))
-    result.addData('ANALYSIS_REPOSITORIES_COUNT', String(parsedArgs.repositories.length))
-    result.addData('ANALYSIS_REPOSITORIES_LIST', parsedArgs.repositories.join(', '))
+    // Use typed arguments directly
+    result.addData('ANALYSIS_OWNER', args.owner)
+    result.addData('ANALYSIS_TIME_WINDOW_DAYS', String(args.timeWindowDays))
+    result.addData('ANALYSIS_REPOSITORIES_COUNT', String(args.repositories.length))
+    result.addData('ANALYSIS_REPOSITORIES_LIST', args.repositories.join(', '))
     
     // Calculate analysis date range
     const endDate = new Date()
-    const startDate = new Date(endDate.getTime() - (parsedArgs.timeWindowDays * 24 * 60 * 60 * 1000))
+    const startDate = new Date(endDate.getTime() - (args.timeWindowDays * 24 * 60 * 60 * 1000))
     result.addData('ANALYSIS_START_DATE', startDate.toISOString())
     result.addData('ANALYSIS_END_DATE', endDate.toISOString())
     
     // Validate authentication
     result.addAction('Validate authentication for activity analysis', 'success')
-    const token = await typedServices.authService.getGitHubToken()
-    const authenticatedUser = await typedServices.authService.getAuthenticatedUser(token)
+    const token = await services.authService.getGitHubToken()
+    const authenticatedUser = await services.authService.getAuthenticatedUser(token)
     result.addAction('Validate authentication for activity analysis', 'success', `Authenticated as ${authenticatedUser}`)
     result.addData('AUTHENTICATED_USER', authenticatedUser)
     
     // Collect activity data from all repositories
     result.addAction('Aggregate activity across repositories', 'success')
     
-    const aggregatedActivity = await typedServices.activityService.aggregateActivityAcrossRepos(
-      parsedArgs.repositories,
-      parsedArgs.owner,
+    const aggregatedActivity = await services.activityService.aggregateActivityAcrossRepos(
+      args.repositories,
+      args.owner,
       startDate
     )
     
@@ -73,7 +85,7 @@ export const activityAnalysisOrchServ: IOrchestratorService = async (
     // Calculate activity summary
     result.addAction('Calculate activity summary', 'success')
     
-    const activitySummary = await typedServices.activityService.calculateActivitySummary([aggregatedActivity])
+    const activitySummary = await services.activityService.calculateActivitySummary([aggregatedActivity])
     
     result.addAction('Calculate activity summary', 'success', 
       `Generated summary with health score: ${activitySummary.healthScore}`)
@@ -87,7 +99,7 @@ export const activityAnalysisOrchServ: IOrchestratorService = async (
     // Identify most active repositories
     result.addAction('Identify most active repositories', 'success')
     
-    const mostActiveRepos = await typedServices.activityService.identifyMostActiveRepositories([aggregatedActivity])
+    const mostActiveRepos = await services.activityService.identifyMostActiveRepositories([aggregatedActivity])
     
     result.addAction('Identify most active repositories', 'success', 
       `Ranked ${mostActiveRepos.length} repositories by activity`)
@@ -123,7 +135,12 @@ export const activityAnalysisOrchServ: IOrchestratorService = async (
           'Ensure you have read access to all specified repositories',
           'Consider reducing the number of repositories if rate limits are hit'
         ],
-        { args, error: error instanceof Error ? error.message : String(error) }
+        { 
+          error: error instanceof Error ? error.message : String(error),
+          owner: args.owner,
+          repositories: args.repositories,
+          timeWindowDays: args.timeWindowDays 
+        }
       ))
     }
     
@@ -134,11 +151,7 @@ export const activityAnalysisOrchServ: IOrchestratorService = async (
 /**
  * Parse activity analysis arguments
  */
-function parseActivityAnalysisArgs(args: string): {
-  owner: string
-  repositories: string[]
-  timeWindowDays: number
-} {
+function parseActivityAnalysisArgs(args: string): IActivityAnalysisArgs {
   const parts = args.split('|')
   const params: Record<string, string> = {}
   

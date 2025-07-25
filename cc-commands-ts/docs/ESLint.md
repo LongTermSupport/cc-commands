@@ -300,6 +300,71 @@ This means:
 - Regular classes still have a max of 4 parameters
 - No manual ESLint disable comments needed in DTO files
 
+## Custom Rules
+
+### strict-orchestrator-service-typing
+
+This custom rule enforces strict service typing for orchestrators and orchestrator services, preventing the use of the generic `TOrchestratorServiceMap` type.
+
+**❌ Problem:**
+```typescript
+// Using generic TOrchestratorServiceMap - violates architectural principles
+export const myOrch = async (args: string, services: TOrchestratorServiceMap) => {
+  // Loses type safety for services
+}
+
+export const myOrchServ = async (args: string, services: TOrchestratorServiceMap) => {
+  // No compile-time checking of service dependencies
+}
+
+// Type aliases extending TOrchestratorServiceMap
+type TMyServices = TOrchestratorServiceMap & {
+  myService: IMyService
+}
+```
+
+**✅ Solution:**
+```typescript
+// Define specific service types for each orchestrator
+type TMyOrchServices = {
+  projectService: IProjectService
+  authService: IAuthService
+  // Only the services this orchestrator actually needs
+}
+
+export const myOrch = async (args: string, services: TMyOrchServices) => {
+  // Full type safety and intellisense for services
+}
+
+// For orchestrator services
+type TMyOrchServServices = {
+  dataService: IDataService
+  apiService: IApiService
+}
+
+export const myOrchServ = async (args: string, services: TMyOrchServServices) => {
+  // Clear dependencies and type checking
+}
+
+// Service types should be defined directly, not extended
+type TMyServices = {
+  projectService: IProjectService
+  authService: IAuthService
+  [key: string]: IOrchestratorService // If dynamic access needed
+}
+```
+
+**Why This Rule Exists:**
+1. **Type Safety**: Ensures compile-time checking of service dependencies
+2. **Clear Dependencies**: Makes it obvious which services each orchestrator requires
+3. **Maintainability**: Prevents accidental usage of undefined services
+4. **Architecture Enforcement**: Enforces the principle of explicit dependencies
+
+**Rule Detection:**
+- Functions/constants ending with `Orch` or `OrchServ`
+- Functions/constants typed as `IOrchestrator` or `IOrchestratorService`
+- Type aliases that extend `TOrchestratorServiceMap`
+
 ## Rule-Specific Guidelines
 
 ### Complexity Rule
@@ -326,6 +391,71 @@ This means:
 - **Only use sequential processing** when operations have dependencies or constraints require it
 - **Always document** when sequential processing is intentionally required
 - **Consider memory implications** when processing large datasets in parallel
+
+## Custom Rules
+
+### no-direct-abstract-types
+
+**Purpose:** Prevents direct use of abstract types as function parameters or return types. Abstract types are meant to be extended, not used directly.
+
+**❌ Problem:**
+```typescript
+// Using abstract type directly
+export const myOrch: IOrchestrator = async (
+  args: string,
+  services: TOrchestratorServiceMap // ESLint error! Abstract type used directly
+) => {
+  // No type safety for services
+}
+
+// Another example with future abstract type
+function processConfig(config: TAbstractBaseConfig) { // ESLint error!
+  // Abstract types should not be used directly
+}
+```
+
+**✅ Solution:**
+```typescript
+// Extend abstract type to create concrete type
+export type TMyOrchServices = TOrchestratorServiceMap & {
+  dataCollector: IDataCollectorService
+  projectService: IProjectService
+}
+
+export const myOrch: IOrchestrator = async (
+  args: string,
+  services: TMyOrchServices // Concrete type that extends abstract
+) => {
+  // Full type safety and autocomplete
+}
+
+// Another example
+export type TMyConfig = TAbstractBaseConfig & {
+  apiKey: string
+  timeout: number
+}
+
+function processConfig(config: TMyConfig) { // Concrete type
+  // Proper type safety
+}
+```
+
+**Abstract Types Convention:**
+- Abstract types should be prefixed with `TAbstract` for clarity
+- Currently tracked abstract types:
+  - `TOrchestratorServiceMap` (should be renamed to `TAbstractOrchestratorServiceMap`)
+  - Future abstract types should follow the `TAbstract` prefix convention
+
+**Why This Rule Exists:**
+1. **Type Safety**: Abstract types provide no compile-time guarantees about their contents
+2. **Clear Dependencies**: Concrete types explicitly declare what's required
+3. **IDE Support**: Abstract types provide no autocomplete or IntelliSense
+4. **Architecture Enforcement**: Enforces proper type composition and dependency injection
+
+**Rule Detection:**
+- Checks function parameters and return types for direct use of abstract types
+- Maintains a list of known abstract types
+- Does NOT prevent extending abstract types in type definitions
 
 ## Updating This Document
 

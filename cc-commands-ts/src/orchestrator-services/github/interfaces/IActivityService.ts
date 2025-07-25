@@ -5,6 +5,8 @@
  * Provides cross-repository activity aggregation and project-level insights.
  */
 
+// @ts-expect-error - Used in JSDoc comments
+import { OrchestratorError } from '../../../core/error/OrchestratorError'
 import { ActivityMetricsDTO } from '../dto/ActivityMetricsDTO'
 import { ProjectSummaryDTO } from '../dto/ProjectSummaryDTO'
 

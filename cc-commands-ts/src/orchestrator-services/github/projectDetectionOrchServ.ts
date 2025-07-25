@@ -6,7 +6,6 @@
  */
 
 import { OrchestratorError } from '../../core/error/OrchestratorError'
-import { IOrchestratorService , TOrchestratorServiceMap } from '../../core/interfaces/IOrchestratorService'
 import { LLMInfo } from '../../core/LLMInfo'
 import { TProjectDetectionServices } from './types/ServiceTypes'
 
@@ -26,11 +25,10 @@ import { TProjectDetectionServices } from './types/ServiceTypes'
  * @param services - Project detection services (auth, graphql, project)
  * @returns LLMInfo with project metadata and discovery results
  */
-export const projectDetectionOrchServ: IOrchestratorService = async (
+export const projectDetectionOrchServ = async (
   args: string,
-  services: TOrchestratorServiceMap
+  services: TProjectDetectionServices
 ): Promise<LLMInfo> => {
-  const typedServices = services as unknown as TProjectDetectionServices
   const result = LLMInfo.create()
   
   try {
@@ -41,8 +39,8 @@ export const projectDetectionOrchServ: IOrchestratorService = async (
     
     // Validate GitHub authentication
     result.addAction('Validate GitHub authentication', 'success')
-    const token = await typedServices.authService.getGitHubToken()
-    const isValidToken = await typedServices.authService.validateToken(token)
+    const token = await services.authService.getGitHubToken()
+    const isValidToken = await services.authService.validateToken(token)
     
     if (!isValidToken) {
       result.addAction('Validate GitHub authentication', 'failed', 'Invalid or expired token')
@@ -57,24 +55,24 @@ export const projectDetectionOrchServ: IOrchestratorService = async (
       )
     }
     
-    const authenticatedUser = await typedServices.authService.getAuthenticatedUser(token)
+    const authenticatedUser = await services.authService.getAuthenticatedUser(token)
     result.addAction('Validate GitHub authentication', 'success', `Authenticated as ${authenticatedUser}`)
     result.addData('AUTHENTICATED_USER', authenticatedUser)
     
     // Execute project detection based on mode
     switch (parsedArgs.mode) {
       case 'auto': {
-        await detectProjectFromGitRemote(typedServices, result)
+        await detectProjectFromGitRemote(services, result)
         break
       }
         
       case 'owner': {
-        await detectProjectFromOwner(parsedArgs.input, typedServices, result)
+        await detectProjectFromOwner(parsedArgs.input, services, result)
         break
       }
         
       case 'url': {
-        await detectProjectFromUrl(parsedArgs.input, typedServices, result)
+        await detectProjectFromUrl(parsedArgs.input, services, result)
         break
       }
         

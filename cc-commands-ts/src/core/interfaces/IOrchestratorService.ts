@@ -35,6 +35,7 @@ export type IOrchestrator = (
  * 
  * Generic service map that allows dynamic access to orchestrator services.
  * Each service implements IOrchestratorService and returns LLMInfo.
+ * MUST be extended, never used directly
  */
 export type TOrchestratorServiceMap = {
   [serviceName: string]: IOrchestratorService

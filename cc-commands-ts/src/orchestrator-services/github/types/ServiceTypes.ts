@@ -5,7 +5,6 @@
  * Provides strictly typed service collections for orchestrators.
  */
 
-import { TOrchestratorServiceMap } from '../../../core/interfaces/IOrchestratorService'
 import { IActivityService } from '../interfaces/IActivityService'
 import { IAuthService } from '../interfaces/IAuthService'
 import { IGitHubGraphQLService } from '../interfaces/IGitHubGraphQLService'
@@ -25,7 +24,7 @@ import { IRepositoryService } from '../interfaces/IRepositoryService'
  * - Domain Layer: projectService, repositoryService, activityService
  * - Infrastructure Layer: authService
  */
-export type TGitHubServices = TOrchestratorServiceMap & {
+export type TGitHubServices = {
   /** Cross-repository activity analysis service */
   activityService: IActivityService
   
@@ -60,7 +59,7 @@ export type TProjectSummaryServices = TGitHubServices
  * Subset of services needed for project detection and validation.
  * Used by orchestrator services that focus on project discovery.
  */
-export type TProjectDetectionServices = TOrchestratorServiceMap & {
+export type TProjectDetectionServices = {
   /** GitHub authentication management service */
   authService: IAuthService
   
@@ -77,7 +76,7 @@ export type TProjectDetectionServices = TOrchestratorServiceMap & {
  * Subset of services needed for repository data analysis.
  * Used by orchestrator services that focus on repository metrics.
  */
-export type TRepositoryDataServices = TOrchestratorServiceMap & {
+export type TRepositoryDataServices = {
   /** GitHub authentication management service */
   authService: IAuthService
   
@@ -94,7 +93,7 @@ export type TRepositoryDataServices = TOrchestratorServiceMap & {
  * Subset of services needed for cross-repository activity analysis.
  * Used by orchestrator services that focus on activity metrics and reporting.
  */
-export type TActivityAnalysisServices = TOrchestratorServiceMap & {
+export type TActivityAnalysisServices = {
   /** Cross-repository activity analysis service */
   activityService: IActivityService
   

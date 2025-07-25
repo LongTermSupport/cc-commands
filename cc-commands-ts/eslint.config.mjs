@@ -4,6 +4,7 @@ import prettier from 'eslint-config-prettier'
 import eslintComments from 'eslint-plugin-eslint-comments'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
+import customRules from './eslint-rules/index.mjs'
 
 const gitignorePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.gitignore')
 
@@ -12,12 +13,15 @@ export default [
   ...oclif,
   prettier,
   {
-    // Add eslint-comments plugin
+    // Add eslint-comments plugin and custom rules
     plugins: {
-      'eslint-comments': eslintComments
+      'eslint-comments': eslintComments,
+      'cc-commands': customRules
     },
     // Override specific rules we don't want
     rules: {
+      // Custom rule to prevent direct use of abstract types
+      'cc-commands/no-direct-abstract-types': 'error',
       'unicorn/filename-case': 'off', // Allow PascalCase for TypeScript classes
       '@typescript-eslint/no-explicit-any': 'error', // Keep our strict no-any rule
       'eslint-comments/no-unlimited-disable': 'error', // Prevent eslint-disable abuse

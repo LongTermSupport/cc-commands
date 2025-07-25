@@ -23,6 +23,30 @@ LLM -> other execution steps as required
 
 You are a top tier typescript developer with a passion for best practice, strong types, test driven development, clear API, strong and clear organisation.
 
+## CRITICAL: File Editing Policy
+
+**ALL FILE EDITS MUST BE DONE MANUALLY - NO BULK UPDATE SCRIPTS**
+
+- **NO automated bulk update scripts** - they consistently cause syntax errors and file corruption
+- **NO scripts that modify multiple files** - each file must be edited individually with care
+- **Manual editing only** - use Edit/MultiEdit tools directly on each file
+- **Test after each change** - verify each file works before moving to the next
+- **One file at a time** - never batch file modifications
+
+**Why this rule exists:**
+- Bulk update scripts have repeatedly caused function definitions to be mangled
+- Complex regex replacements often miss edge cases and create syntax errors  
+- Manual editing allows for verification and context-aware changes
+- Individual file edits can be tested immediately
+
+**Approved methods:**
+- ✅ Edit tool for single changes
+- ✅ MultiEdit tool for multiple changes in ONE file
+- ✅ Manual review and testing of each change
+- ❌ Scripts that modify multiple files automatically
+- ❌ Bulk find-and-replace operations across files
+- ❌ Automated refactoring scripts
+
 We have this basic topography:
 
 ## Command
@@ -45,6 +69,9 @@ LLMInfo has a toString method which should be called and sent to stdout.
 LLMInfo has a getExitCode method which should be called and then the command should exit with that code.
 
 ### Orchestrator
+
+**⚠️ CRITICAL RULE: Every orchestrator MUST define its own strictly typed service parameter. NEVER use the generic TOrchestratorServiceMap type. See the "🚨 CRITICAL: Orchestrator Service Typing Rules" section below for details.**
+
 Akin to a controller in MVC. Has dependencies that do work, hinted by interfaces as much as possible. No functionality beyond returning LLMInfo.
 
 Should be very thin, only tested with integration tests (some mocking allowed for third party APIs), real functionality should be handled by services
@@ -55,7 +82,7 @@ Orchestrator is an exported async function implementing the IOrchestrator interf
 // Orchestrator service function type - coordinates regular services
 export type IOrchestratorService = (
   args: string,
-  services: TOrchestratorServiceMap
+  services: any  // Each orchestrator service defines its own specific service requirements
 ) => Promise<LLMInfo>
 
 // Regular services return DTOs (used by orchestrator services)
@@ -64,7 +91,8 @@ export interface IDataCollectorService {
   collectReleaseData(owner: string, repo: string): Promise<ReleaseDataDTO | null>
 }
 
-// Collection of orchestrator services, each implementing IOrchestratorService
+// Generic service map type - NEVER use this directly in orchestrators!
+// This exists only for internal framework use
 export type TOrchestratorServiceMap = {
   [serviceName: string]: IOrchestratorService;
 }
@@ -72,21 +100,22 @@ export type TOrchestratorServiceMap = {
 // The orchestrator function type: must be a function returning a Promise<LLMInfo>
 export type IOrchestrator = (
   commandArgs: string, // this is the $ARGUMENTS string that the LLM passes to the command, which then passes it down to the orchestrator for parsing
-  services: TOrchestratorServiceMap, 
+  services: any,  // MUST be a specific type defined by each orchestrator, NEVER TOrchestratorServiceMap
 ) => Promise<LLMInfo>;
 ```
 
 The Orchestrator in the form of a function in the functional dependency injection pattern.
 
 ```typescript
-// Strictly typed project summary services
+// ✅ CORRECT: Strictly typed project summary services
+// Each orchestrator defines exactly which services it needs
 export type TProjectSummaryServices = {
   dataCollector: IDataCollectorService;
   dataFileService?: IDataFileService;
   envValidator: IEnvValidatorService;
   projectDetector: IProjectDetectorService;
   projectDiscovery?: IProjectDiscoveryService;
-} & TOrchestratorServiceMap;
+}  // NOTE: No inheritance from TOrchestratorServiceMap!
 
 // Example service interfaces (illustrative only)
 export interface IDataCollectorService extends IOrchestratorService {
@@ -105,12 +134,14 @@ export interface IProjectDiscoveryService extends IOrchestratorService {
   // methods
 }
 
-// Usage in orchestrator:
+// ✅ CORRECT: Usage in orchestrator with specific type
 export const executeProjectSummary: IOrchestrator = async(
   commandArgs: string,
-  services: TProjectSummaryServices,  // Injected
+  services: TProjectSummaryServices,  // Specific type, NOT TOrchestratorServiceMap
 ): Promise<LLMInfo> => {
-  // Pure orchestration logic
+  // Now you have full type safety and IDE support
+  const repoData = await services.dataCollector.collectRepositoryData(owner, repo)
+  // TypeScript knows exactly which services are available
 }
 ```
 
@@ -349,7 +380,113 @@ examples of orchestrator services:
 
 - **Interfaces:** Prefix with `I` (e.g., `IOrchestratorService`, `IDataCollectorService`).
 - **Types:** Prefix with `T` (e.g., `TProjectSummaryServices`, `TOrchestratorServiceMap`).
-- This convention makes it clear at a glance whether a symbol is an interface or a type alias, improving code readability and maintainability.
+- **Abstract Types:** Prefix with `TAbstract` (e.g., `TAbstractServiceMap`, `TAbstractBaseConfig`).
+  - Abstract types are meant to be extended, never used directly as parameter or return types
+  - Currently: `TOrchestratorServiceMap` is an abstract type (should be renamed to `TAbstractOrchestratorServiceMap`)
+- This convention makes it clear at a glance whether a symbol is an interface, type alias, or abstract type, improving code readability and maintainability.
+
+#### Abstract Types Pattern
+
+Abstract types are type aliases that define a base structure meant to be extended by concrete types. They should NEVER be used directly as function parameters or return types.
+
+```typescript
+// Define abstract type (consider renaming existing TOrchestratorServiceMap)
+export type TAbstractServiceMap = {
+  [serviceName: string]: IOrchestratorService
+}
+
+// ✅ CORRECT - Extend abstract type
+export type TMyServices = TAbstractServiceMap & {
+  specificService: ISpecificService
+}
+
+// ❌ WRONG - Use abstract type directly
+function myFunc(services: TAbstractServiceMap) { } // ESLint error!
+
+// ✅ CORRECT - Use concrete type
+function myFunc(services: TMyServices) { }
+```
+
+## 🚨 CRITICAL: Orchestrator Service Typing Rules
+
+**FUNDAMENTAL ARCHITECTURE PRINCIPLE: Every orchestrator MUST define its own strictly typed service interface.**
+
+### ❌ NEVER DO THIS - GENERIC TYPING IS FORBIDDEN
+
+```typescript
+// ❌ WRONG - Using generic TOrchestratorServiceMap
+export const myOrchestrator: IOrchestrator = async (
+  commandArgs: string,
+  services: TOrchestratorServiceMap  // ❌ NEVER USE THIS GENERIC TYPE
+): Promise<LLMInfo> => {
+  // This violates core architecture principles
+}
+```
+
+### ✅ ALWAYS DO THIS - SPECIFIC TYPED SERVICES
+
+```typescript
+// ✅ CORRECT - Define specific service types for each orchestrator
+export type TMyOrchestratorServices = {
+  dataCollector: IDataCollectorService;
+  envValidator: IEnvValidatorService;
+  projectDetector: IProjectDetectorService;
+  // Add other required services with their specific interfaces
+}
+
+export const myOrchestrator: IOrchestrator = async (
+  commandArgs: string,
+  services: TMyOrchestratorServices  // ✅ ALWAYS USE SPECIFIC TYPES
+): Promise<LLMInfo> => {
+  // Now you have type safety and IDE support
+}
+```
+
+### Why This Rule Exists
+
+1. **Type Safety**: Generic typing loses all compile-time guarantees about which services are available
+2. **IDE Support**: Specific types enable autocomplete and IntelliSense for service methods
+3. **Self-Documenting**: The service type explicitly declares the orchestrator's dependencies
+4. **Testability**: Mocking and testing require knowing exactly which services are needed
+5. **Maintainability**: Changes to service interfaces are caught at compile time
+
+### Service Type Composition Pattern
+
+When orchestrators need to share common service sets:
+
+```typescript
+// Define reusable service groups
+export type TGitHubServices = {
+  githubApi: IGitHubApiService;
+  githubAuth: IGitHubAuthService;
+}
+
+export type TFileSystemServices = {
+  fileReader: IFileReaderService;
+  fileWriter: IFileWriterService;
+}
+
+// Compose service types for specific orchestrators
+export type TProjectAnalysisServices = TGitHubServices & TFileSystemServices & {
+  projectAnalyzer: IProjectAnalyzerService;
+  codeParser: ICodeParserService;
+}
+
+// Use the composed type
+export const analyzeProject: IOrchestrator = async (
+  commandArgs: string,
+  services: TProjectAnalysisServices  // Strictly typed with all needed services
+): Promise<LLMInfo> => {
+  // Implementation with full type safety
+}
+```
+
+### Enforcement Rules
+
+1. **Code Review**: Any PR with `services: TOrchestratorServiceMap` in an orchestrator MUST be rejected
+2. **Linting**: Consider adding a custom ESLint rule to prevent generic service typing
+3. **Testing**: Tests should verify that orchestrators declare their specific service dependencies
+4. **Documentation**: Every orchestrator must document its service dependencies via its type
 
 # Project Summary Services: Strict Typing and Structure
 

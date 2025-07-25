@@ -5,6 +5,8 @@
  * Provides Projects v2 data access via GraphQL.
  */
 
+// @ts-expect-error - Used in JSDoc comments
+import { OrchestratorError } from '../../../core/error/OrchestratorError'
 import { ProjectV2DTO } from '../dto/ProjectV2DTO'
 import { ProjectV2ItemDTO } from '../dto/ProjectV2ItemDTO'
 

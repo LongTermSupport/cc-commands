@@ -6,10 +6,9 @@
  */
 
 import { OrchestratorError } from '../../core/error/OrchestratorError'
-import { IOrchestratorService , TOrchestratorServiceMap } from '../../core/interfaces/IOrchestratorService'
 import { LLMInfo } from '../../core/LLMInfo'
 import { RepositoryDataDTO } from './dto/RepositoryDataDTO'
-import { TRepositoryDataServices } from './types/ServiceTypes'
+import { TGitHubServices } from './types/ServiceTypes'
 
 /**
  * Project Data Collection Orchestrator Service
@@ -22,14 +21,13 @@ import { TRepositoryDataServices } from './types/ServiceTypes'
  * - Project node ID (e.g., "PVT_kwHOABDmBM4AHJKL")
  * 
  * @param args - Project node ID for data collection
- * @param services - Repository data services (rest API, repository service, auth)
+ * @param services - GitHub services including GraphQL, REST API, and repository services
  * @returns LLMInfo with comprehensive project and repository data
  */
-export const projectDataCollectionOrchServ: IOrchestratorService = async (
+export const projectDataCollectionOrchServ = async (
   args: string,
-  services: TOrchestratorServiceMap
+  services: TGitHubServices
 ): Promise<LLMInfo> => {
-  const typedServices = services as unknown as TRepositoryDataServices
   const result = LLMInfo.create()
   
   try {
@@ -51,17 +49,29 @@ export const projectDataCollectionOrchServ: IOrchestratorService = async (
     
     // Validate authentication
     result.addAction('Validate authentication for data collection', 'success')
-    const token = await typedServices.authService.getGitHubToken()
-    const authenticatedUser = await typedServices.authService.getAuthenticatedUser(token)
+    const token = await services.authService.getGitHubToken()
+    const authenticatedUser = await services.authService.getAuthenticatedUser(token)
     result.addAction('Validate authentication for data collection', 'success', `Authenticated as ${authenticatedUser}`)
     result.addData('AUTHENTICATED_USER', authenticatedUser)
     
-    // Note: Project details and items would be retrieved via GraphQL service
-    // For now, we'll simulate repository discovery from project items
-    result.addAction('Extract repositories from project', 'success')
+    // Get project details via project service
+    const projectData = await services.projectService.getProjectWithItems(projectNodeId)
+    result.addAction('Get project details', 'success', `Project: ${projectData.title}`)
     
-    // Simulate repository extraction (in real implementation, this would parse project items)
-    const repositories = await extractRepositoriesFromProject(projectNodeId, result)
+    // Add project information to result
+    result.addData('PROJECT_TITLE', projectData.title)
+    result.addData('PROJECT_DESCRIPTION', projectData.description || '')
+    result.addData('PROJECT_URL', projectData.url)
+    result.addData('PROJECT_OWNER', projectData.owner)
+    result.addData('PROJECT_OWNER_TYPE', projectData.ownerType)
+    result.addData('PROJECT_CREATED_AT', projectData.createdAt.toISOString())
+    result.addData('PROJECT_UPDATED_AT', projectData.updatedAt.toISOString())
+    result.addData('PROJECT_STATE', projectData.state)
+    result.addData('PROJECT_VISIBILITY', projectData.visibility)
+    result.addData('PROJECT_ITEMS_COUNT', String(projectData.itemCount))
+    
+    // Extract repositories from project items
+    const repositories = await services.projectService.getRepositoriesFromProject(projectNodeId)
     
     if (repositories.length === 0) {
       result.addAction('Extract repositories from project', 'failed', 'No repositories found in project')
@@ -95,14 +105,14 @@ export const projectDataCollectionOrchServ: IOrchestratorService = async (
         // Start collecting repository data
         
         // Validate repository access first
-        const hasAccess = await typedServices.repositoryService.validateRepositoryAccess(owner, repo)
+        const hasAccess = await services.repositoryService.validateRepositoryAccess(owner, repo)
         if (!hasAccess) {
           result.addAction(`Collect repository data: ${repoFullName}`, 'failed', 'Repository not accessible')
           return null
         }
         
         // Collect repository data
-        const repoData = await typedServices.repositoryService.getRepositoryData(owner, repo)
+        const repoData = await services.repositoryService.getRepositoryData(owner, repo)
         
         result.addAction(`Collect repository data: ${repoFullName}`, 'success', `Collected data for ${repoFullName}`)
         
@@ -185,32 +195,3 @@ export const projectDataCollectionOrchServ: IOrchestratorService = async (
   }
 }
 
-/**
- * Extract repository names from project
- * 
- * In a real implementation, this would query the GraphQL service to get
- * project items and extract repository information from issues and PRs.
- * For now, we'll return a simulated list based on common patterns.
- */
-async function extractRepositoriesFromProject(
-  _projectNodeId: string,
-  result: LLMInfo
-): Promise<string[]> {
-  // This is a placeholder implementation
-  // In reality, this would:
-  // 1. Query project items via GraphQL
-  // 2. Extract repository URLs from issues/PRs
-  // 3. Deduplicate and return unique repository names
-  
-  // For simulation, return common repository patterns
-  const simulatedRepositories = [
-    'example-org/frontend',
-    'example-org/backend', 
-    'example-org/docs'
-  ]
-  
-  result.addAction('Simulate repository extraction', 'success', 
-    `Simulated extraction found ${simulatedRepositories.length} repositories`)
-  
-  return simulatedRepositories
-}

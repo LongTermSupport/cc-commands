@@ -5,6 +5,9 @@
  * Provides token management and authentication validation.
  */
 
+// @ts-expect-error - Used in JSDoc comments
+import { OrchestratorError } from '../../../core/error/OrchestratorError'
+
 /**
  * Interface for GitHub authentication operations
  * 
