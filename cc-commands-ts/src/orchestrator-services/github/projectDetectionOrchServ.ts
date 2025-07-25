@@ -10,6 +10,14 @@ import { LLMInfo } from '../../core/LLMInfo'
 import { TProjectDetectionServices } from './types/ServiceTypes'
 
 /**
+ * Typed arguments for project detection orchestrator service
+ */
+export interface IProjectDetectionArgs {
+  input: string
+  mode: 'auto' | 'owner' | 'url'
+}
+
+/**
  * Project Detection Orchestrator Service
  * 
  * This orchestrator service coordinates project detection operations across
@@ -21,21 +29,20 @@ import { TProjectDetectionServices } from './types/ServiceTypes'
  * - Owner/org names: "myorg" (discovers recent projects)
  * - Auto-detection: empty string (uses git remote)
  * 
- * @param args - Input arguments (URL, org/project, or empty for auto-detect)
+ * @param args - Typed arguments with input and detection mode
  * @param services - Project detection services (auth, graphql, project)
  * @returns LLMInfo with project metadata and discovery results
  */
 export const projectDetectionOrchServ = async (
-  args: string,
+  args: IProjectDetectionArgs,
   services: TProjectDetectionServices
 ): Promise<LLMInfo> => {
   const result = LLMInfo.create()
   
   try {
-    // Parse and validate input arguments
-    const parsedArgs = parseProjectDetectionArgs(args.trim())
-    result.addData('DETECTION_MODE', parsedArgs.mode)
-    result.addData('INPUT_ARGS', args || 'auto-detect')
+    // Use typed arguments directly
+    result.addData('DETECTION_MODE', args.mode)
+    result.addData('INPUT_ARGS', args.input || 'auto-detect')
     
     // Validate GitHub authentication
     result.addAction('Validate GitHub authentication', 'success')
@@ -51,7 +58,7 @@ export const projectDetectionOrchServ = async (
           'Verify your GitHub token has appropriate permissions',
           'Check if your token has expired and needs renewal'
         ],
-        { args, mode: parsedArgs.mode }
+        { args: args.input, mode: args.mode }
       )
     }
     
@@ -60,31 +67,31 @@ export const projectDetectionOrchServ = async (
     result.addData('AUTHENTICATED_USER', authenticatedUser)
     
     // Execute project detection based on mode
-    switch (parsedArgs.mode) {
+    switch (args.mode) {
       case 'auto': {
         await detectProjectFromGitRemote(services, result)
         break
       }
         
       case 'owner': {
-        await detectProjectFromOwner(parsedArgs.input, services, result)
+        await detectProjectFromOwner(args.input, services, result)
         break
       }
         
       case 'url': {
-        await detectProjectFromUrl(parsedArgs.input, services, result)
+        await detectProjectFromUrl(args.input, services, result)
         break
       }
         
       default: {
         throw new OrchestratorError(
-          new Error(`Unsupported detection mode: ${parsedArgs.mode}`),
+          new Error(`Unsupported detection mode: ${args.mode}`),
           [
             'Use a GitHub project URL (https://github.com/orgs/ORG/projects/123)',
             'Provide an organization name for project discovery',
             'Run from a git repository for auto-detection'
           ],
-          { input: parsedArgs.input, mode: parsedArgs.mode }
+          { input: args.input, mode: args.mode }
         )
       }
     }
@@ -105,7 +112,7 @@ export const projectDetectionOrchServ = async (
           'Check if the project or organization exists and is accessible',
           'Ensure you have proper permissions to access the project'
         ],
-        { args, error: error instanceof Error ? error.message : String(error) }
+        { args: args.input, error: error instanceof Error ? error.message : String(error), mode: args.mode }
       ))
     }
     
@@ -113,32 +120,6 @@ export const projectDetectionOrchServ = async (
   }
 }
 
-/**
- * Parse project detection arguments to determine detection mode
- */
-function parseProjectDetectionArgs(args: string): {
-  input: string
-  mode: 'auto' | 'owner' | 'url'
-} {
-  if (!args) {
-    return { input: '', mode: 'auto' }
-  }
-  
-  // Check if it's a GitHub project URL
-  const urlMatch = args.match(/^https:\/\/github\.com\/orgs\/([^/]+)\/projects\/(\d+)/)
-  if (urlMatch) {
-    return { input: args, mode: 'url' }
-  }
-  
-  // Check if it's a GitHub project URL with different format
-  const altUrlMatch = args.match(/^https:\/\/github\.com\/users\/([^/]+)\/projects\/(\d+)/)
-  if (altUrlMatch) {
-    return { input: args, mode: 'url' }
-  }
-  
-  // Otherwise treat as owner/organization name
-  return { input: args, mode: 'owner' }
-}
 
 /**
  * Detect project from GitHub project URL

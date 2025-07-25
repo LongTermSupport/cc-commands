@@ -11,7 +11,7 @@ import { OrchestratorError } from '../../../core/error/OrchestratorError'
 import { TOrchestratorServiceMap } from '../../../core/interfaces/IOrchestratorService'
 import { activityAnalysisOrchServ } from '../activityAnalysisOrchServ'
 import { projectDataCollectionOrchServ } from '../projectDataCollectionOrchServ'
-import { projectDetectionOrchServ } from '../projectDetectionOrchServ'
+import { IProjectDetectionArgs, projectDetectionOrchServ } from '../projectDetectionOrchServ'
 import { ActivityService } from '../services/ActivityService'
 import { AuthService } from '../services/AuthService'
 import { GitHubGraphQLService } from '../services/GitHubGraphQLService'
@@ -82,8 +82,11 @@ export async function createGitHubServices(): Promise<TOrchestratorServiceMap> {
       },
       projectDataCollectionOrchServ: (args: string, _services: TOrchestratorServiceMap) => 
         projectDataCollectionOrchServ(args, githubServices),
-      projectDetectionOrchServ: (args: string, _services: TOrchestratorServiceMap) => 
-        projectDetectionOrchServ(args, githubServices),
+      projectDetectionOrchServ(args: string, _services: TOrchestratorServiceMap) {
+        // Parse string args to typed object for migration compatibility
+        const typedArgs = parseProjectDetectionArgs(args)
+        return projectDetectionOrchServ(typedArgs, githubServices)
+      },
     }
     
     // Return orchestrator services that conform to IOrchestratorService signature
@@ -144,4 +147,31 @@ function parseActivityAnalysisArgs(args: string): IActivityAnalysisArgs {
     repositories,
     timeWindowDays
   }
+}
+
+/**
+ * Parse project detection arguments from string format
+ * Determines detection mode based on input format
+ */
+function parseProjectDetectionArgs(args: string): IProjectDetectionArgs {
+  const trimmedArgs = args.trim()
+  
+  if (!trimmedArgs) {
+    return { input: '', mode: 'auto' }
+  }
+  
+  // Check if it's a GitHub project URL
+  const urlMatch = trimmedArgs.match(/^https:\/\/github\.com\/orgs\/([^/]+)\/projects\/(\d+)/)
+  if (urlMatch) {
+    return { input: trimmedArgs, mode: 'url' }
+  }
+  
+  // Check if it's a GitHub project URL with different format
+  const altUrlMatch = trimmedArgs.match(/^https:\/\/github\.com\/users\/([^/]+)\/projects\/(\d+)/)
+  if (altUrlMatch) {
+    return { input: trimmedArgs, mode: 'url' }
+  }
+  
+  // Otherwise treat as owner/organization name
+  return { input: trimmedArgs, mode: 'owner' }
 }
