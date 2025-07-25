@@ -74,6 +74,7 @@ export class GitHubRestApiService {
     try {
       const response = await this.octokit.rest.repos.get({ owner, repo })
       // Map Octokit response to our interface
+      /* eslint-disable camelcase */
       const mappedResponse: GitHubRepositoryResponse = {
         archived: response.data.archived,
         clone_url: response.data.clone_url,
@@ -111,6 +112,7 @@ export class GitHubRestApiService {
         visibility: response.data.visibility,
         watchers_count: response.data.watchers_count
       }
+      /* eslint-enable camelcase */
       return RepositoryDataDTO.fromGitHubApiResponse(mappedResponse)
     } catch (error) {
       throw new OrchestratorError(

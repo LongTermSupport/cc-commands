@@ -25,8 +25,6 @@ import { summaryOrch, TSummaryOrchestratorServices } from '../../../../orchestra
  * - Manual: g:gh:project:summary "myorg/project-name"
  */
 export default class SummaryCmd extends BaseCommand {
-  static override id = 'g:gh:project:summary'
-  
   static override args = {
     arguments: Args.string({
       description: 'Project identifier (URL, org/project, or auto-detect)',
@@ -54,6 +52,7 @@ static override flags = {
       description: 'Time window for activity analysis (e.g., 7d, 30d, 3m)',
     }),
   }
+static override id = 'g:gh:project:summary'
 static override strict = false
 
   async execute(): Promise<LLMInfo> {

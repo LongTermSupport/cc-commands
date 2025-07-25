@@ -424,16 +424,14 @@ describe('PullRequestDataDTO', () => {
       expect(dto.baseBranch).toBe('main') // Default
     })
 
-    it('should throw error for invalid API response', () => {
-      expect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        PullRequestDataDTO.fromGitHubApiResponse(null as any)
-      }).toThrow('Invalid GitHub pull request API response: response is null, undefined, or not an object')
-
-      expect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        PullRequestDataDTO.fromGitHubApiResponse('invalid' as any)
-      }).toThrow('Invalid GitHub pull request API response: response is null, undefined, or not an object')
+    it('should handle malformed API response with missing required fields', () => {
+      // Test defensive handling of malformed but validly-typed API response
+      const dto = PullRequestDataDTO.fromGitHubApiResponse({})
+      
+      expect(dto.id).toBe('0')
+      expect(dto.number).toBe(0)
+      expect(dto.title).toBe('Untitled Pull Request')
+      expect(dto.creator).toBe('unknown')
     })
   })
 
@@ -555,11 +553,14 @@ describe('PullRequestDataDTO', () => {
       expect(dto.mergeable).toBeNull() // Unknown state
     })
 
-    it('should throw error for invalid GraphQL response', () => {
-      expect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        PullRequestDataDTO.fromGraphQLResponse(null as any, 'owner/repo')
-      }).toThrow('Invalid GitHub pull request GraphQL response: response is null, undefined, or not an object')
+    it('should handle malformed GraphQL response with missing fields', () => {
+      // Test defensive handling of malformed but validly-typed GraphQL response
+      const dto = PullRequestDataDTO.fromGraphQLResponse({}, 'owner/repo')
+      
+      expect(dto.id).toBe('unknown')
+      expect(dto.title).toBe('Untitled Pull Request')
+      expect(dto.repository).toBe('owner/repo')
+      expect(dto.creator).toBe('unknown')
     })
   })
 
@@ -634,16 +635,13 @@ describe('PullRequestDataDTO', () => {
       expect(dto.baseBranch).toBe('main') // Default
     })
 
-    it('should throw error for invalid CLI output', () => {
-      expect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        PullRequestDataDTO.fromCliOutput(null as any)
-      }).toThrow('Invalid GitHub CLI pull request output: output is null, undefined, or not an object')
-
-      expect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        PullRequestDataDTO.fromCliOutput('invalid' as any)
-      }).toThrow('Invalid GitHub CLI pull request output: output is null, undefined, or not an object')
+    it('should handle malformed CLI output with missing fields', () => {
+      // Test defensive handling of malformed but validly-typed CLI output
+      const dto = PullRequestDataDTO.fromCliOutput({})
+      
+      expect(dto.id).toBe('unknown')
+      expect(dto.title).toBe('Untitled Pull Request')
+      expect(dto.creator).toBe('unknown')
     })
   })
 

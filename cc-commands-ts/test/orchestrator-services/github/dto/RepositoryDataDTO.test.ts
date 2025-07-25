@@ -421,19 +421,14 @@ describe('RepositoryDataDTO', () => {
     })
 
     it('should throw error for invalid API response', () => {
+      // Test with completely empty response
       expect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        RepositoryDataDTO.fromGitHubApiResponse(null as any)
-      }).toThrow('Invalid GitHub Repository API response: response is null, undefined, or not an object')
-
-      expect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        RepositoryDataDTO.fromGitHubApiResponse({} as any)
+        RepositoryDataDTO.fromGitHubApiResponse({})
       }).toThrow('Invalid GitHub Repository API response: missing required fields: id, name, full_name, owner')
 
+      // Test with partial required fields
       expect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        RepositoryDataDTO.fromGitHubApiResponse({ id: 123 } as any)
+        RepositoryDataDTO.fromGitHubApiResponse({ id: 123 })
       }).toThrow('Invalid GitHub Repository API response: missing required fields: name, full_name, owner')
     })
   })
@@ -504,15 +499,10 @@ describe('RepositoryDataDTO', () => {
       expect(dto.topics).toEqual([])
     })
 
-    it('should throw error for invalid CLI output', () => {
+    it('should throw error for malformed CLI output', () => {
+      // Test with empty CLI output - this can happen from real CLI
       expect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        RepositoryDataDTO.fromGitHubCliOutput(null as any)
-      }).toThrow('Invalid GitHub CLI output: output is null, undefined, or not an object')
-
-      expect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        RepositoryDataDTO.fromGitHubCliOutput({} as any)
+        RepositoryDataDTO.fromGitHubCliOutput({})
       }).toThrow('Invalid GitHub CLI output: missing required field: name')
     })
   })

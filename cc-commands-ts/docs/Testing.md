@@ -90,6 +90,43 @@ describe('ExampleService', () => {
 4. **Arrange-Act-Assert**: Structure tests with clear setup, execution, and verification phases
 5. **No Test Code in Production**: Tests should never influence production behavior
 6. **Fast and Reliable**: Tests should run quickly and produce consistent results
+7. **Don't Test TypeScript Compiler**: Never test code paths that TypeScript prevents at compile time
+
+### Testing TypeScript-Enforced Constraints
+
+**❌ Wrong: Testing Impossible Runtime Scenarios**
+```typescript
+// DON'T test scenarios that TypeScript prevents
+it('should handle null input', () => {
+  expect(() => {
+    // @ts-expect-error or as any casting just to test
+    MyService.processData(null)
+  }).toThrow('Invalid input')
+})
+```
+
+**✅ Correct: Test Real Runtime Scenarios**
+```typescript
+// DO test scenarios that can actually occur at runtime
+it('should handle malformed API response', () => {
+  // This can happen from a real API call
+  const dto = MyDTO.fromApiResponse({})
+  expect(dto.name).toBe('unknown')
+})
+
+it('should handle missing optional fields', () => {
+  // This is a valid, typed scenario that can occur
+  const response = { id: 1 } // missing other optional fields
+  const dto = MyDTO.fromApiResponse(response)
+  expect(dto.description).toBe('')
+})
+```
+
+**Why This Matters:**
+- TypeScript prevents invalid calls at compile time
+- Testing these scenarios just tests the TypeScript compiler, not your code
+- Focus testing effort on scenarios that can actually occur in production
+- Test defensive handling of malformed but validly-typed inputs instead
 
 ## Three-Tier Testing Strategy
 

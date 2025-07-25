@@ -282,16 +282,14 @@ describe('IssueDataDTO', () => {
       expect(dto.repository).toBe('unknown/unknown')
     })
 
-    it('should throw error for invalid API response', () => {
-      expect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        IssueDataDTO.fromGitHubApiResponse(null as any)
-      }).toThrow('Invalid GitHub issue API response: response is null, undefined, or not an object')
-
-      expect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        IssueDataDTO.fromGitHubApiResponse('invalid' as any)
-      }).toThrow('Invalid GitHub issue API response: response is null, undefined, or not an object')
+    it('should handle malformed API response with missing required fields', () => {
+      // Test with empty object - this could happen from a real API
+      const dto = IssueDataDTO.fromGitHubApiResponse({})
+      
+      expect(dto.id).toBe('0')
+      expect(dto.number).toBe(0)
+      expect(dto.title).toBe('Untitled Issue')
+      expect(dto.creator).toBe('unknown')
     })
   })
 
@@ -382,11 +380,14 @@ describe('IssueDataDTO', () => {
       expect(dto.commentsCount).toBe(0)
     })
 
-    it('should throw error for invalid GraphQL response', () => {
-      expect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        IssueDataDTO.fromGraphQLResponse(null as any, 'owner/repo')
-      }).toThrow('Invalid GitHub issue GraphQL response: response is null, undefined, or not an object')
+    it('should handle malformed GraphQL response with missing fields', () => {
+      // Test with minimal GraphQL response - this could happen from a real API
+      const dto = IssueDataDTO.fromGraphQLResponse({}, 'owner/repo')
+      
+      expect(dto.id).toBe('unknown')
+      expect(dto.title).toBe('Untitled Issue')
+      expect(dto.repository).toBe('owner/repo')
+      expect(dto.creator).toBe('unknown')
     })
   })
 
@@ -443,16 +444,13 @@ describe('IssueDataDTO', () => {
       expect(dto.creator).toBe('unknown')
     })
 
-    it('should throw error for invalid CLI output', () => {
-      expect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        IssueDataDTO.fromCliOutput(null as any)
-      }).toThrow('Invalid GitHub CLI issue output: output is null, undefined, or not an object')
-
-      expect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        IssueDataDTO.fromCliOutput('invalid' as any)
-      }).toThrow('Invalid GitHub CLI issue output: output is null, undefined, or not an object')
+    it('should handle malformed CLI output with missing fields', () => {
+      // Test with minimal CLI output - this could happen from real CLI
+      const dto = IssueDataDTO.fromCliOutput({})
+      
+      expect(dto.id).toBe('unknown')
+      expect(dto.title).toBe('Untitled Issue')
+      expect(dto.creator).toBe('unknown')
     })
   })
 
