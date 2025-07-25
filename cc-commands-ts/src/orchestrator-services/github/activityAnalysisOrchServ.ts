@@ -105,7 +105,7 @@ async function activityAnalysisOrchServImpl(
       `Ranked ${mostActiveRepos.length} repositories by activity`)
     
     result.addData('MOST_ACTIVE_REPOSITORIES', mostActiveRepos.slice(0, 5).join(', '))
-    result.addData('TOP_REPOSITORY', mostActiveRepos[0] || 'None')
+    result.addData('TOP_REPOSITORY', mostActiveRepos[0] ?? 'None')
     
     // Generate analysis insights
     const insights = generateActivityInsights(aggregatedActivity, activitySummary, mostActiveRepos)
@@ -152,18 +152,35 @@ async function activityAnalysisOrchServImpl(
  * Parse activity analysis arguments
  */
 function parseActivityAnalysisArgs(args: string): IActivityAnalysisArgs {
+  // If args is JSON, parse it
+  if (args.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(args)
+      return {
+        owner: parsed.owner,
+        repositories: parsed.repositories,
+        timeWindowDays: parsed.timeWindowDays || 30
+      }
+    } catch {
+      // Fall through to legacy parsing
+    }
+  }
+  
+  // Legacy pipe-delimited parsing for backward compatibility
   const parts = args.split('|')
-  const params: Record<string, string> = {}
+  const params = new Map<string, string>()
   
   for (const part of parts) {
-    const [key, value] = part.split(':')
-    if (key && value) {
-      params[key] = value
+    const colonIndex = part.indexOf(':')
+    if (colonIndex > 0) {
+      const key = part.slice(0, Math.max(0, colonIndex))
+      const value = part.slice(Math.max(0, colonIndex + 1))
+      params.set(key, value)
     }
   }
   
   // Validate required parameters
-  if (!params['repositories']) {
+  if (!params.get('repositories')) {
     throw new OrchestratorError(
       new Error('Repositories parameter is required'),
       [
@@ -175,7 +192,7 @@ function parseActivityAnalysisArgs(args: string): IActivityAnalysisArgs {
     )
   }
   
-  if (!params['owner']) {
+  if (!params.get('owner')) {
     throw new OrchestratorError(
       new Error('Owner parameter is required'),
       [
@@ -187,7 +204,7 @@ function parseActivityAnalysisArgs(args: string): IActivityAnalysisArgs {
     )
   }
   
-  if (!params['timeWindow']) {
+  if (!params.get('timeWindow')) {
     throw new OrchestratorError(
       new Error('Time window parameter is required'),
       [
@@ -200,8 +217,8 @@ function parseActivityAnalysisArgs(args: string): IActivityAnalysisArgs {
   }
   
   // Parse and validate values
-  const repositories = params['repositories'].split(',').map(repo => repo.trim()).filter(Boolean)
-  const timeWindowDays = Number.parseInt(params['timeWindow'], 10)
+  const repositories = (params.get('repositories') || '').split(',').map(repo => repo.trim()).filter(Boolean)
+  const timeWindowDays = Number.parseInt(params.get('timeWindow') || '0', 10)
   
   if (repositories.length === 0) {
     throw new OrchestratorError(
@@ -211,7 +228,7 @@ function parseActivityAnalysisArgs(args: string): IActivityAnalysisArgs {
         'Use format: repositories:repo1,repo2,repo3',
         'Remove empty entries from repository list'
       ],
-      { repositories: params['repositories'] }
+      { repositories: params.get('repositories') || '' }
     )
   }
   
@@ -223,12 +240,12 @@ function parseActivityAnalysisArgs(args: string): IActivityAnalysisArgs {
         'Choose a reasonable analysis period (7-90 days recommended)',
         'Consider API rate limits for longer time windows'
       ],
-      { timeWindow: params['timeWindow'] }
+      { timeWindow: params.get('timeWindow') || '' }
     )
   }
   
   return {
-    owner: params['owner'],
+    owner: params.get('owner') || '',
     repositories,
     timeWindowDays
   }
@@ -258,7 +275,7 @@ function generateActivityInsights(
   }
   
   // Repository distribution insights
-  if (mostActiveRepos.length > 0) {
+  if (mostActiveRepos.length > 0 && mostActiveRepos[0]) {
     insights.push(`Most active repository is ${mostActiveRepos[0]}`)
   }
   

@@ -12,6 +12,7 @@ import { CommitDataDTO } from '../dto/CommitDataDTO'
 import { IssueDataDTO } from '../dto/IssueDataDTO'
 import { PullRequestDataDTO } from '../dto/PullRequestDataDTO'
 import { RepositoryDataDTO } from '../dto/RepositoryDataDTO'
+import { GitHubIssueResponse, GitHubPullRequestResponse, GitHubRepositoryResponse } from '../types/GitHubApiTypes'
 
 /**
  * GitHub REST API Service for repository, issues, PRs, and commits
@@ -71,9 +72,45 @@ export class GitHubRestApiService {
   async getRepository(owner: string, repo: string): Promise<RepositoryDataDTO> {
     try {
       const response = await this.octokit.rest.repos.get({ owner, repo })
-      // Type assertion: Octokit types are more complex than our DTOs expect
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return RepositoryDataDTO.fromGitHubApiResponse(response.data as any)
+      // Map Octokit response to our interface
+      const mappedResponse: GitHubRepositoryResponse = {
+        archived: response.data.archived,
+        clone_url: response.data.clone_url,
+        created_at: response.data.created_at,
+        default_branch: response.data.default_branch,
+        description: response.data.description,
+        disabled: response.data.disabled,
+        fork: response.data.fork,
+        forks_count: response.data.forks_count,
+        full_name: response.data.full_name,
+        has_issues: response.data.has_issues,
+        has_pages: response.data.has_pages,
+        has_projects: response.data.has_projects,
+        has_wiki: response.data.has_wiki,
+        html_url: response.data.html_url,
+        id: response.data.id,
+        language: response.data.language,
+        name: response.data.name,
+        open_issues_count: response.data.open_issues_count,
+        owner: {
+          avatar_url: response.data.owner.avatar_url,
+          id: response.data.owner.id,
+          login: response.data.owner.login,
+          node_id: response.data.owner.node_id,
+          type: response.data.owner.type as 'Organization' | 'User',
+          url: response.data.owner.url
+        },
+        private: response.data.private,
+        pushed_at: response.data.pushed_at,
+        size: response.data.size,
+        ssh_url: response.data.ssh_url,
+        stargazers_count: response.data.stargazers_count,
+        updated_at: response.data.updated_at,
+        url: response.data.url,
+        visibility: response.data.visibility,
+        watchers_count: response.data.watchers_count
+      }
+      return RepositoryDataDTO.fromGitHubApiResponse(mappedResponse)
     } catch (error) {
       throw new OrchestratorError(
         error instanceof Error ? error : new Error(String(error)),
@@ -103,8 +140,25 @@ export class GitHubRestApiService {
       return response.data
         .map(commit => {
           try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            return CommitDataDTO.fromGitHubApiResponse(commit as any)
+            // Map to our expected structure
+            // CommitDataDTO expects a different structure than GitHubCommitResponse
+            const dtoApiResponse = {
+              author: commit.commit.author || undefined,
+              commit: {
+                author: commit.commit.author || undefined,
+                committer: commit.commit.committer || undefined,
+                message: commit.commit.message,
+                url: commit.commit.url,
+                verification: commit.commit.verification
+              },
+              committer: commit.commit.committer || undefined,
+              html_url: commit.html_url,
+              parents: commit.parents,
+              sha: commit.sha,
+              stats: commit.stats,
+              url: commit.url
+            }
+            return CommitDataDTO.fromGitHubApiResponse(dtoApiResponse)
           } catch {
             // Skip invalid commits but don't fail entire operation
             return null
@@ -143,8 +197,61 @@ export class GitHubRestApiService {
       return response.data
         .map(issue => {
           try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            return IssueDataDTO.fromGitHubApiResponse(issue as any)
+            // Map to our expected structure
+            const mappedIssue: GitHubIssueResponse = {
+              assignee: issue.assignee ? {
+                avatar_url: issue.assignee.avatar_url,
+                id: issue.assignee.id,
+                login: issue.assignee.login,
+                node_id: issue.assignee.node_id,
+                type: issue.assignee.type as 'Organization' | 'User',
+                url: issue.assignee.url
+              } : null,
+              assignees: issue.assignees?.map(a => ({
+                avatar_url: a.avatar_url,
+                id: a.id,
+                login: a.login,
+                node_id: a.node_id,
+                type: a.type as 'Organization' | 'User',
+                url: a.url
+              })) || [],
+              author_association: issue.author_association,
+              body: issue.body,
+              closed_at: issue.closed_at,
+              comments: issue.comments,
+              created_at: issue.created_at,
+              draft: issue.draft,
+              html_url: issue.html_url,
+              id: issue.id,
+              labels: issue.labels?.filter((label): label is { color: string; description?: null | string; id: number; name: string } => typeof label !== 'string' && label.color !== undefined && label.id !== undefined && label.name !== undefined) || [],
+              locked: issue.locked,
+              milestone: issue.milestone,
+              node_id: issue.node_id,
+              number: issue.number,
+              pull_request: issue.pull_request,
+              repository_url: issue.repository_url,
+              state: issue.state as 'closed' | 'open',
+              state_reason: issue.state_reason,
+              title: issue.title,
+              updated_at: issue.updated_at,
+              url: issue.url,
+              user: issue.user ? {
+                avatar_url: issue.user.avatar_url,
+                id: issue.user.id,
+                login: issue.user.login,
+                node_id: issue.user.node_id,
+                type: issue.user.type as 'Organization' | 'User',
+                url: issue.user.url
+              } : {
+                avatar_url: '',
+                id: 0,
+                login: 'unknown',
+                node_id: '',
+                type: 'User' as const,
+                url: ''
+              }
+            }
+            return IssueDataDTO.fromGitHubApiResponse(mappedIssue)
           } catch {
             // Skip invalid issues but don't fail entire operation
             return null
@@ -188,8 +295,86 @@ export class GitHubRestApiService {
       return filteredPRs
         .map(pr => {
           try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            return PullRequestDataDTO.fromGitHubApiResponse(pr as any)
+            // Map to our expected structure
+            const mappedPR: GitHubPullRequestResponse = {
+              assignee: pr.assignee ? {
+                avatar_url: pr.assignee.avatar_url,
+                id: pr.assignee.id,
+                login: pr.assignee.login,
+                node_id: pr.assignee.node_id,
+                type: pr.assignee.type as 'Organization' | 'User',
+                url: pr.assignee.url
+              } : null,
+              assignees: pr.assignees?.map(a => ({
+                avatar_url: a.avatar_url,
+                id: a.id,
+                login: a.login,
+                node_id: a.node_id,
+                type: a.type as 'Organization' | 'User',
+                url: a.url
+              })) || [],
+              author_association: pr.author_association,
+              base: {
+                ref: pr.base.ref,
+                repo: null, // List endpoint doesn't return full repo
+                sha: pr.base.sha
+              },
+              body: pr.body,
+              closed_at: pr.closed_at,
+              created_at: pr.created_at,
+              diff_url: pr.diff_url,
+              draft: pr.draft,
+              head: {
+                ref: pr.head.ref,
+                repo: null, // List endpoint doesn't return full repo
+                sha: pr.head.sha
+              },
+              html_url: pr.html_url,
+              id: pr.id,
+              labels: pr.labels?.filter((label): label is any => typeof label !== 'string' && label !== null && typeof label === 'object').map(label => ({
+                color: label.color || '',
+                description: label.description || null,
+                id: label.id || 0,
+                name: label.name || ''
+              })) || [],
+              locked: pr.locked,
+              merge_commit_sha: pr.merge_commit_sha,
+              merged: Boolean(pr.merged_at),
+              merged_at: pr.merged_at,
+              milestone: pr.milestone,
+              node_id: pr.node_id,
+              number: pr.number,
+              patch_url: pr.patch_url,
+              requested_reviewers: pr.requested_reviewers?.filter((r): r is any => r !== null && typeof r === 'object' && 'login' in r).map(r => ({
+                avatar_url: r.avatar_url,
+                id: r.id,
+                login: r.login,
+                node_id: r.node_id,
+                type: r.type as 'Organization' | 'User',
+                url: r.url
+              })) || [],
+              requested_teams: pr.requested_teams || [],
+              state: pr.state as 'closed' | 'open',
+              title: pr.title,
+              updated_at: pr.updated_at,
+              url: pr.url,
+              user: pr.user ? {
+                avatar_url: pr.user.avatar_url,
+                id: pr.user.id,
+                login: pr.user.login,
+                node_id: pr.user.node_id,
+                type: pr.user.type as 'Organization' | 'User',
+                url: pr.user.url
+              } : {
+                avatar_url: '',
+                id: 0,
+                login: 'unknown',
+                node_id: '',
+                type: 'User' as const,
+                url: ''
+              }
+            }
+            return PullRequestDataDTO.fromGitHubApiResponse(mappedPR)
           } catch {
             // Skip invalid PRs but don't fail entire operation
             return null

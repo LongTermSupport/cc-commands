@@ -32,6 +32,7 @@ export interface GitHubRepositoryResponse {
   forks_count: number
   full_name: string
   has_issues: boolean
+  has_pages?: boolean
   has_projects: boolean
   has_wiki: boolean
   homepage?: null | string
@@ -54,6 +55,7 @@ export interface GitHubRepositoryResponse {
   topics?: string[]
   updated_at: string
   url: string
+  visibility?: string
   watchers_count: number
 }
 
@@ -97,10 +99,12 @@ export interface GitHubCliRepositoryOutput {
 export interface GitHubIssueResponse {
   assignee?: GitHubOwner | null
   assignees?: GitHubOwner[]
+  author_association?: string
   body?: null | string
   closed_at?: null | string
   comments: number
   created_at: string
+  draft?: boolean
   html_url: string
   id: number
   labels?: Array<{
@@ -109,9 +113,14 @@ export interface GitHubIssueResponse {
     id: number
     name: string
   }>
+  locked?: boolean
+  milestone?: any
+  node_id?: string
   number: number
+  pull_request?: any
   repository_url?: string
   state: 'closed' | 'open'
+  state_reason?: null | string
   title: string
   updated_at: string
   url: string
@@ -125,19 +134,21 @@ export interface GitHubPullRequestResponse {
   additions?: number
   assignee?: GitHubOwner | null
   assignees?: GitHubOwner[]
+  author_association?: string
   base: {
     ref: string
-    repo: GitHubRepositoryResponse
+    repo?: GitHubRepositoryResponse | null
     sha: string
   }
   body?: null | string
   changed_files?: number
   closed_at?: null | string
-  comments: number
+  comments?: number
   commits?: number
   created_at: string
   deletions?: number
   diff_url: string
+  draft?: boolean
   head: {
     ref: string
     repo?: GitHubRepositoryResponse | null
@@ -151,13 +162,21 @@ export interface GitHubPullRequestResponse {
     id: number
     name: string
   }>
+  locked?: boolean
+  merge_commit_sha?: null | string
   mergeable?: boolean | null
-  merged: boolean
+  mergeable_state?: string
+  merged?: boolean
   merged_at?: null | string
+  merged_by?: GitHubOwner | null
+  milestone?: any
+  node_id?: string
   number: number
   patch_url: string
+  pull_request?: any
   requested_reviewers?: GitHubOwner[]
-  review_comments: number
+  requested_teams?: any[]
+  review_comments?: number
   state: 'closed' | 'open'
   title: string
   updated_at: string

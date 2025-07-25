@@ -20,8 +20,12 @@ export default [
     },
     // Override specific rules we don't want
     rules: {
-      // Custom rule to prevent direct use of abstract types
+      // Custom rules for type safety
       'cc-commands/no-direct-abstract-types': 'error',
+      'cc-commands/no-unsafe-type-casting': 'error',
+      'cc-commands/no-string-based-service-args': 'error',
+      'cc-commands/require-typed-data-access': 'warn', // Start as warning due to many violations
+      'cc-commands/no-api-response-any': 'error',
       'unicorn/filename-case': 'off', // Allow PascalCase for TypeScript classes
       '@typescript-eslint/no-explicit-any': 'error', // Keep our strict no-any rule
       'eslint-comments/no-unlimited-disable': 'error', // Prevent eslint-disable abuse

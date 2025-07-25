@@ -457,6 +457,131 @@ function processConfig(config: TMyConfig) { // Concrete type
 - Maintains a list of known abstract types
 - Does NOT prevent extending abstract types in type definitions
 
+### no-unsafe-type-casting
+
+**Purpose:** Prevents unsafe type casting patterns that bypass TypeScript's type system.
+
+**❌ Problem:**
+```typescript
+// Double casting through unknown/any
+const services = myServices as unknown as SpecificType
+const data = response as any as MyDataType
+
+// Single cast to unknown/any
+const result = someValue as unknown
+const config = data as any
+```
+
+**✅ Solution:**
+```typescript
+// Use proper type definitions
+const services: SpecificType = createTypedServices()
+
+// Use type guards
+if (isMyDataType(response)) {
+  const data = response // Type is inferred
+}
+
+// Create proper types for API responses
+interface ApiResponse {
+  data: MyDataType
+}
+const response = await api.get<ApiResponse>(url)
+```
+
+### no-string-based-service-args
+
+**Purpose:** Enforces typed argument passing between orchestrator services instead of error-prone string manipulation.
+
+**❌ Problem:**
+```typescript
+// String concatenation for arguments
+const args = projectId + ' ' + commandArgs
+const params = `${owner}|${repo}|${since}`
+
+// String parsing
+const [owner, repo] = args.split(' ')
+const parts = params.split('|')
+```
+
+**✅ Solution:**
+```typescript
+// Use typed interfaces
+interface ProjectArgs {
+  projectId: string
+  commandArgs: string
+}
+
+interface ActivityArgs {
+  owner: string
+  repo: string
+  since: Date
+}
+
+// Pass objects
+const args: ProjectArgs = { projectId, commandArgs }
+```
+
+### require-typed-data-access
+
+**Purpose:** Prevents unsafe property access that can cause runtime errors.
+
+**❌ Problem:**
+```typescript
+// Unsafe bracket notation
+const value = data['SOME_KEY']  // What if undefined?
+
+// Array access without bounds checking
+const first = array[0]  // What if empty?
+
+// Dynamic property access
+const prop = obj[variable]  // No type checking
+```
+
+**✅ Solution:**
+```typescript
+// Use optional chaining
+const value = data['SOME_KEY'] ?? defaultValue
+
+// Safe array access
+const first = array[0] ?? defaultItem
+const first = array.at(0)  // Returns undefined if empty
+
+// Type guards for dynamic access
+if (variable in obj && typeof obj[variable] === 'string') {
+  const prop = obj[variable]
+}
+```
+
+### no-api-response-any
+
+**Purpose:** Ensures API responses are properly typed instead of using `any`.
+
+**❌ Problem:**
+```typescript
+// Lazy typing
+const data = response.data as any
+const result = (await api.get(url)) as any
+
+// DTO methods
+static fromGitHubResponse(response: any) { }
+```
+
+**✅ Solution:**
+```typescript
+// Define response types
+interface GitHubRepoResponse {
+  name: string
+  owner: { login: string }
+  // ... other fields
+}
+
+const data = response.data as GitHubRepoResponse
+
+// Typed DTO methods
+static fromGitHubResponse(response: GitHubRepoResponse) { }
+```
+
 ## Updating This Document
 
 **When encountering new ESLint issues:**
