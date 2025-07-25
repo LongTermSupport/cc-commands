@@ -13,11 +13,11 @@ import { ActivityService } from '../../../../src/orchestrator-services/github/se
 import { RepositoryService } from '../../../../src/orchestrator-services/github/services/RepositoryService'
 
 // Mock dependencies
-const mockRepositoryService = {
+const mockRepositoryService: vi.Mocked<Pick<RepositoryService, 'getRepositoryActivity' | 'getRepositoryData' | 'validateRepositoryAccess'>> = {
   getRepositoryActivity: vi.fn(),
   getRepositoryData: vi.fn(),
   validateRepositoryAccess: vi.fn()
-} as unknown as vi.Mocked<RepositoryService>
+}
 
 const createMockActivity = (repo: string, commits: number, issues: number, prs: number): ActivityMetricsDTO => new ActivityMetricsDTO(
   1, // repositoriesCount

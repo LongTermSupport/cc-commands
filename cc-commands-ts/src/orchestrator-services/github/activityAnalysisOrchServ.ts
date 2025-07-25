@@ -11,6 +11,7 @@ import { ActivityMetricsDTO } from './dto/ActivityMetricsDTO'
 import { ProjectSummaryDTO } from './dto/ProjectSummaryDTO'
 import { IActivityAnalysisArgs } from './types/ArgumentTypes'
 import { TActivityAnalysisServices } from './types/ServiceTypes'
+import { safeArrayAccess } from './utils/TypeGuards'
 
 /**
  * Activity Analysis Orchestrator Service
@@ -105,7 +106,7 @@ async function activityAnalysisOrchServImpl(
       `Ranked ${mostActiveRepos.length} repositories by activity`)
     
     result.addData('MOST_ACTIVE_REPOSITORIES', mostActiveRepos.slice(0, 5).join(', '))
-    result.addData('TOP_REPOSITORY', mostActiveRepos[0] ?? 'None')
+    result.addData('TOP_REPOSITORY', safeArrayAccess(mostActiveRepos, 0) ?? 'None')
     
     // Generate analysis insights
     const insights = generateActivityInsights(aggregatedActivity, activitySummary, mostActiveRepos)
@@ -275,8 +276,9 @@ function generateActivityInsights(
   }
   
   // Repository distribution insights
-  if (mostActiveRepos.length > 0 && mostActiveRepos[0]) {
-    insights.push(`Most active repository is ${mostActiveRepos[0]}`)
+  const topRepo = safeArrayAccess(mostActiveRepos, 0)
+  if (topRepo) {
+    insights.push(`Most active repository is ${topRepo}`)
   }
   
   // Contributor insights

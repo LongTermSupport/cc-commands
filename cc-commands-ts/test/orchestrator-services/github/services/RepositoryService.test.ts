@@ -16,13 +16,13 @@ import { GitHubRestApiService } from '../../../../src/orchestrator-services/gith
 import { RepositoryService } from '../../../../src/orchestrator-services/github/services/RepositoryService'
 
 // Mock dependencies
-const mockRestService = {
+const mockRestService: vi.Mocked<Pick<GitHubRestApiService, 'checkRepositoryAccess' | 'getRepository' | 'searchCommits' | 'searchIssues' | 'searchPullRequests'>> = {
   checkRepositoryAccess: vi.fn(),
   getRepository: vi.fn(),
   searchCommits: vi.fn(),
   searchIssues: vi.fn(),
   searchPullRequests: vi.fn()
-} as unknown as vi.Mocked<GitHubRestApiService>
+}
 
 describe('RepositoryService', () => {
   let service: RepositoryService

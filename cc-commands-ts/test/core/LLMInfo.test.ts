@@ -220,33 +220,15 @@ describe('LLMInfo', () => {
       llmInfo.addFile('old-data.csv', 'deleted')
       llmInfo.addFile('README.md', 'read')
 
-      // Use reflection to access private files array for testing
-      const {files} = (llmInfo as unknown as { files: Array<{ operation: string; path: string; size?: number }> })
-      expect(files).toHaveLength(4)
-
-      expect(files[0]).toEqual({
-        operation: 'created',
-        path: '/tmp/output.json',
-        size: 1024
-      })
-
-      expect(files[1]).toEqual({
-        operation: 'modified',
-        path: 'config.yaml',
-        size: 512
-      })
-
-      expect(files[2]).toEqual({
-        operation: 'deleted',
-        path: 'old-data.csv',
-        size: undefined
-      })
-
-      expect(files[3]).toEqual({
-        operation: 'read',
-        path: 'README.md',
-        size: undefined
-      })
+      // Verify files through the toString output instead of accessing private properties
+      const output = llmInfo.toString()
+      
+      // Check that all files are included in the output
+      expect(output).toContain('FILES:')
+      expect(output).toContain('- created: /tmp/output.json (1024 bytes)')
+      expect(output).toContain('- modified: config.yaml (512 bytes)')
+      expect(output).toContain('- deleted: old-data.csv')
+      expect(output).toContain('- read: README.md')
     })
 
     it('should allow method chaining for addFile', () => {
@@ -264,13 +246,13 @@ describe('LLMInfo', () => {
       llmInfo.addInstruction('Include recommendations for optimization')
       llmInfo.addInstruction('Highlight any critical issues in red')
 
-      // Use reflection to access private instructions array for testing
-      const {instructions} = (llmInfo as unknown as { instructions: string[] })
-      expect(instructions).toEqual([
-        'Generate a technical report focusing on performance metrics',
-        'Include recommendations for optimization',
-        'Highlight any critical issues in red'
-      ])
+      // Verify instructions through the toString output
+      const output = llmInfo.toString()
+      
+      expect(output).toContain('INSTRUCTIONS:')
+      expect(output).toContain('- Generate a technical report focusing on performance metrics')
+      expect(output).toContain('- Include recommendations for optimization')
+      expect(output).toContain('- Highlight any critical issues in red')
     })
 
     it('should allow method chaining for addInstruction', () => {
@@ -332,12 +314,13 @@ describe('LLMInfo', () => {
       expect(actions).toHaveLength(1)
       expect(actions[0].event).toBe('Other action')
 
-      // Use reflection to check merged files and instructions
-      const {files} = (llmInfo as unknown as { files: Array<{ operation: string; path: string; size?: number }> })
-      const {instructions} = (llmInfo as unknown as { instructions: string[] })
-      expect(files).toHaveLength(1)
-      expect(files[0].path).toBe('/other/file.txt')
-      expect(instructions).toEqual(['Other instruction'])
+      // Verify merged files and instructions through the toString output
+      const output = llmInfo.toString()
+      
+      expect(output).toContain('FILES:')
+      expect(output).toContain('- created: /other/file.txt')
+      expect(output).toContain('INSTRUCTIONS:')
+      expect(output).toContain('- Other instruction')
     })
 
     it('should prioritize error from merged LLMInfo', () => {

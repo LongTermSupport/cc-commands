@@ -1079,3 +1079,210 @@ Total: 5-7 days of focused effort
 ### Conclusion
 
 These are not "nice to have" improvements - they are CRITICAL FIXES. The current implementation completely defeats the purpose of using TypeScript and will lead to production failures. No new features should be added until these fundamental architectural flaws are addressed.
+
+## 🎯 UPDATED DEVELOPMENT PLAN (2025-07-25 21:00)
+
+### Executive Summary
+
+Based on the comprehensive code review, the project has critical type safety violations that must be addressed before any new development. While the core functionality is implemented, the architectural flaws create significant maintainability and reliability risks.
+
+### Current State Assessment
+
+**Achievements**:
+- ✅ Core implementation complete (command, orchestrator, services)
+- ✅ Type casting issues resolved (TODO Y.1 complete)
+- ✅ Build passing, 399 tests passing
+- ✅ Critical ESLint errors fixed
+
+**Critical Issues Remaining**:
+- ❌ String-based argument passing (98 ESLint errors)
+- ❌ Test file type safety violations
+- ❌ No runtime validation
+- ❌ Missing integration tests
+- ❌ 344 ESLint warnings (mostly JSDoc)
+
+### Phase Z: Immediate Priority Fixes (Must Complete First)
+
+#### TODO Z.1: Fix Test File Type Safety Violations
+**Priority**: CRITICAL - Blocking clean QA
+**Effort**: 4 hours
+**Dependencies**: None
+
+**Scope**:
+- Fix `as unknown as vi.Mocked<>` patterns in all test files
+- Replace with proper mock typing
+- Ensure all array access uses optional chaining
+
+**Files to fix**:
+- test/orchestrator-services/github/services/ProjectService.test.ts
+- test/orchestrator-services/github/services/RepositoryService.test.ts
+- All other test files with type casting violations
+
+#### TODO Z.2: Complete String-to-Object Argument Migration
+**Priority**: CRITICAL - Major architectural flaw
+**Effort**: 2 days
+**Dependencies**: TODO Z.1
+
+**Scope**:
+1. Define argument interfaces for all orchestrator services
+2. Update service signatures to accept typed objects
+3. Update command layer to pass objects
+4. Remove all pipe-delimited string parsing
+5. Update tests to match new signatures
+
+**Services to update**:
+- projectDetectionOrchServ
+- projectDataCollectionOrchServ
+- activityAnalysisOrchServ (partially complete)
+
+#### TODO Z.3: Implement Schema Validation Layer
+**Priority**: HIGH - Prevents runtime errors
+**Effort**: 1 day
+**Dependencies**: TODO Z.2
+
+**Implementation**:
+1. Add zod as dependency
+2. Create schema definitions matching TypeScript types
+3. Add validation at service boundaries
+4. Create validation middleware for orchestrators
+5. Add proper error messages for validation failures
+
+### Phase A: ESLint Rule Improvements
+
+#### TODO A.1: Enhance Custom ESLint Rules
+**Priority**: HIGH
+**Effort**: 1 day
+**Dependencies**: Phase Z complete
+
+**New rules to add**:
+1. `require-error-type-guards`: Enforce proper error handling
+2. `no-unvalidated-array-access`: Require bounds checking
+3. `require-service-interfaces`: Enforce interface usage
+4. `no-string-service-communication`: Prevent string-based args
+
+#### TODO A.2: Fix JSDoc Warnings
+**Priority**: MEDIUM
+**Effort**: 1 day
+**Dependencies**: None
+
+**Scope**:
+- Fix 344 JSDoc parameter warnings
+- Add proper parameter descriptions
+- Document return types and throws clauses
+
+### Phase B: Testing Infrastructure
+
+#### TODO B.1: Integration Tests for GitHub API
+**Priority**: HIGH
+**Effort**: 2 days
+**Dependencies**: Phase Z complete
+
+**Test scenarios**:
+1. Authentication failures
+2. Rate limiting handling
+3. Large project performance
+4. GraphQL error scenarios
+5. Network timeouts
+6. Partial data availability
+
+#### TODO B.2: E2E Command Tests
+**Priority**: HIGH
+**Effort**: 1 day
+**Dependencies**: TODO B.1
+
+**Test coverage**:
+- All command argument combinations
+- Error output formatting
+- Success scenarios
+- Progress reporting
+
+### Phase C: Architecture Refinement
+
+#### TODO C.1: Implement Proper Dependency Injection
+**Priority**: MEDIUM
+**Effort**: 3 days
+**Dependencies**: Phase A, B complete
+
+**Implementation**:
+1. Create DI container
+2. Service registration with lifecycle management
+3. Dependency resolution
+4. Mock injection for testing
+5. Remove service factory god object
+
+#### TODO C.2: Service Interface Completion
+**Priority**: MEDIUM
+**Effort**: 1 day
+**Dependencies**: TODO C.1
+
+**Updates needed**:
+- Add error type specifications
+- Mark optional returns properly
+- Add generic constraints
+- Document preconditions
+
+### Phase D: Production Readiness
+
+#### TODO D.1: Performance Monitoring
+**Priority**: MEDIUM
+**Effort**: 1 day
+**Dependencies**: Phase C complete
+
+**Features**:
+- API call timing
+- Memory usage tracking
+- Rate limit monitoring
+- Performance logging
+
+#### TODO D.2: Enhanced Error Recovery
+**Priority**: MEDIUM
+**Effort**: 1 day
+**Dependencies**: TODO D.1
+
+**Improvements**:
+- Retry logic for transient failures
+- Graceful degradation
+- User-friendly error messages
+- Recovery suggestions
+
+### Implementation Schedule
+
+**Week 1 (Critical Fixes)**:
+- Day 1: TODO Z.1 - Fix test type safety
+- Day 2-3: TODO Z.2 - String-to-object migration
+- Day 4: TODO Z.3 - Schema validation
+- Day 5: TODO A.1 - ESLint rules
+
+**Week 2 (Quality & Testing)**:
+- Day 1: TODO A.2 - JSDoc fixes
+- Day 2-3: TODO B.1 - Integration tests
+- Day 4: TODO B.2 - E2E tests
+- Day 5: Buffer/bug fixes
+
+**Week 3 (Architecture)**:
+- Day 1-3: TODO C.1 - Dependency injection
+- Day 4: TODO C.2 - Interface completion
+- Day 5: TODO D.1 & D.2 - Production features
+
+### Success Metrics
+
+1. **Type Safety**: Zero `as unknown as` casts, zero `any` types
+2. **Code Quality**: Zero ESLint errors, < 50 warnings
+3. **Test Coverage**: > 90% with integration tests
+4. **Performance**: < 30s for typical project analysis
+5. **Reliability**: Graceful handling of all error scenarios
+
+### Risk Mitigation
+
+**Risk**: Breaking changes during refactoring
+**Mitigation**: Comprehensive test suite before changes
+
+**Risk**: Performance regression
+**Mitigation**: Benchmark before/after each phase
+
+**Risk**: Scope creep
+**Mitigation**: Strict phase boundaries, no new features
+
+### Conclusion
+
+The development plan prioritizes fixing critical architectural flaws before adding any new features. This approach ensures a maintainable, type-safe codebase that can be extended reliably. The three-week timeline balances urgency with thoroughness, establishing a solid foundation for future development.

@@ -13,6 +13,7 @@ import { IssueDataDTO } from '../dto/IssueDataDTO'
 import { PullRequestDataDTO } from '../dto/PullRequestDataDTO'
 import { RepositoryDataDTO } from '../dto/RepositoryDataDTO'
 import { GitHubIssueResponse, GitHubPullRequestResponse, GitHubRepositoryResponse } from '../types/GitHubApiTypes'
+import { isGitHubLabel, isGitHubUser } from '../utils/TypeGuards'
 
 /**
  * GitHub REST API Service for repository, issues, PRs, and commits
@@ -223,7 +224,9 @@ export class GitHubRestApiService {
               draft: issue.draft,
               html_url: issue.html_url,
               id: issue.id,
-              labels: issue.labels?.filter((label): label is { color: string; description?: null | string; id: number; name: string } => typeof label !== 'string' && label.color !== undefined && label.id !== undefined && label.name !== undefined) || [],
+              labels: issue.labels?.filter((label): label is { color: string; description?: null | string; id: number; name: string } => 
+                typeof label !== 'string' && isGitHubLabel(label)
+              ) || [],
               locked: issue.locked,
               milestone: issue.milestone,
               node_id: issue.node_id,
@@ -331,7 +334,9 @@ export class GitHubRestApiService {
               },
               html_url: pr.html_url,
               id: pr.id,
-              labels: pr.labels?.filter((label): label is any => typeof label !== 'string' && label !== null && typeof label === 'object').map(label => ({
+              labels: pr.labels?.filter((label) => 
+                typeof label !== 'string' && isGitHubLabel(label)
+              ).map(label => ({
                 color: label.color || '',
                 description: label.description || null,
                 id: label.id || 0,
@@ -345,7 +350,7 @@ export class GitHubRestApiService {
               node_id: pr.node_id,
               number: pr.number,
               patch_url: pr.patch_url,
-              requested_reviewers: pr.requested_reviewers?.filter((r): r is any => r !== null && typeof r === 'object' && 'login' in r).map(r => ({
+              requested_reviewers: pr.requested_reviewers?.filter(isGitHubUser).map(r => ({
                 avatar_url: r.avatar_url,
                 id: r.id,
                 login: r.login,

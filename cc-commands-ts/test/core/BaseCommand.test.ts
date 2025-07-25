@@ -216,7 +216,8 @@ describe('BaseCommand', () => {
       expect(mockStdoutWrite).toHaveBeenCalledOnce()
       expect(mockExit).toHaveBeenCalledWith(1)
 
-      const outputArg = mockStdoutWrite.mock.calls[0][0]
+      const outputArg = mockStdoutWrite.mock.calls[0]?.[0]
+      expect(outputArg).toBeTruthy()
       expect(outputArg).toContain('ERROR_TYPE=COMMAND_EXECUTION_ERROR')
       expect(outputArg).toContain('ERROR_MESSAGE=Execute method failed')
       expect(outputArg).toContain('Display error message and exit')
@@ -232,7 +233,8 @@ describe('BaseCommand', () => {
 
       expect(mockExit).toHaveBeenCalledWith(1)
 
-      const outputArg = mockStdoutWrite.mock.calls[0][0]
+      const outputArg = mockStdoutWrite.mock.calls[0]?.[0]
+      expect(outputArg).toBeTruthy()
       expect(outputArg).toContain('ERROR_TYPE=COMMAND_EXECUTION_ERROR')
       expect(outputArg).toContain('ERROR_MESSAGE=String error thrown')
     })
@@ -243,7 +245,8 @@ describe('BaseCommand', () => {
 
       await command.run()
 
-      const outputArg = mockStdoutWrite.mock.calls[0][0]
+      const outputArg = mockStdoutWrite.mock.calls[0]?.[0]
+      expect(outputArg).toBeTruthy()
       expect(outputArg).toContain('ERROR_STACK=')
       expect(outputArg).toContain(errorWithStack.stack)
     })
@@ -255,7 +258,8 @@ describe('BaseCommand', () => {
 
       await command.run()
 
-      const outputArg = mockStdoutWrite.mock.calls[0][0]
+      const outputArg = mockStdoutWrite.mock.calls[0]?.[0]
+      expect(outputArg).toBeTruthy()
       expect(outputArg).toContain('ERROR_MESSAGE=Error without stack')
       expect(outputArg).not.toContain('ERROR_STACK=')
     })
@@ -270,7 +274,8 @@ describe('BaseCommand', () => {
 
       expect(mockExit).toHaveBeenCalledWith(1)
 
-      const outputArg = mockStdoutWrite.mock.calls[0][0]
+      const outputArg = mockStdoutWrite.mock.calls[0]?.[0]
+      expect(outputArg).toBeTruthy()
       expect(outputArg).toContain('ERROR_TYPE=COMMAND_EXECUTION_ERROR')
       expect(outputArg).toContain('ERROR_MESSAGE=[object Object]')
     })
@@ -284,7 +289,8 @@ describe('BaseCommand', () => {
 
       expect(mockExit).toHaveBeenCalledWith(1)
 
-      const outputArg = mockStdoutWrite.mock.calls[0][0]
+      const outputArg = mockStdoutWrite.mock.calls[0]?.[0]
+      expect(outputArg).toBeTruthy()
       expect(outputArg).toContain('ERROR_MESSAGE=execute() must return an LLMInfo instance')
     })
 
@@ -298,7 +304,8 @@ describe('BaseCommand', () => {
 
       expect(mockExit).toHaveBeenCalledWith(1)
 
-      const outputArg = mockStdoutWrite.mock.calls[0][0]
+      const outputArg = mockStdoutWrite.mock.calls[0]?.[0]
+      expect(outputArg).toBeTruthy()
       expect(outputArg).toContain('ERROR_MESSAGE=execute() must return an LLMInfo instance')
     })
 
@@ -426,7 +433,8 @@ describe('BaseCommand', () => {
 
       expect(mockExit).toHaveBeenCalledWith(1)
 
-      const outputArg = mockStdoutWrite.mock.calls[0][0]
+      const outputArg = mockStdoutWrite.mock.calls[0]?.[0]
+      expect(outputArg).toBeTruthy()
       expect(outputArg).toContain('ERROR_MESSAGE=Execute method rejected')
     })
   })
@@ -456,7 +464,8 @@ describe('BaseCommand', () => {
 
       await command.run()
 
-      const output = mockStdoutWrite.mock.calls[0][0]
+      const output = mockStdoutWrite.mock.calls[0]?.[0]
+      expect(output).toBeTruthy()
       
       // Verify comprehensive output format
       expect(output).toContain('=== EXECUTION SUMMARY ===')
@@ -505,7 +514,8 @@ describe('BaseCommand', () => {
 
       await command.run()
 
-      const output = mockStdoutWrite.mock.calls[0][0]
+      const output = mockStdoutWrite.mock.calls[0]?.[0]
+      expect(output).toBeTruthy()
       
       expect(output).toContain('COMMAND EXECUTION FAILED')
       expect(output).toContain('STOP PROCESSING')
@@ -527,7 +537,8 @@ describe('BaseCommand', () => {
       await command.run()
 
       expect(mockExit).toHaveBeenCalledWith(1)
-      const output = mockStdoutWrite.mock.calls[0][0]
+      const output = mockStdoutWrite.mock.calls[0]?.[0]
+      expect(output).toBeTruthy()
       expect(output).toContain('execute() must return an LLMInfo instance')
     })
 
@@ -540,7 +551,8 @@ describe('BaseCommand', () => {
       await command.run()
 
       expect(mockExit).toHaveBeenCalledWith(1)
-      const output = mockStdoutWrite.mock.calls[0][0]
+      const output = mockStdoutWrite.mock.calls[0]?.[0]
+      expect(output).toBeTruthy()
       expect(output).toContain('ERROR_MESSAGE=null')
     })
 
@@ -576,7 +588,8 @@ describe('BaseCommand', () => {
       expect(mockStdoutWrite).toHaveBeenCalledOnce()
       expect(mockExit).toHaveBeenCalledWith(0)
 
-      const output = mockStdoutWrite.mock.calls[0][0]
+      const output = mockStdoutWrite.mock.calls[0]?.[0]
+      expect(output).toBeTruthy()
       expect(output.length).toBeGreaterThan(10_000) // Should be substantial output
     })
   })

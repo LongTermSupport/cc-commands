@@ -14,16 +14,16 @@ import { GitHubGraphQLService } from '../../../../src/orchestrator-services/gith
 import { ProjectService } from '../../../../src/orchestrator-services/github/services/ProjectService'
 
 // Mock dependencies
-const mockGraphQLService = {
+const mockGraphQLService: vi.Mocked<Pick<GitHubGraphQLService, 'findProjectsByOwner' | 'getProject' | 'getProjectItems'>> = {
   findProjectsByOwner: vi.fn(),
   getProject: vi.fn(),
   getProjectItems: vi.fn()
-} as unknown as vi.Mocked<GitHubGraphQLService>
+}
 
-const mockGitService = {
+const mockGitService: vi.Mocked<Pick<SimpleGit, 'cwd' | 'getRemotes'>> = {
   cwd: vi.fn(),
   getRemotes: vi.fn()
-} as unknown as vi.Mocked<SimpleGit>
+}
 
 describe('ProjectService', () => {
   let service: ProjectService
