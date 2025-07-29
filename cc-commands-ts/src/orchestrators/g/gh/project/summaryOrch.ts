@@ -167,7 +167,21 @@ export const summaryOrch = async (
  */
 function extractProjectId(detectionResult: LLMInfo): null | string {
   const data = detectionResult.getData()
-  return data['PROJECT_NODE_ID'] || data['PROJECT_ID'] || data['PROJECT_V2_ID'] || null
+  if (!data) return null
+  
+  if ('PROJECT_NODE_ID' in data && data['PROJECT_NODE_ID']) {
+    return data['PROJECT_NODE_ID']
+  }
+
+  if ('PROJECT_ID' in data && data['PROJECT_ID']) {
+    return data['PROJECT_ID']
+  }
+
+  if ('PROJECT_V2_ID' in data && data['PROJECT_V2_ID']) {
+    return data['PROJECT_V2_ID']
+  }
+  
+  return null
 }
 
 /**
@@ -175,9 +189,10 @@ function extractProjectId(detectionResult: LLMInfo): null | string {
  */
 function extractRepositories(collectionResult: LLMInfo): string[] {
   const data = collectionResult.getData()
-  const repoList = data['REPOSITORIES_LIST']
+  if (!data) return []
   
-  if (!repoList) {
+  const repoList = Object.hasOwn(data, 'REPOSITORIES_LIST') ? data['REPOSITORIES_LIST'] : undefined
+  if (!repoList || typeof repoList !== 'string') {
     return []
   }
   
@@ -189,7 +204,7 @@ function extractRepositories(collectionResult: LLMInfo): string[] {
  */
 function buildAnalysisArgs(repositories: string[], timeWindowDays: number): IActivityAnalysisArgs {
   // Extract owner from first repository
-  const [owner] = repositories[0]?.split('/') || ['']
+  const [owner] = repositories.at(0)?.split('/') ?? ['']
   if (!owner) {
     throw new OrchestratorError(
       new Error('Unable to extract owner from repository list'),

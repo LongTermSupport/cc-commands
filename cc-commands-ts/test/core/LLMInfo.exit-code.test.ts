@@ -130,6 +130,12 @@ describe('LLMInfo Exit Code Logic', () => {
     expect(info.getExitCode()).toBe(0)
     expect(info.hasError()).toBe(false)
     expect(info.getActions()).toHaveLength(21)
-    expect(info.getData()['EXECUTION_STATUS']).toBe('SUCCESS')
+    const data = info.getData()
+    const status = Object.hasOwn(data, 'EXECUTION_STATUS') ? data['EXECUTION_STATUS'] : undefined
+    if (status) {
+      expect(status).toBe('SUCCESS')
+    } else {
+      throw new Error('EXECUTION_STATUS not found in data')
+    }
   })
 })

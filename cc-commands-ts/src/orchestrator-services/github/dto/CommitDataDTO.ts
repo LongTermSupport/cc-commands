@@ -757,7 +757,7 @@ export class CommitDataDTO implements ILLMDataDTO {
    * @returns Brief commit description for logging/debugging
    */
   getSummary(): string {
-    const firstLine = this.message.split('\n')[0] ?? ''
+    const firstLine = this.message.split('\n').at(0) ?? ''
     const shortMessage = firstLine.slice(0, 50)
     const truncated = firstLine.length > 50 ? '...' : ''
     return `${this.shortSha}: ${shortMessage}${truncated}`

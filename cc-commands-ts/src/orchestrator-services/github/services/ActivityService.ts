@@ -46,7 +46,7 @@ export class ActivityService {
       // Collect activity data from all repositories concurrently with error tolerance
       const repositoryResults = await Promise.allSettled(
         repos.map(async (repoFullName) => {
-          const repoName = repoFullName.split('/')[1] || repoFullName
+          const repoName = repoFullName.split('/').at(1) ?? repoFullName
           return this.repositoryService.getRepositoryActivity(owner, repoName, since)
         })
       )
@@ -113,11 +113,11 @@ export class ActivityService {
 
     try {
       // Aggregate all activity data
-      const combinedActivity = this.combineActivityMetrics(activities, activities[0]?.analysisPeriodStart || new Date())
+      const combinedActivity = this.combineActivityMetrics(activities, activities.at(0)?.analysisPeriodStart || new Date())
       
       // Extract summary data from combined metrics
       const {repositoryList} = combinedActivity
-      const primaryRepo = repositoryList[0] || 'unknown/unknown'
+      const primaryRepo = repositoryList.at(0) ?? 'unknown/unknown'
       const [owner, name] = primaryRepo.split('/')
 
       // Calculate health score based on activity patterns
@@ -252,8 +252,8 @@ export class ActivityService {
     latestEnd: Date
     totalDays: number
   } {
-    let earliestStart = activities[0]?.analysisPeriodStart || since
-    let latestEnd = activities[0]?.analysisPeriodEnd || new Date()
+    let earliestStart = activities.at(0)?.analysisPeriodStart ?? since
+    let latestEnd = activities.at(0)?.analysisPeriodEnd ?? new Date()
     
     for (const activity of activities) {
       if (activity.analysisPeriodStart < earliestStart) {

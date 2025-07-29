@@ -154,7 +154,7 @@ export class RepositoryService {
         mergedPullRequests,
         contributors.size, // contributorsCount
         contributors.size, // activeContributors (same as total for single repo)
-        contributors.size > 0 ? [...contributors][0] ?? null : null, // mostActiveContributor
+        contributors.size > 0 ? [...contributors].at(0) ?? null : null, // mostActiveContributor
         `${owner}/${repo}`, // mostActiveRepository
         0, // releaseCount (not calculated in this method)
         totalAdditions,

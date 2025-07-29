@@ -29,7 +29,7 @@ describe('GitHubGraphQLService Integration', () => {
     expect(projects.length).toBeGreaterThan(0)
     
     console.log(`✓ Found ${projects.length} projects for GitHub org`)
-    console.log(`✓ First project: ${projects[0].title}`)
+    console.log(`✓ First project: ${projects.at(0).title}`)
   })
 
   it('should get project details by ID without union type errors', async () => {
@@ -37,7 +37,7 @@ describe('GitHubGraphQLService Integration', () => {
     const projects = await graphqlService.findProjectsByOwner('github')
     expect(projects.length).toBeGreaterThan(0)
     
-    const projectId = projects[0].id
+    const projectId = projects.at(0).id
     console.log(`Testing project ID: ${projectId}`)
     
     // This should NOT fail with "Selections can't be made directly on unions"
@@ -56,7 +56,7 @@ describe('GitHubGraphQLService Integration', () => {
     const projects = await graphqlService.findProjectsByOwner('github')
     expect(projects.length).toBeGreaterThan(0)
     
-    const projectId = projects[0].id
+    const projectId = projects.at(0).id
     console.log(`Testing project items for ID: ${projectId}`)
     
     // This should NOT fail with union type selection errors
@@ -68,9 +68,11 @@ describe('GitHubGraphQLService Integration', () => {
     console.log(`✓ Retrieved ${items.length} project items`)
     
     if (items.length > 0) {
-      const firstItem = items[0]
-      console.log(`✓ First item type: ${firstItem.type}`)
-      console.log(`✓ First item has ${firstItem.fieldValues.length} field values`)
+      const firstItem = items.at(0)
+      if (firstItem) {
+        console.log(`✓ First item type: ${firstItem.type}`)
+        console.log(`✓ First item has ${firstItem.fieldValues.length} field values`)
+      }
     }
   })
 
@@ -79,7 +81,7 @@ describe('GitHubGraphQLService Integration', () => {
     const projects = await graphqlService.findProjectsByOwner('github')
     
     // Try to find a project with minimal items or create test case
-    const projectId = projects[0].id
+    const projectId = projects.at(0).id
     
     try {
       const items = await graphqlService.getProjectItems(projectId)

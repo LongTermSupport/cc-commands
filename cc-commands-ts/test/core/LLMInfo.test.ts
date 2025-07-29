@@ -156,21 +156,21 @@ describe('LLMInfo', () => {
       const actions = llmInfo.getActions()
       expect(actions).toHaveLength(3)
 
-      expect(actions[0]).toEqual({
+      expect(actions.at(0)).toEqual({
         details: 'Connected to prod DB',
         duration: 150,
         event: 'Connect to database',
         result: 'success'
       })
 
-      expect(actions[1]).toEqual({
+      expect(actions.at(1)).toEqual({
         details: 'Timeout after 30s',
         duration: 30_000,
         event: 'Fetch user data',
         result: 'failed'
       })
 
-      expect(actions[2]).toEqual({
+      expect(actions.at(2)).toEqual({
         details: 'Email disabled in config',
         duration: undefined,
         event: 'Send email',
@@ -182,7 +182,7 @@ describe('LLMInfo', () => {
       llmInfo.addAction('Simple action', 'success')
 
       const actions = llmInfo.getActions()
-      expect(actions[0]).toEqual({
+      expect(actions.at(0)).toEqual({
         details: undefined,
         duration: undefined,
         event: 'Simple action',
@@ -224,11 +224,17 @@ describe('LLMInfo', () => {
       const output = llmInfo.toString()
       
       // Check that all files are included in the output
-      expect(output).toContain('FILES:')
-      expect(output).toContain('- created: /tmp/output.json (1024 bytes)')
-      expect(output).toContain('- modified: config.yaml (512 bytes)')
-      expect(output).toContain('- deleted: old-data.csv')
-      expect(output).toContain('- read: README.md')
+      expect(output).toContain('=== FILES AFFECTED ===')
+      expect(output).toContain('FILE_0_PATH=/tmp/output.json')
+      expect(output).toContain('FILE_0_OPERATION=created')
+      expect(output).toContain('FILE_0_SIZE=1024')
+      expect(output).toContain('FILE_1_PATH=config.yaml')
+      expect(output).toContain('FILE_1_OPERATION=modified')
+      expect(output).toContain('FILE_2_PATH=old-data.csv')
+      expect(output).toContain('FILE_2_OPERATION=deleted')
+      expect(output).toContain('FILE_3_PATH=README.md')
+      expect(output).toContain('FILE_3_OPERATION=read')
+      expect(output).toContain('TOTAL_FILES=4')
     })
 
     it('should allow method chaining for addFile', () => {
@@ -249,7 +255,7 @@ describe('LLMInfo', () => {
       // Verify instructions through the toString output
       const output = llmInfo.toString()
       
-      expect(output).toContain('INSTRUCTIONS:')
+      expect(output).toContain('=== INSTRUCTIONS FOR LLM ===')
       expect(output).toContain('- Generate a technical report focusing on performance metrics')
       expect(output).toContain('- Include recommendations for optimization')
       expect(output).toContain('- Highlight any critical issues in red')
@@ -312,14 +318,15 @@ describe('LLMInfo', () => {
 
       const actions = llmInfo.getActions()
       expect(actions).toHaveLength(1)
-      expect(actions[0].event).toBe('Other action')
+      expect(actions.at(0).event).toBe('Other action')
 
       // Verify merged files and instructions through the toString output
       const output = llmInfo.toString()
       
-      expect(output).toContain('FILES:')
-      expect(output).toContain('- created: /other/file.txt')
-      expect(output).toContain('INSTRUCTIONS:')
+      expect(output).toContain('=== FILES AFFECTED ===')
+      expect(output).toContain('FILE_0_PATH=/other/file.txt')
+      expect(output).toContain('FILE_0_OPERATION=created')
+      expect(output).toContain('=== INSTRUCTIONS FOR LLM ===')
       expect(output).toContain('- Other instruction')
     })
 
@@ -565,7 +572,7 @@ describe('LLMInfo', () => {
       llmInfo.addAction('Long action name', 'success', longDescription, 5000)
 
       const actions = llmInfo.getActions()
-      expect(actions[0].details).toBe(longDescription)
+      expect(actions.at(0).details).toBe(longDescription)
     })
   })
 })

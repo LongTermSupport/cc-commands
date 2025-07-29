@@ -85,7 +85,7 @@
     "test:coverage": "npm run build && vitest run --coverage",
     "test:real": "npm run build && vitest run archive/test/commands/g/gh/project/summary.real-integration.test.ts",
     "typecheck": "tsc -b --noEmit",
-    "qa": "npm run build && npm run lint && npm run test && echo \"\\n✅ QA PASSING: If this is the first time QA passes after failures, commit now! (git add . && git commit -m 'QA passing: [brief description]' && git push)\"",
+    "qa": "npm run build && npm run lint && npm run test && echo \"\\n✅ QA PASSING: All checks completed successfully! Commit when ready: git add . && git commit -m 'QA passing: [description]' && git push\"",
     "postpack": "shx rm -f oclif.manifest.json",
     "posttest": "npm run lint",
     "prepack": "oclif manifest && oclif readme",

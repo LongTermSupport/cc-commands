@@ -207,8 +207,8 @@ describe('ProjectService', () => {
       const result = await service.findRecentProjects('testowner')
 
       expect(result).toHaveLength(2)
-      expect(result[0].id).toBe('PVT_new123') // Newer project first
-      expect(result[1].id).toBe('PVT_old123') // Older project second
+      expect(result.at(0)?.id).toBe('PVT_new123') // Newer project first
+      expect(result.at(1)?.id).toBe('PVT_old123') // Older project second
     })
 
     it('should handle empty projects list', async () => {

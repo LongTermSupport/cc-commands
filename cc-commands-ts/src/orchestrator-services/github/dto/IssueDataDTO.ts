@@ -82,7 +82,7 @@ export class IssueDataDTO implements ILLMDataDTO {
     this.validateCliOutput(cliOutput)
     
     return new IssueDataDTO(
-      cliOutput.id || '',
+      cliOutput.id || 'unknown',
       cliOutput.number || 0,
       cliOutput.title || 'Untitled Issue',
       cliOutput.body || '',
@@ -188,7 +188,7 @@ export class IssueDataDTO implements ILLMDataDTO {
     const state = this.normalizeGraphQLState(apiResponse.state, apiResponse.closed)
     
     return new IssueDataDTO(
-      apiResponse.id || '',
+      apiResponse.id || 'unknown',
       apiResponse.number || 0,
       apiResponse.title || 'Untitled Issue',
       apiResponse.body || '',

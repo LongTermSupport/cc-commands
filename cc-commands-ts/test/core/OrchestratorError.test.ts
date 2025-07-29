@@ -465,7 +465,7 @@ describe('OrchestratorError', () => {
       const orchestratorError = OrchestratorError.fromError(specificError)
 
       // Should get ENOENT-specific instructions, not generic ones
-      expect(orchestratorError.recoveryInstructions[0]).toContain('Check if the file/directory exists')
+      expect(orchestratorError.recoveryInstructions.at(0)).toContain('Check if the file/directory exists')
     })
   })
 

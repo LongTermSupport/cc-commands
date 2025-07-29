@@ -207,7 +207,7 @@ async function detectProjectFromOwner(
   result.addData('PROJECTS_FOUND', String(projects.length))
   
   // Use the most recent project
-  const selectedProject = projects[0]
+  const selectedProject = projects.at(0)
   if (selectedProject) {
     result.addData('SELECTED_PROJECT', selectedProject.title)
     result.addDataBulk(selectedProject.toLLMData())

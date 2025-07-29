@@ -178,7 +178,18 @@ describe('ActivityService', () => {
 
       await expect(service.aggregateActivityAcrossRepos(repos, owner, since))
         .rejects
-        .toBe(originalError)
+        .toBeInstanceOf(OrchestratorError)
+      
+      try {
+        await service.aggregateActivityAcrossRepos(repos, owner, since)
+      } catch (error) {
+        if (error instanceof OrchestratorError) {
+          expect(error.message).toContain('No repositories were accessible for analysis')
+          expect(error.message).toContain('Repository not found')
+          expect(error.debugInfo.failedCount).toBe(1)
+          expect(error.debugInfo.repositories).toEqual(repos)
+        }
+      }
     })
 
     it('should wrap other errors in OrchestratorError', async () => {
@@ -201,7 +212,7 @@ describe('ActivityService', () => {
         if (error instanceof OrchestratorError) {
           expect(error.debugInfo.owner).toBe(owner)
           expect(error.debugInfo.repositories).toEqual(repos)
-          expect(error.debugInfo.since).toBe(since.toISOString())
+          expect(error.debugInfo.failedCount).toBe(1)
         }
       }
     })
@@ -280,9 +291,9 @@ describe('ActivityService', () => {
       const result = await service.identifyMostActiveRepositories(activities)
 
       expect(result).toHaveLength(3)
-      expect(result[0]).toBe('testowner/high-activity') // Highest activity first
-      expect(result[1]).toBe('testowner/medium-activity') // Medium activity second
-      expect(result[2]).toBe('testowner/low-activity') // Lowest activity last
+      expect(result.at(0)).toBe('testowner/high-activity') // Highest activity first
+      expect(result.at(1)).toBe('testowner/medium-activity') // Medium activity second
+      expect(result.at(2)).toBe('testowner/low-activity') // Lowest activity last
     })
 
     it('should handle single repository', async () => {
