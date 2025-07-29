@@ -84,6 +84,13 @@ export const ArgumentParser = {
       return { input: trimmed, mode: 'url' }
     }
     
+    // Check if input looks like "owner/repo" - extract just the owner for project lookup
+    const repoMatch = trimmed.match(/^([a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])\/([a-zA-Z0-9._-]+)$/)
+    if (repoMatch && repoMatch[1]) {
+      // Input like "LongTermSupport/cc-commands" -> extract "LongTermSupport"
+      return { input: repoMatch[1], mode: 'owner' }
+    }
+    
     // Owner mode (organization or user name)
     return { input: trimmed, mode: 'owner' }
   },

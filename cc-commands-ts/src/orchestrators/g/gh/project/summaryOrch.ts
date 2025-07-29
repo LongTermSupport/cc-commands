@@ -167,7 +167,7 @@ export const summaryOrch = async (
  */
 function extractProjectId(detectionResult: LLMInfo): null | string {
   const data = detectionResult.getData()
-  return data['PROJECT_NODE_ID'] || data['PROJECT_ID'] || null
+  return data['PROJECT_NODE_ID'] || data['PROJECT_ID'] || data['PROJECT_V2_ID'] || null
 }
 
 /**

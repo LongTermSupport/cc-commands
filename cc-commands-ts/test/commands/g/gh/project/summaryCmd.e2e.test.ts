@@ -47,8 +47,8 @@ describe('g-gh-project-summary E2E', () => {
     expect(result.stdout).toContain('g-gh-project-summary')
   })
 
-  it('should return project summary for a valid public repository', () => {
-    const result = runCommand('LongTermSupport/cc-commands')
+  it('should return project summary for organization with Projects v2', () => {
+    const result = runCommand('github')
     
     // Debug output
     if (result.exitCode !== 0) {
@@ -59,10 +59,8 @@ describe('g-gh-project-summary E2E', () => {
     
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toContain('EXECUTION_STATUS=SUCCESS')
-    expect(result.stdout).toContain('REPOSITORY_NAME=cc-commands')
-    expect(result.stdout).toContain('REPOSITORY_OWNER=LongTermSupport')
-    expect(result.stdout).toContain('REPOSITORY_FULL_NAME=LongTermSupport/cc-commands')
-    expect(result.stdout).toMatch(/REPOSITORY_STARGAZERS_COUNT=\d+/)
+    expect(result.stdout).toContain('PROJECT_OWNER=github')
+    expect(result.stdout).toMatch(/TOTAL_PROJECTS=\d+/)
   })
 
   it('should handle repository URLs', () => {

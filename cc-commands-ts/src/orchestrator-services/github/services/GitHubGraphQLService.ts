@@ -216,6 +216,7 @@ export class GitHubGraphQLService {
             : String(error)
           lastError = new Error(`GraphQL Error: ${errorStr}`)
         }
+
         continue
       }
     }
@@ -285,15 +286,57 @@ export class GitHubGraphQLService {
                     __typename
                     ... on ProjectV2ItemFieldTextValue {
                       text
-                      field { id name }
+                      field {
+                        __typename
+                        ... on ProjectV2Field {
+                          id
+                          name
+                        }
+                        ... on ProjectV2IterationField {
+                          id
+                          name
+                        }
+                        ... on ProjectV2SingleSelectField {
+                          id
+                          name
+                        }
+                      }
                     }
                     ... on ProjectV2ItemFieldSingleSelectValue {
                       name
-                      field { id name }
+                      field {
+                        __typename
+                        ... on ProjectV2Field {
+                          id
+                          name
+                        }
+                        ... on ProjectV2IterationField {
+                          id
+                          name
+                        }
+                        ... on ProjectV2SingleSelectField {
+                          id
+                          name
+                        }
+                      }
                     }
                     ... on ProjectV2ItemFieldDateValue {
                       date
-                      field { id name }
+                      field {
+                        __typename
+                        ... on ProjectV2Field {
+                          id
+                          name
+                        }
+                        ... on ProjectV2IterationField {
+                          id
+                          name
+                        }
+                        ... on ProjectV2SingleSelectField {
+                          id
+                          name
+                        }
+                      }
                     }
                   }
                 }
@@ -450,21 +493,91 @@ export class GitHubGraphQLService {
                     __typename
                     ... on ProjectV2ItemFieldTextValue {
                       text
-                      field { id name }
+                      field {
+                        __typename
+                        ... on ProjectV2Field {
+                          id
+                          name
+                        }
+                        ... on ProjectV2IterationField {
+                          id
+                          name
+                        }
+                        ... on ProjectV2SingleSelectField {
+                          id
+                          name
+                        }
+                      }
                     }
                     ... on ProjectV2ItemFieldSingleSelectValue {
                       name
-                      field { id name }
+                      field {
+                        __typename
+                        ... on ProjectV2Field {
+                          id
+                          name
+                        }
+                        ... on ProjectV2IterationField {
+                          id
+                          name
+                        }
+                        ... on ProjectV2SingleSelectField {
+                          id
+                          name
+                        }
+                      }
                     }
                     ... on ProjectV2ItemFieldDateValue {
                       date
-                      field { id name }
+                      field {
+                        __typename
+                        ... on ProjectV2Field {
+                          id
+                          name
+                        }
+                        ... on ProjectV2IterationField {
+                          id
+                          name
+                        }
+                        ... on ProjectV2SingleSelectField {
+                          id
+                          name
+                        }
+                      }
                     }
                     ... on ProjectV2ItemFieldRepositoryValue {
-                      field { id name }
+                      field {
+                        __typename
+                        ... on ProjectV2Field {
+                          id
+                          name
+                        }
+                        ... on ProjectV2IterationField {
+                          id
+                          name
+                        }
+                        ... on ProjectV2SingleSelectField {
+                          id
+                          name
+                        }
+                      }
                     }
                     ... on ProjectV2ItemFieldUserValue {
-                      field { id name }
+                      field {
+                        __typename
+                        ... on ProjectV2Field {
+                          id
+                          name
+                        }
+                        ... on ProjectV2IterationField {
+                          id
+                          name
+                        }
+                        ... on ProjectV2SingleSelectField {
+                          id
+                          name
+                        }
+                      }
                     }
                   }
                 }
