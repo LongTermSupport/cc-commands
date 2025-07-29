@@ -30,41 +30,90 @@ export class RepositoryService {
    */
   async getRepositoryActivity(owner: string, repo: string, since: Date): Promise<ActivityMetricsDTO> {
     try {
-      // Collect activity data from multiple endpoints
-      const [issues, pullRequests, commits] = await Promise.all([
+      // Validate repository format
+      if (!owner || !repo || owner.includes('/') || repo.includes('/')) {
+        throw new OrchestratorError(
+          new Error(`Invalid repository format: "${owner}/${repo}"`),
+          ['Use format "owner/repo"', 'Ensure owner and repo names are valid'],
+          { owner, repo }
+        )
+      }
+
+      // Collect activity data from multiple endpoints with error handling
+      const [issues, pullRequests, commits] = await Promise.allSettled([
         this.restService.searchIssues(owner, repo, since),
         this.restService.searchPullRequests(owner, repo, since),
         this.restService.searchCommits(owner, repo, since)
       ])
 
-      // Calculate activity metrics
-      const totalIssues = issues.length
-      const openIssues = issues.filter(issue => issue.state === 'open').length
+      // Extract successful results or empty arrays for failed requests
+      const issuesData = issues.status === 'fulfilled' ? issues.value : []
+      const pullRequestsData = pullRequests.status === 'fulfilled' ? pullRequests.value : []
+      const commitsData = commits.status === 'fulfilled' ? commits.value : []
+
+      // Check if all requests failed (likely due to 404 or access denied)
+      if (issues.status === 'rejected' && pullRequests.status === 'rejected' && commits.status === 'rejected') {
+        // Log the specific error for debugging but handle gracefully
+        const sampleError = issues.reason
+        
+        // Check various ways the 404 status might be represented
+        const is404 = sampleError?.status === 404 || 
+                      sampleError?.response?.status === 404 ||
+                      (sampleError?.message && sampleError.message.includes('Not Found'))
+        
+        if (is404) {
+          throw new OrchestratorError(
+            new Error(`Repository not found or access denied: ${owner}/${repo}`),
+            ['Check if repository exists', 'Verify repository is public or token has access', 'Check repository name spelling'],
+            { owner, repo, status: 404 }
+          )
+        }
+        
+        // For other errors, extract proper error message
+        let errorMessage = 'Unknown repository access error'
+        if (sampleError instanceof Error) {
+          errorMessage = sampleError.message
+        } else if (sampleError && typeof sampleError === 'object' && 'message' in sampleError) {
+          errorMessage = String(sampleError.message)
+        } else if (sampleError) {
+          errorMessage = String(sampleError)
+        }
+        
+        throw new OrchestratorError(
+          new Error(errorMessage),
+          ['Check repository exists', 'Verify GitHub token permissions', 'Check network connectivity'],
+          { originalError: String(sampleError), owner, repo }
+        )
+      }
+
+      // Calculate activity metrics using the extracted data
+      const totalIssues = issuesData.length
+      const openIssues = issuesData.filter(issue => issue.state === 'open').length
       const closedIssues = totalIssues - openIssues
 
-      const totalPullRequests = pullRequests.length
-      const openPullRequests = pullRequests.filter(pr => pr.state === 'open').length
-      const mergedPullRequests = pullRequests.filter(pr => pr.merged).length
+      const totalPullRequests = pullRequestsData.length
+      const openPullRequests = pullRequestsData.filter(pr => pr.state === 'open').length
+      const mergedPullRequests = pullRequestsData.filter(pr => pr.merged).length
       // closedPullRequests calculated for completeness but not used in this DTO
       // const closedPullRequests = totalPullRequests - openPullRequests - mergedPullRequests
 
-      const totalCommits = commits.length
+      const totalCommits = commitsData.length
 
       // Extract unique contributors
       const contributors = new Set<string>()
-      for (const issue of issues) {
+      for (const issue of issuesData) {
         if (issue.creator) {
           contributors.add(issue.creator)
         }
       }
 
-      for (const pr of pullRequests) {
+      for (const pr of pullRequestsData) {
         if (pr.creator) {
           contributors.add(pr.creator)
         }
       }
 
-      for (const commit of commits) {
+      for (const commit of commitsData) {
         if (commit.authorName) {
           contributors.add(commit.authorName)
         }
@@ -86,9 +135,9 @@ export class RepositoryService {
       const avgPrsPerDay = analysisPeriodDays > 0 ? totalPullRequests / analysisPeriodDays : 0
       
       // Calculate totals for code changes
-      const totalAdditions = commits.reduce((sum, commit) => sum + commit.additions, 0)
-      const totalDeletions = commits.reduce((sum, commit) => sum + commit.deletions, 0)
-      const totalFilesChanged = commits.reduce((sum, commit) => sum + commit.filesChanged, 0)
+      const totalAdditions = commitsData.reduce((sum, commit) => sum + commit.additions, 0)
+      const totalDeletions = commitsData.reduce((sum, commit) => sum + commit.deletions, 0)
+      const totalFilesChanged = commitsData.reduce((sum, commit) => sum + commit.filesChanged, 0)
 
       return new ActivityMetricsDTO(
         1, // repositoriesCount
