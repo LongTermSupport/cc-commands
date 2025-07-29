@@ -617,6 +617,60 @@ This runs:
 
 **Custom Type Safety Rules**: The project includes 5 custom ESLint rules that enforce strict typing for orchestrators and prevent usage of abstract types. See the "Custom ESLint Rules for Type Safety" section above.
 
+### ESLint Configuration (2025)
+
+**🚨 CRITICAL: This project uses ESLint 9.x flat configuration format**
+
+#### Verify ESLint Version and Configuration
+
+```bash
+# Check ESLint version (should be 9.x+)
+npx eslint --version
+
+# Verify configuration file exists (NOT .eslintrc.json)
+ls -la eslint.config.mjs
+
+# Debug configuration for specific file
+npx eslint --print-config src/path/to/file.ts
+
+# Debug configuration with verbose output  
+npx eslint --debug src/path/to/file.ts
+```
+
+#### Configuration File Structure
+
+- **Correct**: `eslint.config.mjs` (ESLint 9.x flat config)
+- **Incorrect**: `.eslintrc.json`, `.eslintrc.js`, etc. (legacy format)
+
+#### Adding File-Specific Overrides
+
+When adding new file patterns that need special ESLint rules:
+
+```javascript
+// In eslint.config.mjs - add new override object to export array
+{
+  // Example: Allow snake_case for API response mapping
+  files: [
+    'src/orchestrator-services/github/services/GitHubRestApiService.ts',
+    'src/orchestrator-services/github/types/GitHubApiTypes.ts'
+  ],
+  rules: {
+    'camelcase': 'off' // GitHub API responses use snake_case properties
+  }
+}
+```
+
+#### Common ESLint Issues
+
+1. **Configuration Not Applied**: Using legacy `.eslintrc.*` files with ESLint 9.x
+   - **Solution**: Remove legacy config files, use `eslint.config.mjs`
+   
+2. **File Overrides Not Working**: Incorrect file pattern matching
+   - **Solution**: Use `npx eslint --debug` to verify patterns match target files
+   
+3. **Camelcase Violations**: External API responses with snake_case properties
+   - **Solution**: Add file-specific `camelcase: 'off'` overrides
+
 ### Git Commit Workflow Rules
 
 **🚨 CRITICAL: Commit and Push on QA State Transitions**
