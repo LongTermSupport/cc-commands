@@ -6,9 +6,8 @@
  */
 
 import { OrchestratorError } from '../../../../core/error/OrchestratorError'
-import { IOrchestratorService } from '../../../../core/interfaces/IOrchestratorService'
 import { LLMInfo } from '../../../../core/LLMInfo'
-import { ArgumentParser, IActivityAnalysisArgs } from '../../../../orchestrator-services/github/types/ArgumentTypes'
+import { IActivityAnalysisArgs, IProjectDataCollectionArgs, IProjectDetectionArgs, ISummaryOrchestratorArgs } from '../../../../orchestrator-services/github/types/ArgumentTypes'
 
 /**
  * Service collection for GitHub project summary orchestrator
@@ -18,13 +17,13 @@ import { ArgumentParser, IActivityAnalysisArgs } from '../../../../orchestrator-
  */
 export type TSummaryOrchestratorServices = {
   /** Activity analysis orchestrator service */
-  activityAnalysisOrchServ: IOrchestratorService
+  activityAnalysisOrchServ: (args: IActivityAnalysisArgs) => Promise<LLMInfo>
   
   /** Project data collection orchestrator service */
-  projectDataCollectionOrchServ: IOrchestratorService
+  projectDataCollectionOrchServ: (args: IProjectDataCollectionArgs) => Promise<LLMInfo>
   
   /** Project detection orchestrator service */
-  projectDetectionOrchServ: IOrchestratorService
+  projectDetectionOrchServ: (args: IProjectDetectionArgs) => Promise<LLMInfo>
 }
 
 /**
@@ -40,12 +39,12 @@ export type TSummaryOrchestratorServices = {
  * 2. Data Collection - Gather project and repository information
  * 3. Activity Analysis - Analyze activity patterns and generate insights
  * 
- * @param commandArgs - Raw arguments string from the command
+ * @param args - Typed arguments from the command
  * @param services - Injected service dependencies
  * @returns LLMInfo with comprehensive project analysis data
  */
 export const summaryOrch = async (
-  commandArgs: string,
+  args: ISummaryOrchestratorArgs,
   services: TSummaryOrchestratorServices
 ): Promise<LLMInfo> => {
   // Extract required orchestrator services
@@ -69,14 +68,14 @@ export const summaryOrch = async (
   try {
     // Add initial context
     result.addInstruction('Generate a comprehensive GitHub project summary report')
-    result.addData('COMMAND_ARGS', commandArgs)
+    result.addData('PROJECT_INPUT', args.projectArgs.input)
+    result.addData('DETECTION_MODE', args.projectArgs.mode)
+    result.addData('TIME_WINDOW_DAYS', String(args.timeWindowDays))
+    result.addData('OUTPUT_FORMAT', args.format || 'technical')
     result.addData('EXECUTION_PHASE', 'initialization')
     
     // Phase 1: Project Detection
-    const detectionResult = await projectDetectionOrchServ(
-      commandArgs,
-      services
-    )
+    const detectionResult = await projectDetectionOrchServ(args.projectArgs)
     
     result.merge(detectionResult)
     
@@ -101,11 +100,8 @@ export const summaryOrch = async (
     // Phase 2: Data Collection
     result.addData('EXECUTION_PHASE', 'data_collection')
     
-    const collectionArgs = `${projectId} ${commandArgs}`
-    const collectionResult = await projectDataCollectionOrchServ(
-      collectionArgs,
-      services
-    )
+    const collectionArgs: IProjectDataCollectionArgs = { projectNodeId: projectId }
+    const collectionResult = await projectDataCollectionOrchServ(collectionArgs)
     
     result.merge(collectionResult)
     
@@ -130,13 +126,8 @@ export const summaryOrch = async (
       )
     }
     
-    const analysisArgs = buildAnalysisArgs(repositories, commandArgs)
-    // Convert typed args to JSON string for service map compatibility during migration
-    const analysisArgsString = JSON.stringify(analysisArgs)
-    const analysisResult = await activityAnalysisOrchServ(
-      analysisArgsString,
-      services
-    )
+    const analysisArgs = buildAnalysisArgs(repositories, args.timeWindowDays)
+    const analysisResult = await activityAnalysisOrchServ(analysisArgs)
     
     result.merge(analysisResult)
     
@@ -163,7 +154,7 @@ export const summaryOrch = async (
       result.setError(new OrchestratorError(
         error,
         ['Review the error details', 'Check service availability'],
-        { code: 'ORCHESTRATION_FAILED', commandArgs }
+        { code: 'ORCHESTRATION_FAILED', mode: args.projectArgs.mode, projectInput: args.projectArgs.input }
       ))
     }
 
@@ -194,13 +185,9 @@ function extractRepositories(collectionResult: LLMInfo): string[] {
 }
 
 /**
- * Build analysis arguments from repositories and command args
+ * Build analysis arguments from repositories and time window
  */
-function buildAnalysisArgs(repositories: string[], originalArgs: string): IActivityAnalysisArgs {
-  // Extract time window from original args
-  const sinceMatch = originalArgs.match(/--since\s+(\S+)/)
-  const since = sinceMatch ? sinceMatch[1] : '30d'
-  
+function buildAnalysisArgs(repositories: string[], timeWindowDays: number): IActivityAnalysisArgs {
   // Extract owner from first repository
   const [owner] = repositories[0]?.split('/') || ['']
   if (!owner) {
@@ -210,9 +197,6 @@ function buildAnalysisArgs(repositories: string[], originalArgs: string): IActiv
       { repositories }
     )
   }
-  
-  // Parse time window to days
-  const timeWindowDays = ArgumentParser.parseTimeWindow(since)
   
   return {
     owner,

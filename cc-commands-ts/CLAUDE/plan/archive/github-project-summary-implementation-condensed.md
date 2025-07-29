@@ -1,5 +1,13 @@
 # GitHub Project Summary - Remaining Work (Condensed)
 
+> **⚠️ SUPERSEDED**: This plan has been replaced by `github-project-summary-architectural-fix.md`
+>
+> **REASON**: This condensed plan (like the original `github-project-summary-implementation.md`) focused on "string-to-object migration" which was architecturally wrong. Internal TypeScript services should never have used string arguments in the first place.
+>
+> **NEW PLAN**: `github-project-summary-architectural-fix.md` addresses the fundamental CLI boundary violation and provides the correct architectural approach.
+>
+> **ARCHIVED**: 2025-07-29
+
 ## 🚨 CURRENT STATUS
 **Build**: PASSING ✅  
 **Tests**: 399 PASSING ✅ (Unit tests only)  

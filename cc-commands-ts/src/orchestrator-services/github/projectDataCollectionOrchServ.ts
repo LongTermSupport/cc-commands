@@ -8,6 +8,7 @@
 import { OrchestratorError } from '../../core/error/OrchestratorError'
 import { LLMInfo } from '../../core/LLMInfo'
 import { RepositoryDataDTO } from './dto/RepositoryDataDTO'
+import { IProjectDataCollectionArgs } from './types/ArgumentTypes'
 import { TGitHubServices } from './types/ServiceTypes'
 
 /**
@@ -20,20 +21,19 @@ import { TGitHubServices } from './types/ServiceTypes'
  * Expected input format:
  * - Project node ID (e.g., "PVT_kwHOABDmBM4AHJKL")
  * 
- * @param args - Project node ID for data collection
+ * @param args - Typed arguments with project node ID
  * @param services - GitHub services including GraphQL, REST API, and repository services
  * @returns LLMInfo with comprehensive project and repository data
  */
 export const projectDataCollectionOrchServ = async (
-  args: string,
+  args: IProjectDataCollectionArgs,
   services: TGitHubServices
 ): Promise<LLMInfo> => {
   const result = LLMInfo.create()
   
   try {
-    // Parse and validate project node ID
-    const projectNodeId = args.trim()
-    if (!projectNodeId) {
+    // Validate project node ID
+    if (!args.projectNodeId?.trim()) {
       throw new OrchestratorError(
         new Error('Project node ID is required for data collection'),
         [
@@ -45,7 +45,7 @@ export const projectDataCollectionOrchServ = async (
       )
     }
     
-    result.addData('PROJECT_NODE_ID', projectNodeId)
+    result.addData('PROJECT_NODE_ID', args.projectNodeId)
     
     // Validate authentication
     result.addAction('Validate authentication for data collection', 'success')
@@ -55,7 +55,7 @@ export const projectDataCollectionOrchServ = async (
     result.addData('AUTHENTICATED_USER', authenticatedUser)
     
     // Get project details via project service
-    const projectData = await services.projectService.getProjectWithItems(projectNodeId)
+    const projectData = await services.projectService.getProjectWithItems(args.projectNodeId)
     result.addAction('Get project details', 'success', `Project: ${projectData.title}`)
     
     // Add project information to result
@@ -71,7 +71,7 @@ export const projectDataCollectionOrchServ = async (
     result.addData('PROJECT_ITEMS_COUNT', String(projectData.itemCount))
     
     // Extract repositories from project items
-    const repositories = await services.projectService.getRepositoriesFromProject(projectNodeId)
+    const repositories = await services.projectService.getRepositoriesFromProject(args.projectNodeId)
     
     if (repositories.length === 0) {
       result.addAction('Extract repositories from project', 'failed', 'No repositories found in project')
@@ -82,7 +82,7 @@ export const projectDataCollectionOrchServ = async (
           'Check if the project has any linked repositories',
           'Ensure you have access to the project\'s repositories'
         ],
-        { projectNodeId }
+        { projectNodeId: args.projectNodeId }
       )
     }
     
@@ -153,7 +153,7 @@ export const projectDataCollectionOrchServ = async (
           'Check if the repositories exist and are not private',
           'Ensure your GitHub token has appropriate permissions'
         ],
-        { projectNodeId, repositories }
+        { projectNodeId: args.projectNodeId, repositories }
       )
     }
     

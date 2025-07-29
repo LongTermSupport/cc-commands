@@ -1,5 +1,15 @@
 # GitHub Project Summary Implementation Plan
 
+> **⚠️ SUPERSEDED**: This plan has been replaced by `github-project-summary-architectural-fix.md`
+>
+> **REASON**: This original comprehensive plan (and its condensed version `github-project-summary-implementation-condensed.md`) focused on fixing string-based arguments through migration, which was the wrong approach. Internal TypeScript services should never have used string arguments in the first place.
+>
+> **ARCHITECTURAL FLAW**: The entire system was designed around string arguments flowing through internal services, violating the basic principle that only CLI commands should handle string parsing.
+>
+> **NEW PLAN**: `github-project-summary-architectural-fix.md` provides the correct architectural approach by fixing CLI boundary violations.
+>
+> **ARCHIVED**: 2025-07-29
+
 ## Overview
 
 This plan details the implementation of the `g:gh:project:summary` command following the cc-commands architecture. The command analyzes GitHub Projects v2 and generates comprehensive activity summaries across multiple repositories.

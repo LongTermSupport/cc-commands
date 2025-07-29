@@ -18,7 +18,7 @@ import { GitHubGraphQLService } from '../services/GitHubGraphQLService'
 import { GitHubRestApiService } from '../services/GitHubRestApiService'
 import { ProjectService } from '../services/ProjectService'
 import { RepositoryService } from '../services/RepositoryService'
-import { ArgumentParser, IActivityAnalysisArgs } from '../types/ArgumentTypes'
+import { ArgumentParser, IActivityAnalysisArgs, IProjectDataCollectionArgs } from '../types/ArgumentTypes'
 import { TGitHubServices } from '../types/ServiceTypes'
 
 /**
@@ -80,8 +80,11 @@ export async function createGitHubServices(): Promise<TOrchestratorServiceMap> {
         const typedArgs = parseActivityAnalysisArgs(args)
         return activityAnalysisOrchServ(typedArgs, githubServices)
       },
-      projectDataCollectionOrchServ: (args: string, _services: TOrchestratorServiceMap) => 
-        projectDataCollectionOrchServ(args, githubServices),
+      projectDataCollectionOrchServ(args: string, _services: TOrchestratorServiceMap) {
+        // Parse string args to typed object for migration compatibility
+        const typedArgs = parseProjectDataCollectionArgs(args)
+        return projectDataCollectionOrchServ(typedArgs, githubServices)
+      },
       projectDetectionOrchServ(args: string, _services: TOrchestratorServiceMap) {
         // Parse string args to typed object for migration compatibility
         const typedArgs = parseProjectDetectionArgs(args)
@@ -105,6 +108,60 @@ export async function createGitHubServices(): Promise<TOrchestratorServiceMap> {
       }
     )
   }
+}
+
+/**
+ * Create GitHub services with direct typed orchestrator service access
+ * This replaces the string-based service factory for the architectural fix
+ */
+export async function createTypedGitHubServices() {
+  // Initialize auth service
+  const authService = new AuthService()
+  
+  // Get GitHub token
+  const token = await authService.getGitHubToken()
+  
+  // Validate token
+  const isValid = await authService.validateToken(token)
+  if (!isValid) {
+    throw new OrchestratorError(
+      new Error('GitHub authentication token is invalid'),
+      ['Run `gh auth login` to authenticate', 'Check `gh auth status`'],
+      { code: 'INVALID_TOKEN' }
+    )
+  }
+  
+  // Initialize git client
+  const gitClient: SimpleGit = simpleGit()
+  
+  // Create service instances
+  const restApiService = new GitHubRestApiService(token)
+  const graphqlService = new GitHubGraphQLService(token)
+  const projectService = new ProjectService(graphqlService, gitClient)
+  const repositoryService = new RepositoryService(restApiService)
+  const activityService = new ActivityService(repositoryService)
+  
+  // Create typed service collection for regular services
+  const githubServices: TGitHubServices = {
+    activityService,
+    authService,
+    graphqlService,
+    projectService,
+    repositoryService,
+    restApiService,
+  }
+  
+  // Return typed orchestrator services that accept typed arguments directly
+  const typedOrchestratorServices = {
+    activityAnalysisOrchServ: (args: IActivityAnalysisArgs) => 
+      activityAnalysisOrchServ(args, githubServices),
+    projectDataCollectionOrchServ: (args: IProjectDataCollectionArgs) => 
+      projectDataCollectionOrchServ(args, githubServices),
+    projectDetectionOrchServ: (args: IProjectDetectionArgs) => 
+      projectDetectionOrchServ(args, githubServices),
+  }
+  
+  return typedOrchestratorServices
 }
 
 /**
@@ -174,4 +231,17 @@ function parseProjectDetectionArgs(args: string): IProjectDetectionArgs {
   
   // Otherwise treat as owner/organization name
   return { input: trimmedArgs, mode: 'owner' }
+}
+
+/**
+ * Parse project data collection arguments from string format
+ * Temporary function during architectural fix
+ */
+function parseProjectDataCollectionArgs(args: string): IProjectDataCollectionArgs {
+  const trimmedArgs = args.trim()
+  
+  // For now, assume the args string is the project node ID
+  // This is a temporary parsing function that will be removed
+  // when CLI boundary is properly implemented
+  return { projectNodeId: trimmedArgs }
 }

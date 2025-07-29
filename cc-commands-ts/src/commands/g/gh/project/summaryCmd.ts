@@ -9,8 +9,9 @@ import { Args, Flags } from '@oclif/core'
 
 import { BaseCommand } from '../../../../core/BaseCommand'
 import { LLMInfo } from '../../../../core/LLMInfo'
-import { createGitHubServices } from '../../../../orchestrator-services/github/utils/ServiceFactory'
-import { summaryOrch, TSummaryOrchestratorServices } from '../../../../orchestrators/g/gh/project/summaryOrch'
+import { ArgumentParser, IProjectDetectionArgs, ISummaryOrchestratorArgs } from '../../../../orchestrator-services/github/types/ArgumentTypes'
+import { createTypedGitHubServices } from '../../../../orchestrator-services/github/utils/ServiceFactory'
+import { summaryOrch } from '../../../../orchestrators/g/gh/project/summaryOrch'
 
 /**
  * GitHub Project Summary Command
@@ -58,36 +59,29 @@ static override strict = false
   async execute(): Promise<LLMInfo> {
     const { args, flags } = await this.parse(SummaryCmd)
     
-    // Construct arguments string from parsed args and flags
-    const commandArgs = this.constructCommandArgs(args.arguments, flags)
+    // Parse CLI arguments to typed objects (CLI boundary)
+    const projectArgs = this.parseProjectArguments(args.arguments)
+    const timeWindowDays = ArgumentParser.parseTimeWindow(flags.since)
     
-    // Create service dependencies
-    const services = await createGitHubServices()
+    // Create structured arguments for orchestrator
+    const orchestratorArgs: ISummaryOrchestratorArgs = {
+      format: flags.format as 'detailed' | 'executive' | 'technical',
+      projectArgs,
+      timeWindowDays
+    }
     
-    // Execute orchestrator and return result
-    return summaryOrch(commandArgs, services as TSummaryOrchestratorServices)
+    // Create typed service dependencies
+    const services = await createTypedGitHubServices()
+    
+    // Execute orchestrator with typed arguments
+    return summaryOrch(orchestratorArgs, services)
   }
 
   /**
-   * Construct command arguments string from parsed args and flags
+   * Parse project arguments from CLI input (CLI boundary responsibility)
    */
-  private constructCommandArgs(projectArg: string | undefined, flags: { format?: string; since?: string }): string {
-    const parts: string[] = []
-    
-    // Add project argument if provided
-    if (projectArg) {
-      parts.push(projectArg)
-    }
-    
-    // Add flags
-    if (flags.since && flags.since !== '30d') {
-      parts.push(`--since ${flags.since}`)
-    }
-    
-    if (flags.format && flags.format !== 'technical') {
-      parts.push(`--format ${flags.format}`)
-    }
-    
-    return parts.join(' ')
+  private parseProjectArguments(projectArg: string | undefined): IProjectDetectionArgs {
+    // Use ArgumentParser utility to convert CLI string to typed object
+    return ArgumentParser.parseProjectDetection(projectArg || '')
   }
 }

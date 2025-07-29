@@ -30,6 +30,8 @@ export interface IProjectDetectionArgs {
  * Arguments for project data collection operations
  */
 export interface IProjectDataCollectionArgs {
+  /** Index signature for LLMInfo context compatibility */
+  [key: string]: boolean | null | number | string
   /** GitHub Project v2 node ID (e.g., "PVT_kwHOABDmBM4AHJKL") */
   projectNodeId: string
 }
@@ -51,15 +53,15 @@ export interface IActivityAnalysisArgs {
 /**
  * Combined arguments for the main summary orchestrator
  */
-export interface IProjectSummaryArgs {
+export interface ISummaryOrchestratorArgs {
   /** Output format preference */
   format?: 'detailed' | 'executive' | 'technical'
   
-  /** Original command arguments for initial detection */
-  projectIdentifier?: string
+  /** Project detection arguments */
+  projectArgs: IProjectDetectionArgs
   
-  /** Time window override (defaults to 30 days) */
-  since?: string
+  /** Time window for analysis in days */
+  timeWindowDays: number
 }
 
 /**
