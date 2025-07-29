@@ -92,7 +92,14 @@ export abstract class BaseCommand extends Command {
       this.exit(result.getExitCode())
       
     } catch (error) {
-      // If execute() throws, create error LLMInfo  
+      // OCLIF's this.exit() throws an error to stop execution - this is normal behavior
+      // We should not catch and handle exit errors as failures
+      if (error instanceof Error && error.message?.startsWith('EEXIT:')) {
+        // Re-throw exit errors so they can properly terminate the process
+        throw error
+      }
+      
+      // If execute() throws a real error, create error LLMInfo  
       const errorInfo = LLMInfo.create()
       
       const errorMessage = error instanceof Error ? error.message : String(error)
