@@ -88,18 +88,29 @@ describe('RepositoryService Integration', () => {
     const results = []
     const errors = []
     
-    for (const repo of repositories) {
+    // Use Promise.allSettled to avoid await-in-loop ESLint error
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // 7 days ago
+    const promises = repositories.map(async (repo) => {
       const [owner, repoName] = repo.split('/')
-      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // 7 days ago
-      
       try {
         const activity = await repositoryService.getRepositoryActivity(owner, repoName, since)
-        results.push({ activity, repo })
         console.log(`✓ ${repo} - SUCCESS`)
-        
+        return { activity, repo, type: 'success' as const }
       } catch (error) {
-        errors.push({ error, repo })
         console.log(`✗ ${repo} - ERROR: ${error.message}`)
+        return { error, repo, type: 'error' as const }
+      }
+    })
+    
+    const allResults = await Promise.allSettled(promises)
+    
+    for (const result of allResults) {
+      if (result.status === 'fulfilled') {
+        if (result.value.type === 'success') {
+          results.push({ activity: result.value.activity, repo: result.value.repo })
+        } else {
+          errors.push({ error: result.value.error, repo: result.value.repo })
+        }
       }
     }
     
@@ -121,19 +132,33 @@ describe('RepositoryService Integration', () => {
       { owner: 'test', repo: 'repo/invalid' }
     ]
     
-    for (const { owner, repo } of invalidRepos) {
+    // Use Promise.allSettled to avoid await-in-loop ESLint error
+    const promises = invalidRepos.map(async ({ owner, repo }) => {
       console.log(`Testing invalid repository format: "${owner}/${repo}"`)
       
       try {
         await repositoryService.getRepositoryActivity(owner, repo, new Date())
-        
         // Should not reach here for invalid formats
-        expect(true).toBe(false) // Force failure
-        
+        return { owner, repo, success: true }
       } catch (error) {
         // Should catch validation errors
-        expect(error).toBeDefined()
         console.log(`✓ Invalid format "${owner}/${repo}" rejected: ${error.message}`)
+        return { error, owner, repo, success: false }
+      }
+    })
+    
+    const results = await Promise.allSettled(promises)
+    
+    // All should fail validation
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        if (result.value.success) {
+          // Force failure - invalid formats should be rejected
+          expect(true).toBe(false)
+        } else {
+          // Correct - validation error caught
+          expect(result.value.error).toBeDefined()
+        }
       }
     }
   })

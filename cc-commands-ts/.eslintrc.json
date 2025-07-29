@@ -182,11 +182,22 @@
       }
     },
     {
-      // GitHub API service rules
+      // GitHub API service rules - handle API snake_case properties  
       "files": ["src/orchestrator-services/github/**/*.ts", "**/services/*GitHub*.ts"],
       "rules": {
-        // GitHub API responses use snake_case properties - disable camelcase for API processing
-        "camelcase": "off"
+        // Disable base camelcase rule and use TypeScript-specific naming convention
+        "camelcase": "off",
+        "@typescript-eslint/naming-convention": [
+          "error",
+          {
+            "selector": "default",
+            "format": ["camelCase"]
+          },
+          {
+            "selector": ["objectLiteralProperty", "typeProperty", "parameterProperty"],
+            "format": ["camelCase", "snake_case"]
+          }
+        ]
       }
     },
     {
@@ -229,14 +240,27 @@
       }
     },
     {
-      // GitHub API specific services - disable camelcase for API property access
+      // GitHub API specific services and types - handle API snake_case properties (2025 approach)
       "files": [
         "src/orchestrator-services/github/services/GitHubRestApiService.ts",
-        "src/orchestrator-services/github/services/GitHubGraphQLService.ts",
-        "src/orchestrator-services/github/services/ProjectService.ts"
+        "src/orchestrator-services/github/services/GitHubGraphQLService.ts", 
+        "src/orchestrator-services/github/services/ProjectService.ts",
+        "src/orchestrator-services/github/types/GitHubApiTypes.ts"
       ],
       "rules": {
-        "camelcase": "off"
+        // Modern 2025 approach: disable base camelcase and use TypeScript naming convention
+        "camelcase": "off",
+        "@typescript-eslint/naming-convention": [
+          "error",
+          {
+            "selector": "default",
+            "format": ["camelCase"]
+          },
+          {
+            "selector": ["objectLiteralProperty", "typeProperty", "parameterProperty"],
+            "format": ["camelCase", "snake_case"]
+          }
+        ]
       }
     }
   ],

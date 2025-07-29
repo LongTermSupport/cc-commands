@@ -114,10 +114,21 @@ export interface GitHubIssueResponse {
     name: string
   }>
   locked?: boolean
-  milestone?: any
+  milestone?: null | { 
+    id: number
+    state: 'closed' | 'open'
+    title: string
+  }
   node_id?: string
   number: number
-  pull_request?: any
+  pull_request?: null | {
+    diff_url?: null | string
+    html_url: null | string
+    merged_at?: null | string
+    number?: number
+    patch_url?: null | string
+    url?: null | string
+  }
   repository_url?: string
   state: 'closed' | 'open'
   state_reason?: null | string
@@ -169,13 +180,28 @@ export interface GitHubPullRequestResponse {
   merged?: boolean
   merged_at?: null | string
   merged_by?: GitHubOwner | null
-  milestone?: any
+  milestone?: null | { 
+    id: number
+    state: 'closed' | 'open'
+    title: string
+  }
   node_id?: string
   number: number
   patch_url: string
-  pull_request?: any
+  pull_request?: null | {
+    diff_url?: null | string
+    html_url: null | string
+    merged_at?: null | string
+    number?: number
+    patch_url?: null | string
+    url?: null | string
+  }
   requested_reviewers?: GitHubOwner[]
-  requested_teams?: any[]
+  requested_teams?: {
+    id: number
+    name: string
+    slug: string
+  }[]
   review_comments?: number
   state: 'closed' | 'open'
   title: string

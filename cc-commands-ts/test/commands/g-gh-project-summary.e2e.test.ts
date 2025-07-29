@@ -67,7 +67,7 @@ describe('g-gh-project-summary E2E', () => {
     expect(result.stdout).toContain('EXECUTION_STATUS=SUCCESS')
     
     // Verify no failed actions when command succeeds
-    const actionsFailed = Number.parseInt(result.stdout.match(/ACTIONS_FAILED=(\d+)/)?.[1] || '0')
+    const actionsFailed = Number.parseInt(result.stdout.match(/ACTIONS_FAILED=(\d+)/)?.[1] || '0', 10)
     expect(actionsFailed).toBe(0)
     
     // Content assertions - verify project data is collected

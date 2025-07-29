@@ -45,5 +45,16 @@ export default [
     rules: {
       'max-params': 'off' // DTOs can have any number of constructor parameters
     }
+  },
+  {
+    // GitHub API services - allow snake_case properties from GitHub API responses
+    files: [
+      'src/orchestrator-services/github/services/GitHubRestApiService.ts',
+      'src/orchestrator-services/github/services/GitHubGraphQLService.ts',
+      'src/orchestrator-services/github/types/GitHubApiTypes.ts'
+    ],
+    rules: {
+      'camelcase': 'off' // GitHub API responses use snake_case properties
+    }
   }
 ]
