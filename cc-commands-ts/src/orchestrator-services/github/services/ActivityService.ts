@@ -43,15 +43,34 @@ export class ActivityService {
     }
 
     try {
-      // Collect activity data from all repositories concurrently
-      const repositoryActivities = await Promise.all(
+      // Collect activity data from all repositories concurrently with error tolerance
+      const repositoryResults = await Promise.allSettled(
         repos.map(async (repoFullName) => {
           const repoName = repoFullName.split('/')[1] || repoFullName
           return this.repositoryService.getRepositoryActivity(owner, repoName, since)
         })
       )
 
-      // Aggregate all metrics
+      // Extract successful results and filter out failed repositories  
+      const repositoryActivities = repositoryResults
+        .filter((result): result is PromiseFulfilledResult<ActivityMetricsDTO> => result.status === 'fulfilled')
+        .map(result => result.value)
+
+      // If no repositories were accessible, throw error
+      if (repositoryActivities.length === 0) {
+        const failedReasons = repositoryResults
+          .filter(result => result.status === 'rejected')
+          .map(result => result.reason?.message || 'Unknown error')
+          .join(', ')
+        
+        throw new OrchestratorError(
+          new Error(`No repositories were accessible for analysis. Errors: ${failedReasons}`),
+          ['Verify repositories exist and are accessible', 'Check GitHub token permissions', 'Check repository names'],
+          { failedCount: repositoryResults.length, owner, repositories: repos }
+        )
+      }
+
+      // Aggregate metrics from successful repositories only
       return this.combineActivityMetrics(repositoryActivities, since)
 
     } catch (error) {
