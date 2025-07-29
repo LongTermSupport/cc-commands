@@ -168,7 +168,7 @@ export const projectDataCollectionOrchServ = async (
     result.addData('TOTAL_STARS', String(totalStars))
     result.addData('TOTAL_FORKS', String(totalForks))
     result.addData('LANGUAGES', languages.join(', '))
-    result.addData('PRIMARY_LANGUAGE', languages[0] || 'Unknown')
+    result.addData('PRIMARY_LANGUAGE', languages[0] ?? 'Unknown')
     
     result.addInstruction('Use the collected repository data for activity analysis')
     result.addInstruction('Focus on repositories with recent activity for meaningful insights')

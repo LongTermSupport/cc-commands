@@ -5,8 +5,6 @@
  * Provides Projects v2 data access via GraphQL.
  */
 
-// @ts-expect-error - Used in JSDoc comments
-import { OrchestratorError } from '../../../core/error/OrchestratorError.js'
 import { ProjectV2DTO } from '../dto/ProjectV2DTO.js'
 import { ProjectV2ItemDTO } from '../dto/ProjectV2ItemDTO.js'
 
@@ -23,7 +21,6 @@ export interface IGitHubGraphQLService {
    * 
    * @param owner - GitHub username or organization name
    * @returns Array of project DTOs sorted by most recently updated
-   * @throws {OrchestratorError} When owner is not found or API fails
    */
   findProjectsByOwner(owner: string): Promise<ProjectV2DTO[]>
 
@@ -32,7 +29,6 @@ export interface IGitHubGraphQLService {
    * 
    * @param projectNodeId - GitHub Project v2 node ID (e.g., "PVT_kwHOABDmBM4AHJKL")
    * @returns Project v2 data DTO
-   * @throws {OrchestratorError} When project is not accessible or API fails
    */
   getProject(projectNodeId: string): Promise<ProjectV2DTO>
 
@@ -41,7 +37,6 @@ export interface IGitHubGraphQLService {
    * 
    * @param projectNodeId - GitHub Project v2 node ID
    * @returns Array of field definitions with types and options
-   * @throws {OrchestratorError} When project is not accessible or API fails
    */
   getProjectFields(projectNodeId: string): Promise<Array<{
     dataType: 'DATE' | 'ITERATION' | 'NUMBER' | 'SINGLE_SELECT' | 'TEXT'
@@ -55,7 +50,6 @@ export interface IGitHubGraphQLService {
    * 
    * @param projectNodeId - GitHub Project v2 node ID
    * @returns Array of project item DTOs
-   * @throws {OrchestratorError} When project is not accessible or API fails
    */
   getProjectItems(projectNodeId: string): Promise<ProjectV2ItemDTO[]>
 }

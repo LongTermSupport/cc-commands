@@ -4,6 +4,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    // Increase timeout for integration tests (GitHub API calls, etc.)
+    testTimeout: 15000, // 15 seconds for integration tests
+    hookTimeout: 10000, // 10 seconds for setup/teardown
     include: ['src/**/*.test.ts', 'test/**/*.test.ts'],
     exclude: [
       '**/node_modules/**',

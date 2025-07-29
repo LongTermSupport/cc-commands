@@ -170,7 +170,7 @@ async function detectProjectFromUrl(
     )
   }
   
-  const project = projects[0] // Use most recent project
+  const project = projects.at(0) // Use most recent project
   if (project) {
     result.addAction('Find project by URL', 'success', `Found project: ${project.title}`)
     result.addDataBulk(project.toLLMData())

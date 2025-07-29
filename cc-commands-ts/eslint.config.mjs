@@ -24,14 +24,27 @@ export default [
       'cc-commands/no-direct-abstract-types': 'error',
       'cc-commands/no-unsafe-type-casting': 'error',
       'cc-commands/no-string-based-service-args': 'error',
-      'cc-commands/require-typed-data-access': 'warn', // Start as warning due to many violations
+      'cc-commands/require-typed-data-access': 'error', // Enforce proper type safety
       'cc-commands/no-api-response-any': 'error',
       'unicorn/filename-case': 'off', // Allow PascalCase for TypeScript classes
       '@typescript-eslint/no-explicit-any': 'error', // Keep our strict no-any rule
       'eslint-comments/no-unlimited-disable': 'error', // Prevent eslint-disable abuse
-      'jsdoc/check-tag-names': ['error', {
-        definedTags: ['final'] // Allow @final tag for non-overridable methods
-      }],
+      // Disable JSDoc rules - TypeScript provides type safety, JSDoc is redundant (2025 best practice)
+      'jsdoc/check-alignment': 'off',
+      'jsdoc/check-param-names': 'off',
+      'jsdoc/check-tag-names': 'off',
+      'jsdoc/check-types': 'off',
+      'jsdoc/implements-on-classes': 'off',
+      'jsdoc/newline-after-description': 'off',
+      'jsdoc/no-undefined-types': 'off',
+      'jsdoc/require-description': 'off',
+      'jsdoc/require-jsdoc': 'off',
+      'jsdoc/require-param': 'off',
+      'jsdoc/require-param-description': 'off',
+      'jsdoc/require-param-type': 'off',
+      'jsdoc/require-returns': 'off',
+      'jsdoc/require-returns-description': 'off',
+      'jsdoc/require-returns-type': 'off',
       // Disable dot-notation rule to respect TypeScript's noPropertyAccessFromIndexSignature
       'dot-notation': 'off',
       '@typescript-eslint/dot-notation': 'off',

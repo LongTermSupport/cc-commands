@@ -5,8 +5,6 @@
  * Provides cross-repository activity aggregation and project-level insights.
  */
 
-// @ts-expect-error - Used in JSDoc comments
-import { OrchestratorError } from '../../../core/error/OrchestratorError.js'
 import { ActivityMetricsDTO } from '../dto/ActivityMetricsDTO.js'
 import { ProjectSummaryDTO } from '../dto/ProjectSummaryDTO.js'
 
@@ -29,7 +27,6 @@ export interface IActivityService {
    * @param owner - Repository owner (user or organization)
    * @param since - Start date for activity analysis
    * @returns Aggregated activity metrics DTO
-   * @throws {OrchestratorError} When any repository analysis fails
    */
   aggregateActivityAcrossRepos(repos: string[], owner: string, since: Date): Promise<ActivityMetricsDTO>
 
@@ -42,7 +39,6 @@ export interface IActivityService {
    * 
    * @param activities - Array of activity metrics from different repositories
    * @returns Project summary DTO with aggregated insights
-   * @throws {OrchestratorError} When summary calculation fails
    */
   calculateActivitySummary(activities: ActivityMetricsDTO[]): Promise<ProjectSummaryDTO>
 
@@ -54,7 +50,6 @@ export interface IActivityService {
    * 
    * @param activities - Array of activity metrics from different repositories
    * @returns Array of repository names sorted by activity level (highest first)
-   * @throws {OrchestratorError} When activity analysis fails
    */
   identifyMostActiveRepositories(activities: ActivityMetricsDTO[]): Promise<string[]>
 }

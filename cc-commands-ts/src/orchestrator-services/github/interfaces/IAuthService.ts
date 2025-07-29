@@ -5,8 +5,6 @@
  * Provides token management and authentication validation.
  */
 
-// @ts-expect-error - Used in JSDoc comments
-import { OrchestratorError } from '../../../core/error/OrchestratorError.js'
 
 /**
  * Interface for GitHub authentication operations
@@ -24,7 +22,6 @@ export interface IAuthService {
    * 
    * @param token - GitHub personal access token
    * @returns Username of the authenticated user
-   * @throws {OrchestratorError} When token is invalid or API call fails
    */
   getAuthenticatedUser(token: string): Promise<string>
 
@@ -36,7 +33,6 @@ export interface IAuthService {
    * for use with GitHub API calls.
    * 
    * @returns GitHub personal access token
-   * @throws {OrchestratorError} When authentication setup is incomplete or token retrieval fails
    */
   getGitHubToken(): Promise<string>
 
