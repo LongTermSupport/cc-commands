@@ -7,10 +7,10 @@
 
 import { graphql } from '@octokit/graphql'
 
-import { OrchestratorError } from '../../../core/error/OrchestratorError'
-import { ProjectV2DTO } from '../dto/ProjectV2DTO'
-import { ProjectV2ItemDTO } from '../dto/ProjectV2ItemDTO'
-import { ProjectV2FieldGraphQLResponse, ProjectV2GraphQLResponse, ProjectV2ItemGraphQLResponse } from '../types/GitHubGraphQLTypes'
+import { OrchestratorError } from '../../../core/error/OrchestratorError.js'
+import { ProjectV2DTO } from '../dto/ProjectV2DTO.js'
+import { ProjectV2ItemDTO } from '../dto/ProjectV2ItemDTO.js'
+import { ProjectV2FieldGraphQLResponse, ProjectV2GraphQLResponse, ProjectV2ItemGraphQLResponse } from '../types/GitHubGraphQLTypes.js'
 
 /**
  * GitHub GraphQL API Service for Projects v2 operations
@@ -207,7 +207,15 @@ export class GitHubGraphQLService {
         }
       } catch (error) {
         // Store error and continue to next query type if this one fails
-        lastError = error instanceof Error ? error : new Error(String(error));
+        if (error instanceof Error) {
+          lastError = error
+        } else {
+          // Handle non-Error objects (like GraphQL errors)
+          const errorStr = typeof error === 'object' && error !== null 
+            ? JSON.stringify(error) 
+            : String(error)
+          lastError = new Error(`GraphQL Error: ${errorStr}`)
+        }
         continue
       }
     }

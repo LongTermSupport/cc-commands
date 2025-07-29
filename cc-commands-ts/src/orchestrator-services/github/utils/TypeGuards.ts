@@ -6,7 +6,7 @@
  * type predicates.
  */
 
-import type { GitHubOwner } from '../types/GitHubApiTypes'
+import type { GitHubOwner } from '../types/GitHubApiTypes.js'
 
 /**
  * Type guard for GitHub User type

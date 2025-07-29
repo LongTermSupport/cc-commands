@@ -7,9 +7,9 @@
 
 import { SimpleGit } from 'simple-git'
 
-import { OrchestratorError } from '../../../core/error/OrchestratorError'
-import { ProjectV2DTO } from '../dto/ProjectV2DTO'
-import { GitHubGraphQLService } from './GitHubGraphQLService'
+import { OrchestratorError } from '../../../core/error/OrchestratorError.js'
+import { ProjectV2DTO } from '../dto/ProjectV2DTO.js'
+import { GitHubGraphQLService } from './GitHubGraphQLService.js'
 
 /**
  * GitHub Project Service for high-level project operations

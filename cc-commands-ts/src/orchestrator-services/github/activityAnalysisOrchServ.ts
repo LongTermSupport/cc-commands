@@ -5,13 +5,13 @@
  * Coordinates activity data collection, aggregation, and summary generation.
  */
 
-import { OrchestratorError } from '../../core/error/OrchestratorError'
-import { LLMInfo } from '../../core/LLMInfo'
-import { ActivityMetricsDTO } from './dto/ActivityMetricsDTO'
-import { ProjectSummaryDTO } from './dto/ProjectSummaryDTO'
-import { IActivityAnalysisArgs } from './types/ArgumentTypes'
-import { TActivityAnalysisServices } from './types/ServiceTypes'
-import { safeArrayAccess } from './utils/TypeGuards'
+import { OrchestratorError } from '../../core/error/OrchestratorError.js'
+import { LLMInfo } from '../../core/LLMInfo.js'
+import { ActivityMetricsDTO } from './dto/ActivityMetricsDTO.js'
+import { ProjectSummaryDTO } from './dto/ProjectSummaryDTO.js'
+import { IActivityAnalysisArgs } from './types/ArgumentTypes.js'
+import { TActivityAnalysisServices } from './types/ServiceTypes.js'
+import { safeArrayAccess } from './utils/TypeGuards.js'
 
 /**
  * Activity Analysis Orchestrator Service

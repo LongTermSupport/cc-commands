@@ -7,13 +7,13 @@
 
 import { Octokit } from '@octokit/rest'
 
-import { OrchestratorError } from '../../../core/error/OrchestratorError'
-import { CommitDataDTO } from '../dto/CommitDataDTO'
-import { IssueDataDTO } from '../dto/IssueDataDTO'
-import { PullRequestDataDTO } from '../dto/PullRequestDataDTO'
-import { RepositoryDataDTO } from '../dto/RepositoryDataDTO'
-import { GitHubIssueResponse, GitHubPullRequestResponse, GitHubRepositoryResponse } from '../types/GitHubApiTypes'
-import { isGitHubLabel, isGitHubUser } from '../utils/TypeGuards'
+import { OrchestratorError } from '../../../core/error/OrchestratorError.js'
+import { CommitDataDTO } from '../dto/CommitDataDTO.js'
+import { IssueDataDTO } from '../dto/IssueDataDTO.js'
+import { PullRequestDataDTO } from '../dto/PullRequestDataDTO.js'
+import { RepositoryDataDTO } from '../dto/RepositoryDataDTO.js'
+import { GitHubIssueResponse, GitHubPullRequestResponse, GitHubRepositoryResponse } from '../types/GitHubApiTypes.js'
+import { isGitHubLabel, isGitHubUser } from '../utils/TypeGuards.js'
 
 /**
  * GitHub REST API Service for repository, issues, PRs, and commits

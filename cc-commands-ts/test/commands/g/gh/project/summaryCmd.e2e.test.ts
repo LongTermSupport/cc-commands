@@ -1,22 +1,51 @@
 import { execSync } from 'node:child_process'
 import { describe, expect, it } from 'vitest'
 
-describe('g:gh:project:summary E2E', () => {
-  const runCommand = (args: string = ''): { exitCode: number; stderr: string; stdout: string; } => {
-    try {
-      const stdout = execSync(`node ./bin/run.js g:gh:project:summary ${args}`, {
-        encoding: 'utf8',
-        env: { ...process.env, GITHUB_TOKEN: process.env.GITHUB_TOKEN || '', NODE_ENV: 'test' }
-      })
-      return { exitCode: 0, stderr: '', stdout }
-    } catch (error: any) {
-      return {
-        exitCode: error.status || 1,
-        stderr: error.stderr || '',
-        stdout: error.stdout || ''
-      }
+interface CommandResult {
+  exitCode: number
+  stderr: string
+  stdout: string
+}
+
+interface ExecError extends Error {
+  status?: number
+  stderr?: string
+  stdout?: string
+}
+
+const runCommand = (args: string = ''): CommandResult => {
+  try {
+    const stdout = execSync(`node ./bin/run.js g-gh-project-summary ${args}`, {
+      encoding: 'utf8',
+      env: { ...process.env, GITHUB_TOKEN: process.env.GITHUB_TOKEN || '', NODE_ENV: 'test' }
+    })
+    return { exitCode: 0, stderr: '', stdout }
+  } catch (error) {
+    const execError = error as ExecError
+    return {
+      exitCode: execError.status || 1,
+      stderr: execError.stderr || '',
+      stdout: execError.stdout || ''
     }
   }
+}
+
+describe('g-gh-project-summary E2E', () => {
+
+  it('should show help when requested', () => {
+    const result = runCommand('--help')
+    
+    // Debug output
+    if (result.exitCode !== 0) {
+      console.error('Help command failed with exit code:', result.exitCode)
+      console.error('stdout:', result.stdout)
+      console.error('stderr:', result.stderr)
+    }
+    
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toContain('Generate comprehensive GitHub project summary')
+    expect(result.stdout).toContain('g-gh-project-summary')
+  })
 
   it('should return project summary for a valid public repository', () => {
     const result = runCommand('LongTermSupport/cc-commands')

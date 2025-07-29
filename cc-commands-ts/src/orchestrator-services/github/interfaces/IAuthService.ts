@@ -6,7 +6,7 @@
  */
 
 // @ts-expect-error - Used in JSDoc comments
-import { OrchestratorError } from '../../../core/error/OrchestratorError'
+import { OrchestratorError } from '../../../core/error/OrchestratorError.js'
 
 /**
  * Interface for GitHub authentication operations

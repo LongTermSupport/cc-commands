@@ -5,9 +5,9 @@
  * Handles project discovery from URLs, organizations, or git remotes.
  */
 
-import { OrchestratorError } from '../../core/error/OrchestratorError'
-import { LLMInfo } from '../../core/LLMInfo'
-import { TProjectDetectionServices } from './types/ServiceTypes'
+import { OrchestratorError } from '../../core/error/OrchestratorError.js'
+import { LLMInfo } from '../../core/LLMInfo.js'
+import { TProjectDetectionServices } from './types/ServiceTypes.js'
 
 /**
  * Typed arguments for project detection orchestrator service

@@ -5,10 +5,10 @@
  * Provides repository, issue, PR, and commit data access.
  */
 
-import { CommitDataDTO } from '../dto/CommitDataDTO'
-import { IssueDataDTO } from '../dto/IssueDataDTO'
-import { PullRequestDataDTO } from '../dto/PullRequestDataDTO'
-import { RepositoryDataDTO } from '../dto/RepositoryDataDTO'
+import { CommitDataDTO } from '../dto/CommitDataDTO.js'
+import { IssueDataDTO } from '../dto/IssueDataDTO.js'
+import { PullRequestDataDTO } from '../dto/PullRequestDataDTO.js'
+import { RepositoryDataDTO } from '../dto/RepositoryDataDTO.js'
 
 /**
  * Interface for GitHub REST API service operations

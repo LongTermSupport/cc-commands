@@ -220,8 +220,8 @@ src/
 **Commands**: 
 - File: `summaryCmd.ts`
 - Class: `export default class SummaryCmd extends Command`
-- CLI: `g:gh:project:summary` (set via `static override id = 'g:gh:project:summary'`)
-- Pattern: Class/file names include `Cmd` suffix, CLI commands are clean without suffix
+- CLI: `g-gh-project-summary` (set via `static override id = 'g-gh-project-summary'`)
+- Pattern: Class/file names include `Cmd` suffix, CLI commands use flat structure with hyphens
 
 **Orchestrators**: 
 - File: `summaryOrch.ts` 

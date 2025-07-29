@@ -7,19 +7,19 @@
 
 import simpleGit, { SimpleGit } from 'simple-git'
 
-import { OrchestratorError } from '../../../core/error/OrchestratorError'
-import { TOrchestratorServiceMap } from '../../../core/interfaces/IOrchestratorService'
-import { activityAnalysisOrchServ } from '../activityAnalysisOrchServ'
-import { projectDataCollectionOrchServ } from '../projectDataCollectionOrchServ'
-import { IProjectDetectionArgs, projectDetectionOrchServ } from '../projectDetectionOrchServ'
-import { ActivityService } from '../services/ActivityService'
-import { AuthService } from '../services/AuthService'
-import { GitHubGraphQLService } from '../services/GitHubGraphQLService'
-import { GitHubRestApiService } from '../services/GitHubRestApiService'
-import { ProjectService } from '../services/ProjectService'
-import { RepositoryService } from '../services/RepositoryService'
-import { ArgumentParser, IActivityAnalysisArgs, IProjectDataCollectionArgs } from '../types/ArgumentTypes'
-import { TGitHubServices } from '../types/ServiceTypes'
+import { OrchestratorError } from '../../../core/error/OrchestratorError.js'
+import { TOrchestratorServiceMap } from '../../../core/interfaces/IOrchestratorService.js'
+import { activityAnalysisOrchServ } from '../activityAnalysisOrchServ.js'
+import { projectDataCollectionOrchServ } from '../projectDataCollectionOrchServ.js'
+import { IProjectDetectionArgs, projectDetectionOrchServ } from '../projectDetectionOrchServ.js'
+import { ActivityService } from '../services/ActivityService.js'
+import { AuthService } from '../services/AuthService.js'
+import { GitHubGraphQLService } from '../services/GitHubGraphQLService.js'
+import { GitHubRestApiService } from '../services/GitHubRestApiService.js'
+import { ProjectService } from '../services/ProjectService.js'
+import { RepositoryService } from '../services/RepositoryService.js'
+import { ArgumentParser, IActivityAnalysisArgs, IProjectDataCollectionArgs } from '../types/ArgumentTypes.js'
+import { TGitHubServices } from '../types/ServiceTypes.js'
 
 /**
  * Create and configure all GitHub services with proper dependency injection

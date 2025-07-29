@@ -5,12 +5,12 @@
  * Provides strictly typed service collections for orchestrators.
  */
 
-import { IActivityService } from '../interfaces/IActivityService'
-import { IAuthService } from '../interfaces/IAuthService'
-import { IGitHubGraphQLService } from '../interfaces/IGitHubGraphQLService'
-import { IGitHubRestApiService } from '../interfaces/IGitHubRestApiService'
-import { IProjectService } from '../interfaces/IProjectService'
-import { IRepositoryService } from '../interfaces/IRepositoryService'
+import { IActivityService } from '../interfaces/IActivityService.js'
+import { IAuthService } from '../interfaces/IAuthService.js'
+import { IGitHubGraphQLService } from '../interfaces/IGitHubGraphQLService.js'
+import { IGitHubRestApiService } from '../interfaces/IGitHubRestApiService.js'
+import { IProjectService } from '../interfaces/IProjectService.js'
+import { IRepositoryService } from '../interfaces/IRepositoryService.js'
 
 /**
  * Complete GitHub service collection type

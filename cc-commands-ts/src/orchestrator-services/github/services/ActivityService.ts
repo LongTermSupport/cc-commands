@@ -5,10 +5,10 @@
  * Aggregates activity data and provides project-level insights.
  */
 
-import { OrchestratorError } from '../../../core/error/OrchestratorError'
-import { ActivityMetricsDTO } from '../dto/ActivityMetricsDTO'
-import { ProjectSummaryDTO } from '../dto/ProjectSummaryDTO'
-import { RepositoryService } from './RepositoryService'
+import { OrchestratorError } from '../../../core/error/OrchestratorError.js'
+import { ActivityMetricsDTO } from '../dto/ActivityMetricsDTO.js'
+import { ProjectSummaryDTO } from '../dto/ProjectSummaryDTO.js'
+import { RepositoryService } from './RepositoryService.js'
 
 /**
  * GitHub Activity Service for high-level activity analysis

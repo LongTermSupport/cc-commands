@@ -5,7 +5,7 @@
  * including token validation, scope issues, and CLI authentication problems.
  */
 
-import { OrchestratorError } from '../../../core/error/OrchestratorError'
+import { OrchestratorError } from '../../../core/error/OrchestratorError.js'
 
 /**
  * Factory class for creating GitHub authentication-related errors

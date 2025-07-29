@@ -5,9 +5,9 @@
  * Coordinates the multi-phase execution of project detection, data collection, and activity analysis.
  */
 
-import { OrchestratorError } from '../../../../core/error/OrchestratorError'
-import { LLMInfo } from '../../../../core/LLMInfo'
-import { IActivityAnalysisArgs, IProjectDataCollectionArgs, IProjectDetectionArgs, ISummaryOrchestratorArgs } from '../../../../orchestrator-services/github/types/ArgumentTypes'
+import { OrchestratorError } from '../../../../core/error/OrchestratorError.js'
+import { LLMInfo } from '../../../../core/LLMInfo.js'
+import { IActivityAnalysisArgs, IProjectDataCollectionArgs, IProjectDetectionArgs, ISummaryOrchestratorArgs } from '../../../../orchestrator-services/github/types/ArgumentTypes.js'
 
 /**
  * Service collection for GitHub project summary orchestrator

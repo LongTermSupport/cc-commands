@@ -18,7 +18,7 @@
 
 import { Command } from '@oclif/core'
 
-import { LLMInfo } from './LLMInfo'
+import { LLMInfo } from './LLMInfo.js'
 
 /**
  * Base class for ALL cc-commands.

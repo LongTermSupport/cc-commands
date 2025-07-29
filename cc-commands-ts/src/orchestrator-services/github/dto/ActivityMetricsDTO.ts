@@ -6,7 +6,7 @@
  * activity over specified time periods for LLM consumption.
  */
 
-import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO'
+import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO.js'
 
 /**
  * Data Transfer Object for GitHub activity metrics

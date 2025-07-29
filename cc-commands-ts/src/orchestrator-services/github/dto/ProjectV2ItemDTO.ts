@@ -4,8 +4,8 @@
  * STUB IMPLEMENTATION - Will be corrected when real GraphQL API calls reveal actual structure.
  */
 
-import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO'
-import { ProjectV2ItemGraphQLResponse } from '../types/GitHubGraphQLTypes'
+import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO.js'
+import { ProjectV2ItemGraphQLResponse } from '../types/GitHubGraphQLTypes.js'
 
 /**
  * Data Transfer Object for GitHub Project v2 Item information (GraphQL-based)

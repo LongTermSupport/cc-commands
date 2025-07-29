@@ -6,9 +6,9 @@
  */
 
 // @ts-expect-error - Used in JSDoc comments
-import { OrchestratorError } from '../../../core/error/OrchestratorError'
-import { ProjectV2DTO } from '../dto/ProjectV2DTO'
-import { ProjectV2ItemDTO } from '../dto/ProjectV2ItemDTO'
+import { OrchestratorError } from '../../../core/error/OrchestratorError.js'
+import { ProjectV2DTO } from '../dto/ProjectV2DTO.js'
+import { ProjectV2ItemDTO } from '../dto/ProjectV2ItemDTO.js'
 
 /**
  * Interface for GitHub GraphQL API service operations

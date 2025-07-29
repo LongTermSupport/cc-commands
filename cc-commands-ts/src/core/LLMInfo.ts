@@ -17,7 +17,7 @@
  * - Include comprehensive error recovery information
  */
 
-import { OrchestratorError } from './error/OrchestratorError';
+import { OrchestratorError } from './error/OrchestratorError.js';
 
 /**
  * Action performed by the command with its result

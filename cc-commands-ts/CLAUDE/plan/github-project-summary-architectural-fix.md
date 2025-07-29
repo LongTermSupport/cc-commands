@@ -26,7 +26,7 @@ CLI Command → Typed Objects → Orchestrator → Typed Objects → OrchServ �
 
 ## 🎯 CORE DELIVERABLE
 
-**Functional GitHub Project Summary Command**: `g:gh:project:summary` that analyzes GitHub Projects v2 and generates comprehensive activity summaries.
+**Functional GitHub Project Summary Command**: `g-gh-project-summary` that analyzes GitHub Projects v2 and generates comprehensive activity summaries.
 
 **SUCCESS CRITERIA**:
 - ✅ Proper CLI argument parsing (only at command boundary)
@@ -316,7 +316,7 @@ Each phase must meet these criteria before proceeding:
 
 The project is complete when:
 
-1. **Functional**: `g:gh:project:summary` command works end-to-end
+1. **Functional**: `g-gh-project-summary` command works end-to-end
 2. **Type Safe**: Zero `as unknown as` casts, zero `any` types
 3. **Well Tested**: Unit → Integration → E2E tests all passing
 4. **Clean Architecture**: Proper CLI boundaries, no god objects

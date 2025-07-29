@@ -5,8 +5,8 @@
  * Provides repository information and activity metrics calculation.
  */
 
-import { ActivityMetricsDTO } from '../dto/ActivityMetricsDTO'
-import { RepositoryDataDTO } from '../dto/RepositoryDataDTO'
+import { ActivityMetricsDTO } from '../dto/ActivityMetricsDTO.js'
+import { RepositoryDataDTO } from '../dto/RepositoryDataDTO.js'
 
 /**
  * Interface for repository data operations

@@ -37,7 +37,7 @@
  * })
  * ```
  */
-import { DebugInfo, ErrorContext, JsonValue } from '../types/DataTypes'
+import { DebugInfo, ErrorContext, JsonValue } from '../types/DataTypes.js'
 
 export class OrchestratorError {
   public readonly context: ErrorContext = {}

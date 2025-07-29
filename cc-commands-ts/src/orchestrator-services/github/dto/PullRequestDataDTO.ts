@@ -6,7 +6,7 @@
  * merge information, and change statistics.
  */
 
-import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO'
+import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO.js'
 
 /**
  * Data Transfer Object for GitHub pull requests

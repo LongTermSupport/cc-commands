@@ -5,7 +5,7 @@
  */
 
 import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO'
-import { ProjectV2GraphQLResponse } from '../types/GitHubGraphQLTypes'
+import { ProjectV2GraphQLResponse } from '../types/GitHubGraphQLTypes.js'
 
 /**
  * Data Transfer Object for GitHub Project v2 information (GraphQL-based)

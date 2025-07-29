@@ -7,11 +7,11 @@
 
 import { Args, Flags } from '@oclif/core'
 
-import { BaseCommand } from '../../../../core/BaseCommand'
-import { LLMInfo } from '../../../../core/LLMInfo'
-import { ArgumentParser, IProjectDetectionArgs, ISummaryOrchestratorArgs } from '../../../../orchestrator-services/github/types/ArgumentTypes'
-import { createTypedGitHubServices } from '../../../../orchestrator-services/github/utils/ServiceFactory'
-import { summaryOrch } from '../../../../orchestrators/g/gh/project/summaryOrch'
+import { BaseCommand } from '../core/BaseCommand.js'
+import { LLMInfo } from '../core/LLMInfo.js'
+import { ArgumentParser, IProjectDetectionArgs, ISummaryOrchestratorArgs } from '../orchestrator-services/github/types/ArgumentTypes.js'
+import { createTypedGitHubServices } from '../orchestrator-services/github/utils/ServiceFactory.js'
+import { summaryOrch } from '../orchestrators/g/gh/project/summaryOrch.js'
 
 /**
  * GitHub Project Summary Command
@@ -21,9 +21,9 @@ import { summaryOrch } from '../../../../orchestrators/g/gh/project/summaryOrch'
  * project detection from git remotes or manual specification.
  * 
  * Usage examples:
- * - Auto-detect: g:gh:project:summary
- * - From URL: g:gh:project:summary "https://github.com/orgs/myorg/projects/1"
- * - Manual: g:gh:project:summary "myorg/project-name"
+ * - Auto-detect: g-gh-project-summary
+ * - From URL: g-gh-project-summary "https://github.com/orgs/myorg/projects/1"
+ * - Manual: g-gh-project-summary "myorg/project-name"
  */
 export default class SummaryCmd extends BaseCommand {
   static override args = {
@@ -53,7 +53,7 @@ static override flags = {
       description: 'Time window for activity analysis (e.g., 7d, 30d, 3m)',
     }),
   }
-static override id = 'g:gh:project:summary'
+static override id = 'g-gh-project-summary'
 static override strict = false
 
   async execute(): Promise<LLMInfo> {

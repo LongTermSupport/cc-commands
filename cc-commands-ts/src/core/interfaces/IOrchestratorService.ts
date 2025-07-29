@@ -5,7 +5,7 @@
  * Defines the contracts for service coordination and data collection.
  */
 
-import { LLMInfo } from '../LLMInfo'
+import { LLMInfo } from '../LLMInfo.js'
 
 /**
  * Orchestrator service function type - coordinates regular services

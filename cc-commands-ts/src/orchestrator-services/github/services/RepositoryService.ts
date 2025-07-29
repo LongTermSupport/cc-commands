@@ -5,10 +5,10 @@
  * Coordinates GitHubRestApiService for repository operations.
  */
 
-import { OrchestratorError } from '../../../core/error/OrchestratorError'
-import { ActivityMetricsDTO } from '../dto/ActivityMetricsDTO'
-import { RepositoryDataDTO } from '../dto/RepositoryDataDTO'
-import { GitHubRestApiService } from './GitHubRestApiService'
+import { OrchestratorError } from '../../../core/error/OrchestratorError.js'
+import { ActivityMetricsDTO } from '../dto/ActivityMetricsDTO.js'
+import { RepositoryDataDTO } from '../dto/RepositoryDataDTO.js'
+import { GitHubRestApiService } from './GitHubRestApiService.js'
 
 /**
  * GitHub Repository Service for high-level repository operations

@@ -78,7 +78,7 @@
   },
   "repository": "cc-commands/cc-commands-ts",
   "scripts": {
-    "build": "shx rm -rf dist && tsc -b",
+    "build": "shx rm -rf dist && tsc -b && oclif manifest",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --fix",
     "test": "npm run build && vitest run",
     "test:watch": "vitest",

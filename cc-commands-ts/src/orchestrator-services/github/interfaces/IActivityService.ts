@@ -6,9 +6,9 @@
  */
 
 // @ts-expect-error - Used in JSDoc comments
-import { OrchestratorError } from '../../../core/error/OrchestratorError'
-import { ActivityMetricsDTO } from '../dto/ActivityMetricsDTO'
-import { ProjectSummaryDTO } from '../dto/ProjectSummaryDTO'
+import { OrchestratorError } from '../../../core/error/OrchestratorError.js'
+import { ActivityMetricsDTO } from '../dto/ActivityMetricsDTO.js'
+import { ProjectSummaryDTO } from '../dto/ProjectSummaryDTO.js'
 
 /**
  * Interface for high-level activity analysis operations

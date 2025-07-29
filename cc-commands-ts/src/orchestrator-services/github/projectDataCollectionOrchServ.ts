@@ -5,11 +5,11 @@
  * Coordinates project details, repository discovery, and basic repository information.
  */
 
-import { OrchestratorError } from '../../core/error/OrchestratorError'
-import { LLMInfo } from '../../core/LLMInfo'
-import { RepositoryDataDTO } from './dto/RepositoryDataDTO'
-import { IProjectDataCollectionArgs } from './types/ArgumentTypes'
-import { TGitHubServices } from './types/ServiceTypes'
+import { OrchestratorError } from '../../core/error/OrchestratorError.js'
+import { LLMInfo } from '../../core/LLMInfo.js'
+import { RepositoryDataDTO } from './dto/RepositoryDataDTO.js'
+import { IProjectDataCollectionArgs } from './types/ArgumentTypes.js'
+import { TGitHubServices } from './types/ServiceTypes.js'
 
 /**
  * Project Data Collection Orchestrator Service

@@ -5,7 +5,7 @@
  * Combines GraphQL service with git remote detection capabilities.
  */
 
-import { ProjectV2DTO } from '../dto/ProjectV2DTO'
+import { ProjectV2DTO } from '../dto/ProjectV2DTO.js'
 
 /**
  * Interface for high-level GitHub Projects v2 operations

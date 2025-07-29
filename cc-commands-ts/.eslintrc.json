@@ -183,13 +183,10 @@
     },
     {
       // GitHub API service rules
-      "files": ["**/services/github/**/*.ts"],
+      "files": ["src/orchestrator-services/github/**/*.ts", "**/services/*GitHub*.ts"],
       "rules": {
-        // GitHub API uses snake_case parameters
-        "camelcase": ["error", {
-          "properties": "never",
-          "allow": ["per_page", "since", "state", "sort", "direction", "page"]
-        }]
+        // GitHub API responses use snake_case properties - disable camelcase for API processing
+        "camelcase": "off"
       }
     },
     {
@@ -229,6 +226,17 @@
       "rules": {
         // Services can instantiate other objects
         "no-restricted-syntax": "off"
+      }
+    },
+    {
+      // GitHub API specific services - disable camelcase for API property access
+      "files": [
+        "src/orchestrator-services/github/services/GitHubRestApiService.ts",
+        "src/orchestrator-services/github/services/GitHubGraphQLService.ts",
+        "src/orchestrator-services/github/services/ProjectService.ts"
+      ],
+      "rules": {
+        "camelcase": "off"
       }
     }
   ],

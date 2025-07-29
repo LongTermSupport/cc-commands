@@ -8,7 +8,7 @@
 import { Octokit } from '@octokit/rest'
 import { execSync } from 'node:child_process'
 
-import { OrchestratorError } from '../../../core/error/OrchestratorError'
+import { OrchestratorError } from '../../../core/error/OrchestratorError.js'
 
 /**
  * GitHub Authentication Service
