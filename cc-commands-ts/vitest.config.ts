@@ -17,9 +17,11 @@ export default defineConfig({
       '**/real-integration.test.ts' // Exclude real API integration tests by default
     ],
     coverage: {
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'html', 'json-summary'],
+      reportsDirectory: './var/coverage',
       exclude: [
         'coverage/**',
+        'var/**',
         'dist/**',
         'lib/**',
         'node_modules/**',

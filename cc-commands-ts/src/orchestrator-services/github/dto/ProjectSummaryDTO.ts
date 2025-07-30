@@ -1,9 +1,12 @@
 /**
  * @file GitHub Project Summary Data Transfer Object
  * 
- * Represents a comprehensive GitHub project summary that aggregates data from
- * multiple sources (repositories, issues, pull requests, commits, activity metrics).
- * This is the top-level DTO that combines all other DTOs for final LLM processing.
+ * Represents a comprehensive GitHub project summary with pure mathematical facts
+ * from multiple sources (repositories, issues, pull requests, commits, activity metrics).
+ * This DTO provides raw numerical data and ratios for LLM analysis and interpretation.
+ * 
+ * CRITICAL: This DTO contains ONLY mathematical facts and ratios. No subjective
+ * analysis, interpretation, or quality judgments are included.
  */
 
 import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO.js'
@@ -11,21 +14,26 @@ import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO.js'
 /**
  * Data Transfer Object for GitHub project summaries
  * 
- * This DTO encapsulates a complete project summary including repository
- * information, development activity, issue tracking, pull request metrics,
- * and overall project health indicators. It aggregates data from multiple
- * other DTOs to provide a comprehensive view for LLM analysis.
+ * This DTO encapsulates mathematical facts about a project including repository
+ * counts, development activity ratios, issue metrics, pull request statistics,
+ * and time-based calculations. It aggregates numerical data from multiple
+ * sources to provide factual measurements for LLM interpretation.
  */
 export class ProjectSummaryDTO implements ILLMDataDTO {
   private static readonly Keys = {
     PROJECT_ACTIVE_CONTRIBUTORS: 'PROJECT_ACTIVE_CONTRIBUTORS',
     PROJECT_ACTIVE_REPOSITORIES: 'PROJECT_ACTIVE_REPOSITORIES',
+    PROJECT_ACTIVITY_DENSITY_LAST_30_DAYS: 'PROJECT_ACTIVITY_DENSITY_LAST_30_DAYS',
+    PROJECT_AGE_DAYS: 'PROJECT_AGE_DAYS',
     PROJECT_AVERAGE_ISSUE_AGE_DAYS: 'PROJECT_AVERAGE_ISSUE_AGE_DAYS',
     PROJECT_AVERAGE_PR_AGE_DAYS: 'PROJECT_AVERAGE_PR_AGE_DAYS',
     PROJECT_COMMITS_LAST_30_DAYS: 'PROJECT_COMMITS_LAST_30_DAYS',
+    PROJECT_COMMITS_TO_ISSUES_RATIO: 'PROJECT_COMMITS_TO_ISSUES_RATIO',
+    PROJECT_COMMITS_TO_PRS_RATIO: 'PROJECT_COMMITS_TO_PRS_RATIO',
+    PROJECT_CONTRIBUTORS_TO_REPOS_RATIO: 'PROJECT_CONTRIBUTORS_TO_REPOS_RATIO',
     PROJECT_CREATED_AT: 'PROJECT_CREATED_AT',
+    PROJECT_DAYS_SINCE_UPDATE: 'PROJECT_DAYS_SINCE_UPDATE',
     PROJECT_DESCRIPTION: 'PROJECT_DESCRIPTION',
-    PROJECT_HEALTH_SCORE: 'PROJECT_HEALTH_SCORE',
     PROJECT_ISSUES_CLOSED_RATIO: 'PROJECT_ISSUES_CLOSED_RATIO',
     PROJECT_ISSUES_OPEN_COUNT: 'PROJECT_ISSUES_OPEN_COUNT',
     PROJECT_ISSUES_TOTAL_COUNT: 'PROJECT_ISSUES_TOTAL_COUNT',
@@ -36,8 +44,8 @@ export class ProjectSummaryDTO implements ILLMDataDTO {
     PROJECT_PRS_MERGED_RATIO: 'PROJECT_PRS_MERGED_RATIO',
     PROJECT_PRS_OPEN_COUNT: 'PROJECT_PRS_OPEN_COUNT',
     PROJECT_PRS_TOTAL_COUNT: 'PROJECT_PRS_TOTAL_COUNT',
-    PROJECT_RECENT_ACTIVITY_LEVEL: 'PROJECT_RECENT_ACTIVITY_LEVEL',
     PROJECT_REPOSITORY_COUNT: 'PROJECT_REPOSITORY_COUNT',
+    PROJECT_STARS_TO_REPOS_RATIO: 'PROJECT_STARS_TO_REPOS_RATIO',
     PROJECT_STARS_TOTAL: 'PROJECT_STARS_TOTAL',
     PROJECT_TOTAL_COMMITS: 'PROJECT_TOTAL_COMMITS',
     PROJECT_TOTAL_CONTRIBUTORS: 'PROJECT_TOTAL_CONTRIBUTORS',
@@ -69,8 +77,13 @@ export class ProjectSummaryDTO implements ILLMDataDTO {
     public readonly prsOpenCount: number,
     public readonly prsMergedRatio: number,
     public readonly averagePrAgeDays: number,
-    public readonly recentActivityLevel: 'high' | 'low' | 'medium',
-    public readonly healthScore: number
+    public readonly commitsToIssuesRatio: number,
+    public readonly commitsToPrsRatio: number,
+    public readonly contributorsToReposRatio: number,
+    public readonly starsToReposRatio: number,
+    public readonly ageDays: number,
+    public readonly daysSinceUpdate: number,
+    public readonly activityDensityLast30Days: number
   ) {}
 
   /**
@@ -87,7 +100,6 @@ export class ProjectSummaryDTO implements ILLMDataDTO {
     commitsLast30Days?: number
     createdAt?: Date | string
     description?: string
-    healthScore?: number
     
     issuesOpenCount?: number
     // Issue metrics
@@ -103,8 +115,6 @@ export class ProjectSummaryDTO implements ILLMDataDTO {
     
     // Pull request metrics
     prsTotalCount?: number
-    // Calculated metrics
-    recentActivityLevel?: 'high' | 'low' | 'medium'
     // Repository metrics
     repositoryCount?: number
     
@@ -138,6 +148,9 @@ export class ProjectSummaryDTO implements ILLMDataDTO {
   }): ProjectSummaryDTO {
     this.validateBasicData(basicData)
     
+    const createdAt = this.parseDate(basicData.createdAt) || new Date()
+    const updatedAt = this.parseDate(basicData.updatedAt) || new Date()
+    
     return new ProjectSummaryDTO(
       basicData.name,
       basicData.owner,
@@ -145,8 +158,8 @@ export class ProjectSummaryDTO implements ILLMDataDTO {
       basicData.url || '',
       'Unknown',
       [],
-      this.parseDate(basicData.createdAt) || new Date(),
-      this.parseDate(basicData.updatedAt) || new Date(),
+      createdAt,
+      updatedAt,
       0, // repositoryCount
       0, // activeRepositories
       0, // starsTotal
@@ -162,9 +175,31 @@ export class ProjectSummaryDTO implements ILLMDataDTO {
       0, // prsOpenCount
       0, // prsMergedRatio
       0, // averagePrAgeDays
-      'low', // recentActivityLevel
-      0 // healthScore
+      0, // commitsToIssuesRatio
+      0, // commitsToPrsRatio
+      0, // contributorsToReposRatio
+      0, // starsToReposRatio
+      this.calculateAgeDays(createdAt), // ageDays
+      this.calculateDaysSinceUpdate(updatedAt), // daysSinceUpdate
+      0 // activityDensityLast30Days
     )
+  }
+
+  /**
+   * Calculate activity density (commits per day)
+   */
+  private static calculateActivityDensity(commits: number, days: number): number {
+    if (days === 0) return 0
+    return Math.round((commits / days) * 100) / 100
+  }
+
+  /**
+   * Calculate age in days from creation date
+   */
+  private static calculateAgeDays(createdAt: Date): number {
+    const now = new Date()
+    const diffTime = Math.abs(now.getTime() - createdAt.getTime())
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
   }
 
   /**
@@ -177,11 +212,53 @@ export class ProjectSummaryDTO implements ILLMDataDTO {
   }
 
   /**
-   * Calculate a basic health score based on available metrics
+   * Calculate days since last update
    */
-  private static calculateDefaultHealthScore(issuesClosedRatio: number, prsMergedRatio: number): number {
-    // Simple scoring: average of issue resolution and PR merge rates
-    return Math.round((issuesClosedRatio + prsMergedRatio) / 2)
+  private static calculateDaysSinceUpdate(updatedAt: Date): number {
+    const now = new Date()
+    const diffTime = Math.abs(now.getTime() - updatedAt.getTime())
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  }
+
+  /**
+   * Calculate mathematical ratios from extracted metrics
+   */
+  private static calculateMathematicalRatios(
+    activityMetrics: { totalCommits: number; totalContributors: number; },
+    issueMetrics: { issuesOpenCount: number; issuesTotalCount: number; },
+    prMetrics: { prsOpenCount: number; prsTotalCount: number; },
+    repositoryMetrics: { repositoryCount: number; starsTotal: number; }
+  ): {
+    commitsToIssuesRatio: number
+    commitsToPrsRatio: number
+    contributorsToReposRatio: number
+    issuesClosedRatio: number
+    prsMergedRatio: number
+    starsToReposRatio: number
+  } {
+    const issuesClosedRatio = this.calculateClosedRatio(issueMetrics.issuesTotalCount, issueMetrics.issuesOpenCount)
+    const prsMergedRatio = this.calculateClosedRatio(prMetrics.prsTotalCount, prMetrics.prsOpenCount)
+    const commitsToIssuesRatio = this.calculateRatio(activityMetrics.totalCommits, issueMetrics.issuesTotalCount)
+    const commitsToPrsRatio = this.calculateRatio(activityMetrics.totalCommits, prMetrics.prsTotalCount)
+    const contributorsToReposRatio = this.calculateRatio(activityMetrics.totalContributors, repositoryMetrics.repositoryCount)
+    const starsToReposRatio = this.calculateRatio(repositoryMetrics.starsTotal, repositoryMetrics.repositoryCount)
+
+    return {
+      commitsToIssuesRatio,
+      commitsToPrsRatio,
+      contributorsToReposRatio,
+      issuesClosedRatio,
+      prsMergedRatio,
+      starsToReposRatio
+    }
+  }
+
+  /**
+   * Calculate mathematical ratio with division by zero protection
+   */
+  private static calculateRatio(numerator: number, denominator: number): number {
+    if (denominator === 0) return 0
+    return Math.round((numerator / denominator) * 100) / 100
   }
 
   /**
@@ -195,7 +272,6 @@ export class ProjectSummaryDTO implements ILLMDataDTO {
     commitsLast30Days?: number
     createdAt?: Date | string
     description?: string
-    healthScore?: number
     
     issuesOpenCount?: number
     // Issue metrics
@@ -211,8 +287,6 @@ export class ProjectSummaryDTO implements ILLMDataDTO {
     
     // Pull request metrics
     prsTotalCount?: number
-    // Calculated metrics
-    recentActivityLevel?: 'high' | 'low' | 'medium'
     // Repository metrics
     repositoryCount?: number
     
@@ -230,7 +304,7 @@ export class ProjectSummaryDTO implements ILLMDataDTO {
     const activityMetrics = this.extractActivityMetrics(summaryData)
     const issueMetrics = this.extractIssueMetrics(summaryData)
     const prMetrics = this.extractPrMetrics(summaryData)
-    const calculatedMetrics = this.extractCalculatedMetrics(summaryData, issueMetrics, prMetrics)
+    const calculatedMetrics = this.calculateMathematicalRatios(activityMetrics, issueMetrics, prMetrics, repositoryMetrics)
 
     return new ProjectSummaryDTO(
       basicData.name,
@@ -256,8 +330,13 @@ export class ProjectSummaryDTO implements ILLMDataDTO {
       prMetrics.prsOpenCount,
       calculatedMetrics.prsMergedRatio,
       prMetrics.averagePrAgeDays,
-      calculatedMetrics.recentActivityLevel,
-      calculatedMetrics.healthScore
+      calculatedMetrics.commitsToIssuesRatio,
+      calculatedMetrics.commitsToPrsRatio,
+      calculatedMetrics.contributorsToReposRatio,
+      calculatedMetrics.starsToReposRatio,
+      this.calculateAgeDays(basicData.createdAt),
+      this.calculateDaysSinceUpdate(basicData.updatedAt),
+      this.calculateActivityDensity(activityMetrics.commitsLast30Days, 30)
     )
   }
 
@@ -314,33 +393,6 @@ export class ProjectSummaryDTO implements ILLMDataDTO {
       primaryLanguage: summaryData.primaryLanguage || 'Unknown',
       updatedAt: this.parseDate(summaryData.updatedAt) || new Date(),
       url: summaryData.url || ''
-    }
-  }
-
-  /**
-   * Extract and calculate derived metrics
-   */
-  private static extractCalculatedMetrics(
-    summaryData: {
-      healthScore?: number
-      recentActivityLevel?: 'high' | 'low' | 'medium'
-    },
-    issueMetrics: { issuesOpenCount: number; issuesTotalCount: number; },
-    prMetrics: { prsOpenCount: number; prsTotalCount: number; }
-  ): {
-    healthScore: number
-    issuesClosedRatio: number
-    prsMergedRatio: number
-    recentActivityLevel: 'high' | 'low' | 'medium'
-  } {
-    const issuesClosedRatio = this.calculateClosedRatio(issueMetrics.issuesTotalCount, issueMetrics.issuesOpenCount)
-    const prsMergedRatio = this.calculateClosedRatio(prMetrics.prsTotalCount, prMetrics.prsOpenCount)
-
-    return {
-      healthScore: summaryData.healthScore || this.calculateDefaultHealthScore(issuesClosedRatio, prsMergedRatio),
-      issuesClosedRatio,
-      prsMergedRatio,
-      recentActivityLevel: summaryData.recentActivityLevel || 'low'
     }
   }
 
@@ -447,116 +499,33 @@ export class ProjectSummaryDTO implements ILLMDataDTO {
     }
   }
 
-  /**
-   * Get activity level as human-readable string
-   * 
-   * @returns Activity level description
-   */
-  getActivityDescription(): string {
-    switch (this.recentActivityLevel) {
-      case 'high': {
-        return 'Very active with frequent commits and updates'
-      }
 
-      case 'low': {
-        return 'Low activity with infrequent updates'
-      }
 
-      case 'medium': {
-        return 'Moderately active with regular updates'
-      }
 
-      default: {
-        return 'Activity level unknown'
-      }
-    }
-  }
 
-  /**
-   * Get project age in days
-   * 
-   * @returns Number of days since project creation
-   */
-  getAgeInDays(): number {
-    const now = new Date()
-    const diffTime = Math.abs(now.getTime() - this.createdAt.getTime())
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  }
 
-  /**
-   * Get days since last update
-   * 
-   * @returns Number of days since last project update
-   */
-  getDaysSinceUpdate(): number {
-    const now = new Date()
-    const diffTime = Math.abs(now.getTime() - this.updatedAt.getTime())
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  }
-
-  /**
-   * Get health status based on health score
-   * 
-   * @returns Health status description
-   */
-  getHealthStatus(): string {
-    if (this.healthScore >= 80) return 'Excellent'
-    if (this.healthScore >= 60) return 'Good'
-    if (this.healthScore >= 40) return 'Fair'
-    if (this.healthScore >= 20) return 'Poor'
-    return 'Critical'
-  }
-
-  /**
-   * Get a human-readable summary of the project
-   * 
-   * @returns Brief project description
-   */
-  getSummary(): string {
-    const languageInfo = this.primaryLanguage === 'Unknown' ? '' : ` (${this.primaryLanguage})`
-    const repoInfo = this.repositoryCount > 1 ? ` with ${this.repositoryCount} repositories` : ''
-    const activityInfo = this.isActivelyMaintained() ? ' - actively maintained' : ' - low activity'
-    
-    return `${this.owner}/${this.name}${languageInfo}${repoInfo}${activityInfo}`
-  }
-
-  /**
-   * Check if project has recent activity (updated within specified days)
-   * 
-   * @param days - Number of days to consider as recent (default: 30)
-   * @returns True if project was updated within the specified time frame
-   */
-  hasRecentActivity(days: number = 30): boolean {
-    return this.getDaysSinceUpdate() <= days
-  }
-
-  /**
-   * Check if project is actively maintained based on multiple factors
-   * 
-   * @returns True if project shows signs of active maintenance
-   */
-  isActivelyMaintained(): boolean {
-    return this.hasRecentActivity(30) && 
-           this.activeContributors > 0 && 
-           this.commitsLast30Days > 0 &&
-           this.healthScore > 20
-  }
 
   /**
    * Convert project summary data to LLM-compatible key-value pairs
    * 
-   * @returns Record of standardized data keys to string values
+   * @returns Record of standardized mathematical facts for LLM interpretation
    */
   toLLMData(): Record<string, string> {
     return {
       [ProjectSummaryDTO.Keys.PROJECT_ACTIVE_CONTRIBUTORS]: String(this.activeContributors),
       [ProjectSummaryDTO.Keys.PROJECT_ACTIVE_REPOSITORIES]: String(this.activeRepositories),
+      [ProjectSummaryDTO.Keys.PROJECT_ACTIVITY_DENSITY_LAST_30_DAYS]: String(this.activityDensityLast30Days),
+      [ProjectSummaryDTO.Keys.PROJECT_AGE_DAYS]: String(this.ageDays),
       [ProjectSummaryDTO.Keys.PROJECT_AVERAGE_ISSUE_AGE_DAYS]: String(this.averageIssueAgeDays),
       [ProjectSummaryDTO.Keys.PROJECT_AVERAGE_PR_AGE_DAYS]: String(this.averagePrAgeDays),
       [ProjectSummaryDTO.Keys.PROJECT_COMMITS_LAST_30_DAYS]: String(this.commitsLast30Days),
+      // Mathematical ratios
+      [ProjectSummaryDTO.Keys.PROJECT_COMMITS_TO_ISSUES_RATIO]: String(this.commitsToIssuesRatio),
+      [ProjectSummaryDTO.Keys.PROJECT_COMMITS_TO_PRS_RATIO]: String(this.commitsToPrsRatio),
+      [ProjectSummaryDTO.Keys.PROJECT_CONTRIBUTORS_TO_REPOS_RATIO]: String(this.contributorsToReposRatio),
       [ProjectSummaryDTO.Keys.PROJECT_CREATED_AT]: this.createdAt.toISOString(),
+      [ProjectSummaryDTO.Keys.PROJECT_DAYS_SINCE_UPDATE]: String(this.daysSinceUpdate),
       [ProjectSummaryDTO.Keys.PROJECT_DESCRIPTION]: this.description,
-      [ProjectSummaryDTO.Keys.PROJECT_HEALTH_SCORE]: String(this.healthScore),
       [ProjectSummaryDTO.Keys.PROJECT_ISSUES_CLOSED_RATIO]: String(this.issuesClosedRatio),
       [ProjectSummaryDTO.Keys.PROJECT_ISSUES_OPEN_COUNT]: String(this.issuesOpenCount),
       [ProjectSummaryDTO.Keys.PROJECT_ISSUES_TOTAL_COUNT]: String(this.issuesTotalCount),
@@ -567,8 +536,8 @@ export class ProjectSummaryDTO implements ILLMDataDTO {
       [ProjectSummaryDTO.Keys.PROJECT_PRS_MERGED_RATIO]: String(this.prsMergedRatio),
       [ProjectSummaryDTO.Keys.PROJECT_PRS_OPEN_COUNT]: String(this.prsOpenCount),
       [ProjectSummaryDTO.Keys.PROJECT_PRS_TOTAL_COUNT]: String(this.prsTotalCount),
-      [ProjectSummaryDTO.Keys.PROJECT_RECENT_ACTIVITY_LEVEL]: this.recentActivityLevel,
       [ProjectSummaryDTO.Keys.PROJECT_REPOSITORY_COUNT]: String(this.repositoryCount),
+      [ProjectSummaryDTO.Keys.PROJECT_STARS_TO_REPOS_RATIO]: String(this.starsToReposRatio),
       [ProjectSummaryDTO.Keys.PROJECT_STARS_TOTAL]: String(this.starsTotal),
       [ProjectSummaryDTO.Keys.PROJECT_TOTAL_COMMITS]: String(this.totalCommits),
       [ProjectSummaryDTO.Keys.PROJECT_TOTAL_CONTRIBUTORS]: String(this.totalContributors),

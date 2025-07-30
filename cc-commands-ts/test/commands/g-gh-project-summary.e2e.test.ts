@@ -32,7 +32,8 @@ const runCommand = (args: string = ''): CommandResult => {
 
 describe('g-gh-project-summary E2E', () => {
 
-  it('should show help when requested', () => {
+  describe('Help and Basic CLI', () => {
+    it('should show help when requested', () => {
     const result = runCommand('--help')
     
     // Debug output
@@ -45,9 +46,11 @@ describe('g-gh-project-summary E2E', () => {
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toContain('Generate comprehensive GitHub project summary')
     expect(result.stdout).toContain('g-gh-project-summary')
+    })
   })
 
-  it('should return project summary for organization with Projects v2', { timeout: 15_000 }, () => {
+  describe('Owner Mode Detection', () => {
+    it('should return project summary for organization with Projects v2', { timeout: 15_000 }, () => {
     const result = runCommand('github')
     
     // Debug output for exit code verification
@@ -73,9 +76,9 @@ describe('g-gh-project-summary E2E', () => {
     // Content assertions - verify project data is collected
     expect(result.stdout).toContain('PROJECT_OWNER=github')
     expect(result.stdout).toMatch(/PROJECTS_FOUND=\d+/)
-  })
+    })
 
-  it('should handle repository owner (LongTermSupport)', () => {
+    it('should handle repository owner (LongTermSupport)', () => {
     const result = runCommand('LongTermSupport')
     
     // This may fail if no projects are found, which is expected behavior
@@ -86,20 +89,189 @@ describe('g-gh-project-summary E2E', () => {
       // If no projects found, should fail gracefully
       expect(result.stdout).toContain('STOP PROCESSING')
     }
-  })
+    })
 
-  it('should fail gracefully for non-existent repository', () => {
+    it('should handle owner/repo format by extracting owner', () => {
+      const result = runCommand('github/docs')
+      
+      // Should extract 'github' as the owner and ignore '/docs'
+      if (result.exitCode === 0) {
+        expect(result.stdout).toContain('PROJECT_OWNER=github')
+        expect(result.stdout).toContain('EXECUTION_STATUS=SUCCESS')
+      } else {
+        expect(result.stdout).toContain('STOP PROCESSING')
+      }
+    })
+
+    it('should fail gracefully for non-existent organization', () => {
     const result = runCommand('definitely/not-a-real-repo-123456')
     
     expect(result.exitCode).toBe(1)
     expect(result.stdout).toContain('STOP PROCESSING')
     expect(result.stdout).toContain('ERROR_TYPE=')
+    })
   })
 
-  it('should fail when no arguments provided', () => {
+  describe('Auto Mode Detection', () => {
+    it('should attempt auto-detection from git remote when no arguments provided', { timeout: 15_000 }, () => {
     const result = runCommand('')
     
-    expect(result.exitCode).toBe(1)
-    expect(result.stdout).toContain('STOP PROCESSING')
+    // Debug output to understand what happened
+    console.log(`Exit code: ${result.exitCode}`)
+    console.log(`Detection mode: ${result.stdout.match(/DETECTION_MODE=(\w+)/)?.[1] || 'none'}`)
+    
+    // Should attempt auto-detection (regardless of success/failure)
+    expect(result.stdout).toContain('DETECTION_MODE=auto')
+    
+    // Should either succeed with a project OR fail gracefully with proper error
+    if (result.exitCode === 0) {
+      // Success case - found a project
+      expect(result.stdout).toContain('EXECUTION_STATUS=SUCCESS')
+      expect(result.stdout).toContain('PROJECT_TITLE=')
+    } else {
+      // Expected failure case - no project associated with git remote
+      expect(result.exitCode).toBe(1)
+      expect(result.stdout).toContain('STOP PROCESSING')
+      expect(result.stdout).toContain('Could not detect GitHub project from git remote')
+      expect(result.stdout).toContain('Ensure you are in a git repository directory')
+    }
+    })
+  })
+
+  describe('URL Mode Detection', () => {
+    it('should handle GitHub organization project URLs', { timeout: 15_000 }, () => {
+      const result = runCommand('"https://github.com/orgs/github/projects/1"')
+      
+      if (result.exitCode === 0) {
+        expect(result.stdout).toContain('DETECTION_MODE=url')
+        expect(result.stdout).toContain('PROJECT_OWNER=github')
+        expect(result.stdout).toContain('PROJECT_NUMBER=1')
+        expect(result.stdout).toContain('EXECUTION_STATUS=SUCCESS')
+      } else {
+        // May fail if project doesn't exist or no access
+        expect(result.stdout).toContain('STOP PROCESSING')
+        expect(result.stdout).toContain('DETECTION_MODE=url')
+      }
+    })
+
+    it('should handle GitHub user project URLs', { timeout: 15_000 }, () => {
+      const result = runCommand('"https://github.com/users/octocat/projects/1"')
+      
+      if (result.exitCode === 0) {
+        expect(result.stdout).toContain('DETECTION_MODE=url')
+        expect(result.stdout).toContain('PROJECT_OWNER=octocat')
+        expect(result.stdout).toContain('PROJECT_NUMBER=1')
+      } else {
+        expect(result.stdout).toContain('STOP PROCESSING')
+        expect(result.stdout).toContain('DETECTION_MODE=url')
+      }
+    })
+
+    it('should fail gracefully for invalid GitHub project URLs', () => {
+      const result = runCommand('"https://github.com/invalid/url/format"')
+      
+      expect(result.exitCode).toBe(1)
+      expect(result.stdout).toContain('STOP PROCESSING')
+      expect(result.stdout).toContain('Invalid GitHub project URL format')
+      expect(result.stdout).toContain('Use format: https://github.com/orgs/ORG/projects/123')
+    })
+
+    it('should fail gracefully for non-GitHub URLs', () => {
+      const result = runCommand('"https://gitlab.com/some/project"')
+      
+      expect(result.exitCode).toBe(1)
+      expect(result.stdout).toContain('STOP PROCESSING')
+      expect(result.stdout).toContain('Invalid GitHub project URL format')
+    })
+  })
+
+  describe('Command Flags', () => {
+    it('should handle format flag variations', { timeout: 15_000 }, () => {
+      const result = runCommand('github --format executive')
+      
+      if (result.exitCode === 0) {
+        expect(result.stdout).toContain('EXECUTION_STATUS=SUCCESS')
+        expect(result.stdout).toContain('FORMAT=executive')
+      } else {
+        expect(result.stdout).toContain('STOP PROCESSING')
+      }
+    })
+
+    it('should handle since flag for time window', { timeout: 15_000 }, () => {
+      const result = runCommand('github --since 7d')
+      
+      if (result.exitCode === 0) {
+        expect(result.stdout).toContain('EXECUTION_STATUS=SUCCESS')
+        expect(result.stdout).toContain('TIME_WINDOW_DAYS=7')
+      } else {
+        expect(result.stdout).toContain('STOP PROCESSING')
+      }
+    })
+
+    it('should handle combined flags', { timeout: 15_000 }, () => {
+      const result = runCommand('github --format detailed --since 14d')
+      
+      if (result.exitCode === 0) {
+        expect(result.stdout).toContain('EXECUTION_STATUS=SUCCESS')
+        expect(result.stdout).toContain('FORMAT=detailed')
+        expect(result.stdout).toContain('TIME_WINDOW_DAYS=14')
+      } else {
+        expect(result.stdout).toContain('STOP PROCESSING')
+      }
+    })
+
+    it('should handle invalid format flag gracefully', () => {
+      const result = runCommand('github --format invalid')
+      
+      // Command may return 0 or 1 depending on error handling
+      expect(result.exitCode).toBeGreaterThanOrEqual(0)
+      
+      // Error message should be present in either stdout or stderr
+      const output = result.stdout + result.stderr
+      expect(output).toContain('Expected --format=invalid to be one of')
+      expect(output).toMatch(/technical.*executive.*detailed/)
+    })
+
+    it('should handle invalid time window gracefully', { timeout: 15_000 }, () => {
+      const result = runCommand('github --since invalid')
+      
+      if (result.exitCode === 0) {
+        // Should use default time window when invalid
+        expect(result.stdout).toContain('TIME_WINDOW_DAYS=30')
+      } else {
+        expect(result.stdout).toContain('STOP PROCESSING')
+      }
+    })
+  })
+
+  describe('Output Format Verification', () => {
+    it('should include proper LLM instructions in successful output', { timeout: 15_000 }, () => {
+      const result = runCommand('github')
+      
+      if (result.exitCode === 0) {
+        expect(result.stdout).toContain('=== INSTRUCTIONS FOR LLM ===')
+        expect(result.stdout).toContain('Synthesize the collected data into a comprehensive project summary')
+      }
+    })
+
+    it('should include action log in output', { timeout: 15_000 }, () => {
+      const result = runCommand('github')
+      
+      // Both success and failure should include action log
+      expect(result.stdout).toContain('=== ACTION LOG ===')
+      expect(result.stdout).toMatch(/ACTION_\d+_EVENT=/)
+      expect(result.stdout).toMatch(/ACTION_\d+_RESULT=/)
+      expect(result.stdout).toContain('TOTAL_ACTIONS=')
+    })
+
+    it('should include proper data section formatting', { timeout: 15_000 }, () => {
+      const result = runCommand('github')
+      
+      if (result.exitCode === 0) {
+        expect(result.stdout).toContain('=== DATA ===')
+        expect(result.stdout).toContain('DETECTION_MODE=owner')
+        expect(result.stdout).toContain('INPUT_ARGS=github')
+      }
+    })
   })
 })

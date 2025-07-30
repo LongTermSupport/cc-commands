@@ -120,11 +120,7 @@ export class ActivityService {
       const primaryRepo = repositoryList.at(0) ?? 'unknown/unknown'
       const [owner, name] = primaryRepo.split('/')
 
-      // Calculate health score based on activity patterns
-      const healthScore = this.calculateHealthScore(combinedActivity)
-      
-      // Determine recent activity level
-      const recentActivityLevel = this.determineActivityLevel(combinedActivity)
+      // Note: Mathematical ratios will be calculated inside ProjectSummaryDTO
 
       // Create summary DTO with aggregated data
       return ProjectSummaryDTO.fromAggregatedData({
@@ -135,7 +131,6 @@ export class ActivityService {
         commitsLast30Days: combinedActivity.commitsCount, // Simplified - using total for period
         createdAt: combinedActivity.analysisPeriodStart,
         description: `Project with ${repositoryList.length} repositories`,
-        healthScore,
         issuesOpenCount: combinedActivity.openIssuesCount,
         issuesTotalCount: combinedActivity.totalIssuesCount,
         languages: ['Mixed'], // Simplified for aggregated analysis
@@ -144,7 +139,6 @@ export class ActivityService {
         primaryLanguage: 'Mixed', // Multi-repo projects have mixed languages
         prsOpenCount: combinedActivity.openPrsCount,
         prsTotalCount: combinedActivity.totalPrsCount,
-        recentActivityLevel,
         repositoryCount: combinedActivity.repositoriesCount,
         starsTotal: 0, // Not available in activity metrics
         totalCommits: combinedActivity.commitsCount,
@@ -270,28 +264,6 @@ export class ActivityService {
     return { earliestStart, latestEnd, totalDays }
   }
 
-  /**
-   * Calculate health score based on activity patterns
-   */
-  private calculateHealthScore(activity: ActivityMetricsDTO): number {
-    // Health score based on activity ratios and patterns
-    const issueResolutionRate = activity.totalIssuesCount > 0 ? 
-      activity.closedIssuesCount / activity.totalIssuesCount : 0
-    
-    const prMergeRate = activity.totalPrsCount > 0 ? 
-      activity.mergedPrsCount / activity.totalPrsCount : 0
-    
-    const commitActivity = Math.min(activity.avgCommitsPerDay / 5, 1) // Normalize to daily commits
-    
-    // Weighted average of health indicators (0-100 scale)
-    const healthScore = (
-      (issueResolutionRate * 40) + // 40% weight on issue resolution
-      (prMergeRate * 30) +         // 30% weight on PR merge rate
-      (commitActivity * 30)        // 30% weight on commit activity
-    ) * 100
-
-    return Math.round(Math.min(healthScore, 100))
-  }
 
   /**
    * Calculate repository activity score for ranking purposes
@@ -394,20 +366,6 @@ export class ActivityService {
     )
   }
 
-  /**
-   * Determine activity level based on recent metrics
-   */
-  private determineActivityLevel(activity: ActivityMetricsDTO): 'high' | 'low' | 'medium' {
-    const dailyCommits = activity.avgCommitsPerDay
-    const dailyIssues = activity.avgIssuesPerDay
-    const dailyPRs = activity.avgPrsPerDay
-    
-    const totalDailyActivity = dailyCommits + dailyIssues + dailyPRs
-    
-    if (totalDailyActivity >= 5) return 'high'
-    if (totalDailyActivity >= 1) return 'medium'
-    return 'low'
-  }
 
   /**
    * Find most active repository (by commits)

@@ -415,6 +415,12 @@ export class LLMInfo {
     output += this.formatErrorContext()
     output += this.formatErrorDebugLog()
     output += this.formatErrorStackTrace()
+    
+    // Include data collected before error occurred
+    output += this.formatDataSection()
+    output += this.formatActionLog()
+    output += this.formatFileOperations()
+    
     output += this.formatRecoveryInstructions()
 
     return output

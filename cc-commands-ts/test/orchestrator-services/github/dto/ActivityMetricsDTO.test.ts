@@ -400,7 +400,7 @@ describe('ActivityMetricsDTO', () => {
 
     it('should generate correct summary', () => {
       const summary = dto.getSummary()
-      expect(summary).toBe('3 repositories, 30 days: 75 commits, 36 issues, 24 PRs (moderate activity)')
+      expect(summary).toBe('3 repositories, 30 days: 75 commits, 36 issues, 24 PRs (4.5 avg daily activity)')
     })
 
     it('should generate summary for single repository', () => {
@@ -410,24 +410,24 @@ describe('ActivityMetricsDTO', () => {
       )
 
       const summary = singleRepoDto.getSummary()
-      expect(summary).toBe('1 repository, 7 days: 5 commits, 2 issues, 1 PRs (moderate activity)')
+      expect(summary).toBe('1 repository, 7 days: 5 commits, 2 issues, 1 PRs (1.14 avg daily activity)')
     })
 
-    it('should calculate activity intensity correctly', () => {
-      expect(dto.getActivityIntensity()).toBe('moderate') // (75+36+24)/30 = 4.5 avg daily
+    it('should calculate average daily activity correctly', () => {
+      expect(dto.getAverageDailyActivity()).toBe(4.5) // (75+36+24)/30 = 4.5 avg daily
       
-      // Test other intensity levels
+      // Test other activity levels
       const lowActivityDto = new ActivityMetricsDTO(
         1, ['owner/low'], validActivityData.analysisPeriodStart, validActivityData.analysisPeriodEnd,
         30, 5, 3, 1, 2, 2, 1, 1, 1, 1, null, null, 0, 50, 10, 3, 0.17, 0.1, 0.07
       )
-      expect(lowActivityDto.getActivityIntensity()).toBe('low') // (5+3+2)/30 = 0.33
+      expect(lowActivityDto.getAverageDailyActivity()).toBe(0.33) // (5+3+2)/30 = 0.33
 
       const veryHighDto = new ActivityMetricsDTO(
         1, ['owner/busy'], validActivityData.analysisPeriodStart, validActivityData.analysisPeriodEnd,
         10, 200, 80, 40, 40, 50, 10, 40, 5, 3, null, null, 5, 5000, 1000, 200, 20, 8, 5
       )
-      expect(veryHighDto.getActivityIntensity()).toBe('very_high') // (200+80+50)/10 = 33 avg daily
+      expect(veryHighDto.getAverageDailyActivity()).toBe(33) // (200+80+50)/10 = 33 avg daily
     })
 
     it('should calculate merge rate correctly', () => {
@@ -522,7 +522,7 @@ describe('ActivityMetricsDTO', () => {
       expect(llmData.ACTIVITY_COMMITS_COUNT).toBe('50000')
       expect(llmData.ACTIVITY_CONTRIBUTORS_COUNT).toBe('1000')
       expect(llmData.ACTIVITY_REPOSITORIES_COUNT).toBe('100')
-      expect(dto.getActivityIntensity()).toBe('very_high')
+      expect(dto.getAverageDailyActivity()).toBeGreaterThan(100) // Very high activity
     })
 
     it('should handle empty repository list', () => {

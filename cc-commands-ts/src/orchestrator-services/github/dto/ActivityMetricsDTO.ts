@@ -335,18 +335,14 @@ export class ActivityMetricsDTO implements ILLMDataDTO {
   }
 
   /**
-   * Get activity intensity rating based on metrics
+   * Calculate average daily total activity (mathematical fact)
    * 
-   * @returns Activity level: 'low', 'moderate', 'high', 'very_high'
+   * @returns Average daily activity count (commits + issues + PRs per day)
    */
-  getActivityIntensity(): 'high' | 'low' | 'moderate' | 'very_high' {
+  getAverageDailyActivity(): number {
     const totalActivity = this.commitsCount + this.totalIssuesCount + this.totalPrsCount
-    const avgDailyActivity = totalActivity / this.analysisPeriodDays
-    
-    if (avgDailyActivity >= 10) return 'very_high'
-    if (avgDailyActivity >= 5) return 'high'
-    if (avgDailyActivity >= 1) return 'moderate'
-    return 'low'
+    if (this.analysisPeriodDays === 0) return 0
+    return Math.round((totalActivity / this.analysisPeriodDays) * 100) / 100
   }
 
   /**
@@ -385,9 +381,9 @@ export class ActivityMetricsDTO implements ILLMDataDTO {
    * @returns Brief activity summary for logging/debugging
    */
   getSummary(): string {
-    const intensity = this.getActivityIntensity()
+    const avgDaily = this.getAverageDailyActivity()
     const repos = this.repositoriesCount === 1 ? 'repository' : 'repositories'
-    return `${this.repositoriesCount} ${repos}, ${this.analysisPeriodDays} days: ${this.commitsCount} commits, ${this.totalIssuesCount} issues, ${this.totalPrsCount} PRs (${intensity} activity)`
+    return `${this.repositoriesCount} ${repos}, ${this.analysisPeriodDays} days: ${this.commitsCount} commits, ${this.totalIssuesCount} issues, ${this.totalPrsCount} PRs (${avgDaily} avg daily activity)`
   }
 
   /**

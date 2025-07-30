@@ -6,15 +6,10 @@
  * methods, calculated metrics, and edge cases.
  */
 
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import { ProjectSummaryDTO } from '../../../../src/orchestrator-services/github/dto/ProjectSummaryDTO'
 
-const createDtoWithScore = (score: number): ProjectSummaryDTO => 
-  new ProjectSummaryDTO(
-    'test', 'owner', 'desc', 'url', 'lang', [], new Date(), new Date(),
-    1, 1, 100, 100, 10, 5, 2, 10, 2, 80, 5, 5, 1, 80, 2, 'medium', score
-  )
 
 describe('ProjectSummaryDTO', () => {
   describe('constructor', () => {
@@ -46,8 +41,13 @@ describe('ProjectSummaryDTO', () => {
         7, // prsOpenCount
         92, // prsMergedRatio
         5, // averagePrAgeDays
-        'high', // recentActivityLevel
-        88 // healthScore
+        18.26, // commitsToIssuesRatio (2847/156)
+        31.98, // commitsToPrsRatio (2847/89)
+        5.6, // contributorsToReposRatio (28/5)
+        250, // starsToReposRatio (1250/5)
+        730, // ageDays (2 years)
+        5, // daysSinceUpdate
+        1.5 // activityDensityLast30Days (45/30)
       )
 
       expect(dto.name).toBe('awesome-project')
@@ -73,21 +73,27 @@ describe('ProjectSummaryDTO', () => {
       expect(dto.prsOpenCount).toBe(7)
       expect(dto.prsMergedRatio).toBe(92)
       expect(dto.averagePrAgeDays).toBe(5)
-      expect(dto.recentActivityLevel).toBe('high')
-      expect(dto.healthScore).toBe(88)
+      expect(dto.commitsToIssuesRatio).toBe(18.26)
+      expect(dto.commitsToPrsRatio).toBe(31.98)
+      expect(dto.contributorsToReposRatio).toBe(5.6)
+      expect(dto.starsToReposRatio).toBe(250)
+      expect(dto.ageDays).toBe(730)
+      expect(dto.daysSinceUpdate).toBe(5)
+      expect(dto.activityDensityLast30Days).toBe(1.5)
     })
 
     it('should handle readonly properties correctly', () => {
       const dto = new ProjectSummaryDTO(
         'test-project', 'test-owner', 'Description', 'https://test.com',
         'JavaScript', [], new Date(), new Date(),
-        1, 1, 100, 50, 5, 10, 3, 20, 5, 75, 8, 15, 3, 80, 2, 'medium', 70
+        1, 1, 100, 50, 5, 10, 3, 20, 5, 75, 8, 15, 3, 80, 2,
+        2.5, 3.33, 10, 100, 365, 5, 0.17
       )
 
       // Properties should be readonly - TypeScript compile-time check only
       expect(dto.name).toBe('test-project')
       expect(dto.owner).toBe('test-owner')
-      expect(dto.healthScore).toBe(70)
+      expect(dto.commitsToIssuesRatio).toBe(2.5)
     })
   })
 
@@ -101,7 +107,6 @@ describe('ProjectSummaryDTO', () => {
         commitsLast30Days: 28,
         createdAt: '2022-06-10T08:00:00Z',
         description: 'Comprehensive data analysis toolkit',
-        healthScore: 82,
         issuesOpenCount: 14,
         issuesTotalCount: 98,
         languages: ['Python', 'R', 'SQL'],
@@ -110,7 +115,6 @@ describe('ProjectSummaryDTO', () => {
         primaryLanguage: 'Python',
         prsOpenCount: 4,
         prsTotalCount: 67,
-        recentActivityLevel: 'medium' as const,
         repositoryCount: 3,
         starsTotal: 847,
         totalCommits: 1523,
@@ -144,8 +148,10 @@ describe('ProjectSummaryDTO', () => {
       expect(dto.prsOpenCount).toBe(4)
       expect(dto.prsMergedRatio).toBe(94) // Calculated: (67-4)/67 * 100 = 94.0
       expect(dto.averagePrAgeDays).toBe(7)
-      expect(dto.recentActivityLevel).toBe('medium')
-      expect(dto.healthScore).toBe(82)
+      expect(dto.commitsToIssuesRatio).toBe(15.54) // Calculated: 1523/98 = 15.54
+      expect(dto.commitsToPrsRatio).toBe(22.73) // Calculated: 1523/67 = 22.73
+      expect(dto.contributorsToReposRatio).toBe(5) // Calculated: 15/3 = 5.0
+      expect(dto.starsToReposRatio).toBe(282.33) // Calculated: 847/3 = 282.33
     })
 
     it('should handle minimal aggregated data with defaults', () => {
@@ -179,8 +185,10 @@ describe('ProjectSummaryDTO', () => {
       expect(dto.prsOpenCount).toBe(0)
       expect(dto.prsMergedRatio).toBe(0)
       expect(dto.averagePrAgeDays).toBe(0)
-      expect(dto.recentActivityLevel).toBe('low')
-      expect(dto.healthScore).toBe(0)
+      expect(dto.commitsToIssuesRatio).toBe(0) // No commits or issues
+      expect(dto.commitsToPrsRatio).toBe(0) // No commits or PRs
+      expect(dto.contributorsToReposRatio).toBe(0) // No contributors or repos
+      expect(dto.starsToReposRatio).toBe(0) // No stars or repos
     })
 
     it('should calculate ratios correctly for edge cases', () => {
@@ -197,7 +205,8 @@ describe('ProjectSummaryDTO', () => {
 
       expect(dto.issuesClosedRatio).toBe(0) // 0 total issues = 0% ratio
       expect(dto.prsMergedRatio).toBe(100) // All PRs merged = 100% ratio
-      expect(dto.healthScore).toBe(50) // Average of 0% and 100%
+      expect(dto.commitsToIssuesRatio).toBe(0) // 0 issues means 0 ratio
+      expect(dto.commitsToPrsRatio).toBe(0) // No commits data provided
     })
 
     it('should handle Date objects and string dates', () => {
@@ -264,8 +273,13 @@ describe('ProjectSummaryDTO', () => {
       
       // All metrics should be zero/default
       expect(dto.repositoryCount).toBe(0)
-      expect(dto.healthScore).toBe(0)
-      expect(dto.recentActivityLevel).toBe('low')
+      expect(dto.commitsToIssuesRatio).toBe(0)
+      expect(dto.commitsToPrsRatio).toBe(0)
+      expect(dto.contributorsToReposRatio).toBe(0)
+      expect(dto.starsToReposRatio).toBe(0)
+      expect(dto.ageDays).toBeGreaterThan(0) // Should be calculated from dates
+      expect(dto.daysSinceUpdate).toBeGreaterThan(0) // Should be calculated from dates
+      expect(dto.activityDensityLast30Days).toBe(0) // No activity data
     })
 
     it('should handle minimal basic data', () => {
@@ -298,150 +312,50 @@ describe('ProjectSummaryDTO', () => {
     })
   })
 
-  describe('utility methods', () => {
+  describe('mathematical properties', () => {
     const testDto = new ProjectSummaryDTO(
-      'utility-test', 'test-owner', 'Test project', 'https://test.com',
+      'math-test', 'test-owner', 'Test project', 'https://test.com',
       'TypeScript', ['TypeScript', 'JavaScript'], 
       new Date('2024-01-01T00:00:00Z'), // createdAt
       new Date('2025-01-15T00:00:00Z'), // updatedAt  
-      2, 1, 500, 1000, 25, 10, 5, 50, 8, 75, 12, 30, 2, 80, 3, 'high', 85
+      2, 1, 500, 1000, 25, 10, 5, 50, 8, 75, 12, 30, 2, 80, 3,
+      20, // commitsToIssuesRatio (1000/50)
+      33.33, // commitsToPrsRatio (1000/30)
+      5, // contributorsToReposRatio (10/2)
+      250, // starsToReposRatio (500/2)
+      379, // ageDays (calculated from 2024-01-01 to 2025-01-15)
+      5, // daysSinceUpdate
+      0.83 // activityDensityLast30Days (25/30)
     )
 
-    describe('getAgeInDays', () => {
-      it('should calculate project age correctly', () => {
-        const mockDate = new Date('2025-01-20T00:00:00Z')
-        vi.useFakeTimers()
-        vi.setSystemTime(mockDate)
-
-        const age = testDto.getAgeInDays()
-        expect(age).toBe(385) // Days between 2024-01-01 and 2025-01-20
-
-        vi.useRealTimers()
-      })
+    it('should have correct mathematical ratios', () => {
+      expect(testDto.commitsToIssuesRatio).toBe(20)
+      expect(testDto.commitsToPrsRatio).toBe(33.33)
+      expect(testDto.contributorsToReposRatio).toBe(5)
+      expect(testDto.starsToReposRatio).toBe(250)
     })
 
-    describe('getDaysSinceUpdate', () => {
-      it('should calculate days since last update', () => {
-        const mockDate = new Date('2025-01-20T00:00:00Z')
-        vi.useFakeTimers()
-        vi.setSystemTime(mockDate)
-
-        const daysSince = testDto.getDaysSinceUpdate()
-        expect(daysSince).toBe(5) // Days between 2025-01-15 and 2025-01-20
-
-        vi.useRealTimers()
-      })
+    it('should have correct temporal calculations', () => {
+      expect(testDto.ageDays).toBe(379)
+      expect(testDto.daysSinceUpdate).toBe(5)
+      expect(testDto.activityDensityLast30Days).toBe(0.83)
     })
 
-    describe('getActivityDescription', () => {
-      it('should return correct activity descriptions', () => {
-        const highActivity = new ProjectSummaryDTO(
-          'high', 'owner', 'desc', 'url', 'lang', [], new Date(), new Date(),
-          1, 1, 100, 100, 10, 5, 2, 10, 2, 80, 5, 5, 1, 80, 2, 'high', 80
-        )
-        const mediumActivity = new ProjectSummaryDTO(
-          'medium', 'owner', 'desc', 'url', 'lang', [], new Date(), new Date(),
-          1, 1, 100, 100, 10, 5, 2, 10, 2, 80, 5, 5, 1, 80, 2, 'medium', 80
-        )
-        const lowActivity = new ProjectSummaryDTO(
-          'low', 'owner', 'desc', 'url', 'lang', [], new Date(), new Date(),
-          1, 1, 100, 100, 10, 5, 2, 10, 2, 80, 5, 5, 1, 80, 2, 'low', 80
-        )
+    it('should handle zero denominators correctly', () => {
+      const zeroDto = new ProjectSummaryDTO(
+        'zero-test', 'owner', 'desc', 'url', 'lang', [], new Date(), new Date(),
+        0, 0, 0, 100, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, // commitsToIssuesRatio (issues = 0)
+        0, // commitsToPrsRatio (PRs = 0)
+        0, // contributorsToReposRatio (repos = 0)
+        0, // starsToReposRatio (repos = 0)
+        100, 5, 0.33
+      )
 
-        expect(highActivity.getActivityDescription()).toBe('Very active with frequent commits and updates')
-        expect(mediumActivity.getActivityDescription()).toBe('Moderately active with regular updates')
-        expect(lowActivity.getActivityDescription()).toBe('Low activity with infrequent updates')
-      })
-    })
-
-    describe('getHealthStatus', () => {
-      it('should return correct health status based on score', () => {
-        expect(createDtoWithScore(95).getHealthStatus()).toBe('Excellent')
-        expect(createDtoWithScore(75).getHealthStatus()).toBe('Good')
-        expect(createDtoWithScore(55).getHealthStatus()).toBe('Fair')
-        expect(createDtoWithScore(35).getHealthStatus()).toBe('Poor')
-        expect(createDtoWithScore(15).getHealthStatus()).toBe('Critical')
-      })
-    })
-
-    describe('hasRecentActivity', () => {
-      it('should check recent activity correctly', () => {
-        const mockDate = new Date('2025-01-20T00:00:00Z')
-        vi.useFakeTimers()
-        vi.setSystemTime(mockDate)
-
-        expect(testDto.hasRecentActivity(10)).toBe(true) // Updated 5 days ago, within 10 days
-        expect(testDto.hasRecentActivity(3)).toBe(false) // Updated 5 days ago, not within 3 days
-        expect(testDto.hasRecentActivity()).toBe(true) // Default 30 days, updated 5 days ago
-
-        vi.useRealTimers()
-      })
-    })
-
-    describe('isActivelyMaintained', () => {
-      it('should identify actively maintained projects', () => {
-        const mockDate = new Date('2025-01-20T00:00:00Z')
-        vi.useFakeTimers()
-        vi.setSystemTime(mockDate)
-
-        expect(testDto.isActivelyMaintained()).toBe(true) // All criteria met
-
-        const inactiveDto = new ProjectSummaryDTO(
-          'inactive', 'owner', 'desc', 'url', 'lang', [], 
-          new Date('2024-01-01T00:00:00Z'), 
-          new Date('2024-12-01T00:00:00Z'), // Updated 50 days ago
-          1, 1, 100, 100, 0, 5, 0, 10, 2, 80, 5, 5, 1, 80, 2, 'low', 15
-        )
-
-        expect(inactiveDto.isActivelyMaintained()).toBe(false) // Fails multiple criteria
-
-        vi.useRealTimers()
-      })
-    })
-
-    describe('getSummary', () => {
-      it('should generate comprehensive project summary', () => {
-        const mockDate = new Date('2025-01-20T00:00:00Z')
-        vi.useFakeTimers()
-        vi.setSystemTime(mockDate)
-
-        const summary = testDto.getSummary()
-        expect(summary).toBe('test-owner/utility-test (TypeScript) with 2 repositories - actively maintained')
-
-        vi.useRealTimers()
-      })
-
-      it('should handle single repository projects', () => {
-        const singleRepoDto = new ProjectSummaryDTO(
-          'single', 'owner', 'desc', 'url', 'JavaScript', [], new Date(), new Date(),
-          1, 1, 100, 100, 10, 5, 2, 10, 2, 80, 5, 5, 1, 80, 2, 'high', 80
-        )
-
-        const summary = singleRepoDto.getSummary()
-        expect(summary).toBe('owner/single (JavaScript) - actively maintained')
-      })
-
-      it('should handle unknown language projects', () => {
-        const unknownLangDto = new ProjectSummaryDTO(
-          'unknown', 'owner', 'desc', 'url', 'Unknown', [], new Date(), new Date(),
-          1, 1, 100, 100, 10, 5, 2, 10, 2, 80, 5, 5, 1, 80, 2, 'high', 80
-        )
-
-        const summary = unknownLangDto.getSummary()
-        expect(summary).toBe('owner/unknown - actively maintained')
-      })
-
-      it('should handle inactive projects', () => {
-        const inactiveDto = new ProjectSummaryDTO(
-          'inactive', 'owner', 'desc', 'url', 'Python', [], 
-          new Date('2024-01-01T00:00:00Z'), 
-          new Date('2024-06-01T00:00:00Z'),
-          1, 1, 100, 100, 0, 5, 0, 10, 2, 80, 5, 5, 1, 80, 2, 'low', 15
-        )
-
-        const summary = inactiveDto.getSummary()
-        expect(summary).toBe('owner/inactive (Python) - low activity')
-      })
+      expect(zeroDto.commitsToIssuesRatio).toBe(0)
+      expect(zeroDto.commitsToPrsRatio).toBe(0)
+      expect(zeroDto.contributorsToReposRatio).toBe(0)
+      expect(zeroDto.starsToReposRatio).toBe(0)
     })
   })
 
@@ -471,8 +385,13 @@ describe('ProjectSummaryDTO', () => {
         11, // prsOpenCount
         91, // prsMergedRatio
         8, // averagePrAgeDays
-        'high', // recentActivityLevel
-        88 // healthScore
+        19.41, // commitsToIssuesRatio (3842/198)
+        30.25, // commitsToPrsRatio (3842/127)
+        8.5, // contributorsToReposRatio (34/4)
+        537.5, // starsToReposRatio (2150/4)
+        613, // ageDays (calculated)
+        7, // daysSinceUpdate
+        2.23 // activityDensityLast30Days (67/30)
       )
 
       const llmData = dto.toLLMData()
@@ -480,12 +399,17 @@ describe('ProjectSummaryDTO', () => {
       expect(llmData).toEqual({
         PROJECT_ACTIVE_CONTRIBUTORS: '12',
         PROJECT_ACTIVE_REPOSITORIES: '3',
+        PROJECT_ACTIVITY_DENSITY_LAST_30_DAYS: '2.23',
+        PROJECT_AGE_DAYS: '613',
         PROJECT_AVERAGE_ISSUE_AGE_DAYS: '16',
         PROJECT_AVERAGE_PR_AGE_DAYS: '8',
         PROJECT_COMMITS_LAST_30_DAYS: '67',
+        PROJECT_COMMITS_TO_ISSUES_RATIO: '19.41',
+        PROJECT_COMMITS_TO_PRS_RATIO: '30.25',
+        PROJECT_CONTRIBUTORS_TO_REPOS_RATIO: '8.5',
         PROJECT_CREATED_AT: '2023-05-15T09:30:00.000Z',
+        PROJECT_DAYS_SINCE_UPDATE: '7',
         PROJECT_DESCRIPTION: 'Test project for LLM data conversion',
-        PROJECT_HEALTH_SCORE: '88',
         PROJECT_ISSUES_CLOSED_RATIO: '85',
         PROJECT_ISSUES_OPEN_COUNT: '29',
         PROJECT_ISSUES_TOTAL_COUNT: '198',
@@ -496,8 +420,8 @@ describe('ProjectSummaryDTO', () => {
         PROJECT_PRS_MERGED_RATIO: '91',
         PROJECT_PRS_OPEN_COUNT: '11',
         PROJECT_PRS_TOTAL_COUNT: '127',
-        PROJECT_RECENT_ACTIVITY_LEVEL: 'high',
         PROJECT_REPOSITORY_COUNT: '4',
+        PROJECT_STARS_TO_REPOS_RATIO: '537.5',
         PROJECT_STARS_TOTAL: '2150',
         PROJECT_TOTAL_COMMITS: '3842',
         PROJECT_TOTAL_CONTRIBUTORS: '34',
@@ -509,7 +433,8 @@ describe('ProjectSummaryDTO', () => {
     it('should handle empty languages array', () => {
       const dto = new ProjectSummaryDTO(
         'no-lang', 'owner', 'desc', 'url', 'Unknown', [],
-        new Date(), new Date(), 1, 1, 100, 100, 10, 5, 2, 10, 2, 80, 5, 5, 1, 80, 2, 'low', 50
+        new Date(), new Date(), 1, 1, 100, 100, 10, 5, 2, 10, 2, 80, 5, 5, 1, 80, 2,
+        10, 20, 5, 100, 365, 5, 0.33
       )
 
       const llmData = dto.toLLMData()
@@ -520,7 +445,8 @@ describe('ProjectSummaryDTO', () => {
     it('should use consistent key names matching private Keys constants', () => {
       const dto = new ProjectSummaryDTO(
         'key-test', 'owner', 'desc', 'url', 'lang', [], new Date(), new Date(),
-        1, 1, 100, 100, 10, 5, 2, 10, 2, 80, 5, 5, 1, 80, 2, 'medium', 70
+        1, 1, 100, 100, 10, 5, 2, 10, 2, 80, 5, 5, 1, 80, 2,
+        10, 20, 5, 100, 365, 5, 0.33
       )
 
       const llmData = dto.toLLMData()
@@ -529,12 +455,15 @@ describe('ProjectSummaryDTO', () => {
       // Verify all expected keys are present
       const expectedKeys = [
         'PROJECT_ACTIVE_CONTRIBUTORS', 'PROJECT_ACTIVE_REPOSITORIES', 
+        'PROJECT_ACTIVITY_DENSITY_LAST_30_DAYS', 'PROJECT_AGE_DAYS',
         'PROJECT_AVERAGE_ISSUE_AGE_DAYS', 'PROJECT_AVERAGE_PR_AGE_DAYS',
-        'PROJECT_COMMITS_LAST_30_DAYS', 'PROJECT_CREATED_AT', 'PROJECT_DESCRIPTION',
-        'PROJECT_HEALTH_SCORE', 'PROJECT_ISSUES_CLOSED_RATIO', 'PROJECT_ISSUES_OPEN_COUNT',
+        'PROJECT_COMMITS_LAST_30_DAYS', 'PROJECT_COMMITS_TO_ISSUES_RATIO',
+        'PROJECT_COMMITS_TO_PRS_RATIO', 'PROJECT_CONTRIBUTORS_TO_REPOS_RATIO',
+        'PROJECT_CREATED_AT', 'PROJECT_DAYS_SINCE_UPDATE', 'PROJECT_DESCRIPTION',
+        'PROJECT_ISSUES_CLOSED_RATIO', 'PROJECT_ISSUES_OPEN_COUNT',
         'PROJECT_ISSUES_TOTAL_COUNT', 'PROJECT_LANGUAGES', 'PROJECT_NAME', 'PROJECT_OWNER',
         'PROJECT_PRIMARY_LANGUAGE', 'PROJECT_PRS_MERGED_RATIO', 'PROJECT_PRS_OPEN_COUNT',
-        'PROJECT_PRS_TOTAL_COUNT', 'PROJECT_RECENT_ACTIVITY_LEVEL', 'PROJECT_REPOSITORY_COUNT',
+        'PROJECT_PRS_TOTAL_COUNT', 'PROJECT_REPOSITORY_COUNT', 'PROJECT_STARS_TO_REPOS_RATIO',
         'PROJECT_STARS_TOTAL', 'PROJECT_TOTAL_COMMITS', 'PROJECT_TOTAL_CONTRIBUTORS',
         'PROJECT_UPDATED_AT', 'PROJECT_URL'
       ]
@@ -543,7 +472,7 @@ describe('ProjectSummaryDTO', () => {
         expect(keys).toContain(key)
       }
 
-      expect(keys.length).toBe(expectedKeys.length)
+      expect(keys).toHaveLength(expectedKeys.length)
     })
   })
 })

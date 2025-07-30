@@ -706,6 +706,132 @@ When working on development tasks, follow these commit rules:
 
 See [@docs/Testing.md](docs/Testing.md) for complete testing guide including TDD practices, three-tier testing approach, mocking strategies, and coverage requirements.
 
+### 🚨 CRITICAL: Test Analysis Rules
+
+**NEVER grep stdout from test commands. ALWAYS use result files.**
+
+#### Required Test Analysis Workflow
+
+1. **Generate Test Reports** (outputs to `var/` directory):
+   ```bash
+   npm run qa              # Full QA with all reports
+   npm run test:coverage   # Tests + coverage reports
+   npm run lint:report     # ESLint JSON report
+   npm run typecheck:report # TypeScript errors report
+   ```
+
+2. **Analyze Results from Files** (efficient, repeatable):
+   ```bash
+   npm run qa:analyze      # Quick summary from result files
+   
+   # Manual analysis examples:
+   jq '.testResults[].message' var/test-results-coverage.json  # Failed test details
+   jq '.length' var/eslint-report.json                        # ESLint error count
+   cat var/typecheck-report.txt                               # TypeScript errors
+   jq '.statements.pct' var/coverage/coverage-summary.json    # Coverage percentage
+   ```
+
+#### 🔍 Comprehensive jq Reference Commands
+
+**CRITICAL**: Never attempt to read entire JSON result files. Always use jq for targeted data extraction.
+
+##### Test Results Analysis
+
+```bash
+# Test status overview
+jq '{numFailedTests, numPassedTests, numPendingTests, numTodoTests}' var/test-results-coverage.json
+
+# Find all failing tests
+jq '.testResults[] | select(.status == "failed") | {name, message}' var/test-results-coverage.json
+
+# Get specific failing test details
+jq '.testResults[] | select(.status == "failed") | .assertionResults[] | select(.status == "failed") | {ancestorTitles, title, failureMessages}' var/test-results-coverage.json
+
+# Test execution time
+jq '.testResults[] | {name, perfStats: {runtime: .perfStats.runtime}}' var/test-results-coverage.json
+
+# Test suite summary
+jq '{testSuites: .numTotalTestSuites, tests: .numTotalTests, passed: .numPassedTests, failed: .numFailedTests}' var/test-results-coverage.json
+```
+
+##### Coverage Analysis
+
+```bash
+# Overall coverage summary
+jq '.total | {statements: .statements.pct, branches: .branches.pct, functions: .functions.pct, lines: .lines.pct}' var/coverage/coverage-summary.json
+
+# Files with low coverage (under 80%)
+jq 'to_entries | map(select(.key != "total" and .value.statements.pct < 80)) | map({file: .key, coverage: .value.statements.pct})' var/coverage/coverage-summary.json
+
+# Uncovered lines in specific file
+jq '."/path/to/file.ts".lines.uncoveredLines' var/coverage/coverage-summary.json
+
+# Total uncovered statements count
+jq '.total.statements.uncovered' var/coverage/coverage-summary.json
+```
+
+##### ESLint Analysis
+
+```bash
+# Total error count
+jq 'length' var/eslint-report.json
+
+# Errors by severity
+jq 'group_by(.severity) | map({severity: .[0].severity, count: length})' var/eslint-report.json
+
+# Errors by rule
+jq 'group_by(.ruleId) | map({rule: .[0].ruleId, count: length}) | sort_by(.count) | reverse' var/eslint-report.json
+
+# Files with most errors
+jq 'group_by(.filePath) | map({file: .[0].filePath, errors: length}) | sort_by(.errors) | reverse | .[0:5]' var/eslint-report.json
+```
+
+##### Development Workflow Commands
+
+```bash
+# Quick health check
+jq 'if (.numFailedTests == 0) then "✅ All tests passing" else "❌ \(.numFailedTests) tests failing" end' var/test-results-coverage.json
+
+# Coverage threshold check
+jq '.total | if (.statements.pct >= 80) then "✅ Coverage above threshold" else "❌ Coverage: \(.statements.pct)% (need 80%)" end' var/coverage/coverage-summary.json
+
+# TypeScript errors present check
+test -s var/typecheck-report.txt && echo "❌ TypeScript errors found" || echo "✅ TypeScript clean"
+
+# ESLint issues check
+jq 'if (length == 0) then "✅ No ESLint issues" else "❌ \(length) ESLint issues" end' var/eslint-report.json
+```
+
+3. **Result Files Location** (`var/` directory - gitignored):
+   - `var/test-results-coverage.json` - Complete test results with coverage
+   - `var/test-results.json` - Basic test results  
+   - `var/eslint-report.json` - ESLint issues in JSON format
+   - `var/typecheck-report.txt` - TypeScript compilation errors
+   - `var/coverage/coverage-summary.json` - Coverage summary
+   - `var/coverage/index.html` - Interactive coverage report
+
+#### Analysis Benefits
+
+- **Efficiency**: Grep result files multiple times without re-running tests
+- **Precision**: Structured JSON data vs parsing stdout
+- **Performance**: Avoid expensive test re-runs for simple status checks
+- **Consistency**: Standardized format regardless of test runner output changes
+
+#### Forbidden Patterns
+
+```bash
+# ❌ FORBIDDEN - Never do this
+npm test 2>&1 | grep "FAIL"
+npm run qa 2>&1 | grep -A 10 "Failed Tests"
+timeout 60 npm test 2>&1 | tail -20
+
+# ✅ CORRECT - Use result files
+jq '.numFailedTests' var/test-results-coverage.json
+jq '.testResults[] | select(.status == "failed") | .message' var/test-results-coverage.json
+```
+
+**Violation of these rules is a serious development anti-pattern.**
+
 ## Error Handling and CLI Integration
 
 ### How Errors Surface Through the System

@@ -236,8 +236,10 @@ describe('ActivityService', () => {
       expect(result.totalContributors).toBe(10) // 5 + 5
       expect(result.issuesTotalCount).toBe(18) // 10 + 8
       expect(result.prsTotalCount).toBe(12) // 6 + 6
-      expect(result.healthScore).toBeGreaterThan(0)
-      expect(['high', 'medium', 'low']).toContain(result.recentActivityLevel)
+      expect(result.commitsToIssuesRatio).toBeGreaterThan(0)
+      expect(result.commitsToPrsRatio).toBeGreaterThan(0)
+      expect(result.contributorsToReposRatio).toBeGreaterThan(0)
+      expect(result.starsToReposRatio).toBe(0) // ActivityService sets starsTotal: 0 - not available in activity metrics
     })
 
     it('should handle single activity metric', async () => {
@@ -263,8 +265,9 @@ describe('ActivityService', () => {
       const highActivity = createMockSummaryActivity('testowner/active-repo', 100, 50)
       const result = await service.calculateActivitySummary([highActivity])
       
-      expect(result.healthScore).toBeGreaterThan(50)
-      expect(result.recentActivityLevel).toBe('high')
+      expect(result.commitsToIssuesRatio).toBeGreaterThan(0)
+      expect(result.contributorsToReposRatio).toBeGreaterThan(0)
+      expect(result.activityDensityLast30Days).toBeGreaterThan(0)
     })
 
     it('should handle errors gracefully', async () => {
