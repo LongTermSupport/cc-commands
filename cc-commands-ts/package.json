@@ -88,7 +88,7 @@
     "test:real": "npm run build && vitest run archive/test/commands/g/gh/project/summary.real-integration.test.ts",
     "typecheck": "tsc -b --noEmit",
     "typecheck:report": "tsc -b --noEmit --pretty false > var/typecheck-report.txt 2>&1 || true",
-    "qa": "npm run build && npm run lint:report && npm run typecheck:report && npm run test:coverage && echo \"\\n✅ QA PASSING: All checks completed successfully! Check var/ directory for detailed reports.\\nCommit when ready: git add . && git commit -m 'QA passing: [description]' && git push\"",
+    "qa": "npm run build && npm run lint:report && npm run typecheck:report && npm run test:coverage && ./scripts/qa-success.bash",
     "qa:analyze": "echo \"=== QA ANALYSIS (from result files) ===\" && echo \"ESLint issues:   $(jq '.length' var/eslint-report.json 2>/dev/null || echo 'N/A')\" && echo \"TypeScript errors: $(wc -l < var/typecheck-report.txt 2>/dev/null || echo 'N/A')\" && echo \"Test results:    $(jq '.numFailedTests + .numPassedTests | . as \\$total | \"\\(.numPassedTests)/\\(\\$total) passed\"' var/test-results-coverage.json 2>/dev/null || echo 'N/A')\" && echo \"Coverage:        $(jq '.statements.pct' var/coverage/coverage-summary.json 2>/dev/null || echo 'N/A')%\"",
     "postpack": "shx rm -f oclif.manifest.json",
     "posttest": "npm run lint",
