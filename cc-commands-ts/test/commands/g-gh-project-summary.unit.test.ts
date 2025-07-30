@@ -78,7 +78,8 @@ describe('SummaryCmd Unit Tests', () => {
 
     it('should parse empty arguments for auto-detection', () => {
       // Access private method for testing
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, cc-commands/no-unsafe-type-casting
+       
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, cc-commands/no-unsafe-type-casting, cc-commands/prefer-production-types-in-mocks
       const parseMethod = (cmd as any).parseProjectArguments.bind(cmd)
       const result = parseMethod()
       
@@ -89,7 +90,8 @@ describe('SummaryCmd Unit Tests', () => {
     })
 
     it('should parse organization name for owner mode', () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, cc-commands/no-unsafe-type-casting
+       
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, cc-commands/no-unsafe-type-casting, cc-commands/prefer-production-types-in-mocks
       const parseMethod = (cmd as any).parseProjectArguments.bind(cmd)
       const result = parseMethod('github')
       
@@ -100,7 +102,8 @@ describe('SummaryCmd Unit Tests', () => {
     })
 
     it('should parse GitHub project URL for URL mode', () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, cc-commands/no-unsafe-type-casting
+       
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, cc-commands/no-unsafe-type-casting, cc-commands/prefer-production-types-in-mocks
       const parseMethod = (cmd as any).parseProjectArguments.bind(cmd)
       const result = parseMethod('https://github.com/orgs/myorg/projects/1')
       
@@ -111,7 +114,8 @@ describe('SummaryCmd Unit Tests', () => {
     })
 
     it('should parse repository format as owner mode', () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, cc-commands/no-unsafe-type-casting
+       
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, cc-commands/no-unsafe-type-casting, cc-commands/prefer-production-types-in-mocks
       const parseMethod = (cmd as any).parseProjectArguments.bind(cmd)
       const result = parseMethod('owner/repo')
       

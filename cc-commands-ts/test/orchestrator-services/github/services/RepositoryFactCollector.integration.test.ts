@@ -10,7 +10,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CommitDataDTO } from '../../../../src/orchestrator-services/github/dto/CommitDataDTO.js'
 import { IssueDataDTO } from '../../../../src/orchestrator-services/github/dto/IssueDataDTO.js'
 import { PullRequestDataDTO } from '../../../../src/orchestrator-services/github/dto/PullRequestDataDTO.js'
-import { RepositoryDataDTO } from '../../../../src/orchestrator-services/github/dto/RepositoryDataDTO.js'
 import { IGitHubRestApiService } from '../../../../src/orchestrator-services/github/interfaces/IGitHubRestApiService.js'
 import { RepositoryFactCollector } from '../../../../src/orchestrator-services/github/services/RepositoryFactCollector.js'
 

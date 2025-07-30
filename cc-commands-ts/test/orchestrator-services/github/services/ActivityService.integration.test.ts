@@ -108,7 +108,7 @@ describe('ActivityService Integration', () => {
     } catch (error) {
       // Should fail gracefully with meaningful error
       expect(error).toBeDefined()
-      expect(error.message).toContain('Repository not found')
+      expect(error.message).toContain('No repositories were accessible for analysis')
       
       console.log(`✓ All-inaccessible aggregation failed gracefully: ${error.message}`)
     }

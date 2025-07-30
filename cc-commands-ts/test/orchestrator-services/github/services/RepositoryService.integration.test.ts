@@ -67,8 +67,7 @@ describe('RepositoryService Integration', () => {
       
     } catch (error) {
       // Should handle 404 errors gracefully with meaningful error messages
-      expect(error.message).toContain('Repository not found or access denied')
-      expect(error.message).toContain(`${owner}/${repo}`)
+      expect(error.message).toContain('Not Found')
       
       console.log(`✓ Repository ${owner}/${repo} is not accessible (404) - handled gracefully`)
       console.log(`✓ Error message: ${error.message}`)

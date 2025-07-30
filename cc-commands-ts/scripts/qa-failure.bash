@@ -1,19 +1,18 @@
 #!/bin/bash
 
 ##
-# QA Success Handler
+# QA Failure Handler
 # 
-# Displays comprehensive test results, coverage analysis, and provides
-# interactive git commit workflow when all quality checks pass.
+# Displays diagnostic information when QA fails, including details about
+# which specific checks failed and where to find more information.
 # 
-# Usage: npm run qa (calls this script automatically on success)
+# Usage: Called automatically when npm run qa fails
 ##
 
 set -euo pipefail
 
 # Colors for output
-readonly GREEN='\033[0;32m'
-readonly BLUE='\033[0;34m'
+readonly RED='\033[0;31m'
 readonly YELLOW='\033[1;33m'
 readonly CYAN='\033[0;36m'
 readonly BOLD='\033[1m'
@@ -29,7 +28,7 @@ readonly TYPECHECK_REPORT="var/typecheck-report.txt"
 # Display formatted header
 ##
 print_header() {
-    echo -e "\n${GREEN}${BOLD}✅ QA SUCCESS${NC}\n"
+    echo -e "\n${RED}${BOLD}❌ QA FAILED${NC}\n"
 }
 
 ##
@@ -37,22 +36,23 @@ print_header() {
 ##
 show_test_stats() {
     if [[ -f "$TEST_RESULTS" ]]; then
-        local passed_tests failed_tests todo_tests actual_tests
+        local passed_tests failed_tests todo_tests actual_tests success
         passed_tests=$(jq -r '.numPassedTests' "$TEST_RESULTS")
         failed_tests=$(jq -r '.numFailedTests' "$TEST_RESULTS")
         todo_tests=$(jq -r '.numTodoTests' "$TEST_RESULTS")
+        success=$(jq -r '.success' "$TEST_RESULTS")
         actual_tests=$((passed_tests + failed_tests))
         
-        if [[ "$failed_tests" -eq 0 ]]; then
-            echo -e "${GREEN}Tests: ${passed_tests}/${actual_tests} passed${NC}"
+        if [[ "$success" == "true" && "$failed_tests" -eq 0 ]]; then
+            echo -e "${YELLOW}Tests: ${passed_tests}/${actual_tests} passed (but QA failed elsewhere)${NC}"
             if [[ "$todo_tests" -gt 0 ]]; then
                 echo -e "${CYAN}Todo: ${todo_tests} tests marked as todo${NC}"
             fi
         else
-            echo -e "${YELLOW}Tests: ${passed_tests}/${actual_tests} passed, ${failed_tests} failed${NC}"
+            echo -e "${RED}Tests: ${passed_tests}/${actual_tests} passed, ${failed_tests} failed${NC}"
         fi
     else
-        echo -e "${YELLOW}Tests: Results file not found${NC}"
+        echo -e "${RED}Tests: Results file not found${NC}"
     fi
 }
 
@@ -63,11 +63,9 @@ show_coverage_stats() {
     if [[ -f "$COVERAGE_SUMMARY" ]]; then
         local stmt_pct
         stmt_pct=$(jq -r '.total.statements.pct' "$COVERAGE_SUMMARY")
-        local color
-        color=$(coverage_color "$stmt_pct")
-        echo -e "Coverage: ${color}${stmt_pct}%${NC} statements"
+        echo -e "Coverage: ${YELLOW}${stmt_pct}%${NC} statements"
     else
-        echo -e "${YELLOW}Coverage: Summary file not found${NC}"
+        echo -e "${RED}Coverage: Summary file not found${NC}"
     fi
 }
 
@@ -80,12 +78,12 @@ show_eslint_stats() {
         total_issues=$(jq 'map(.errorCount + .warningCount) | add' "$ESLINT_REPORT")
         
         if [[ "$total_issues" -eq 0 ]]; then
-            echo -e "${GREEN}ESLint: Clean${NC}"
+            echo -e "${YELLOW}ESLint: Clean (but QA failed elsewhere)${NC}"
         else
-            echo -e "${YELLOW}ESLint: ${total_issues} issues${NC}"
+            echo -e "${RED}ESLint: ${total_issues} issues${NC}"
         fi
     else
-        echo -e "${YELLOW}ESLint: Report file not found${NC}"
+        echo -e "${RED}ESLint: Report file not found${NC}"
     fi
 }
 
@@ -96,43 +94,32 @@ show_typescript_stats() {
     if [[ -f "$TYPECHECK_REPORT" && -s "$TYPECHECK_REPORT" ]]; then
         local error_count
         error_count=$(wc -l < "$TYPECHECK_REPORT")
-        echo -e "${YELLOW}TypeScript: ${error_count} errors${NC}"
+        echo -e "${RED}TypeScript: ${error_count} errors${NC}"
     else
-        echo -e "${GREEN}TypeScript: Clean${NC}"
+        echo -e "${YELLOW}TypeScript: Clean (but QA failed elsewhere)${NC}"
     fi
 }
 
 ##
-# Determine color for coverage percentage
+# Show diagnostic report locations
 ##
-coverage_color() {
-    local pct=$1
-    if (( $(echo "$pct >= 80" | bc -l) )); then
-        echo -n "$GREEN"
-    elif (( $(echo "$pct >= 60" | bc -l) )); then
-        echo -n "$YELLOW"
-    else
-        echo -n "\033[0;31m" # Red
-    fi
+show_diagnostic_locations() {
+    echo -e "${CYAN}Diagnostics:${NC}"
+    echo -e "${CYAN}  - ESLint: var/eslint-report.json${NC}"
+    echo -e "${CYAN}  - TypeScript: var/typecheck-report.txt${NC}"
+    echo -e "${CYAN}  - Tests: var/test-results-coverage.json${NC}"
+    echo -e "${CYAN}  - Coverage: var/coverage/index.html${NC}"
 }
 
 ##
-# Show detailed report locations
+# Show recovery instructions
 ##
-show_report_locations() {
-    echo -e "${CYAN}Reports: var/coverage/index.html (HTML coverage)${NC}"
-}
-
-##
-# Show git commit instructions (non-interactive)
-##
-show_git_instructions() {
-    # Check if there are any changes to commit
-    if ! git diff --quiet || ! git diff --cached --quiet || [[ -n "$(git ls-files --others --exclude-standard)" ]]; then
-        echo -e "${GREEN}Commit and push (QA failing → passing transition)${NC}"
-    else
-        echo -e "${CYAN}No changes to commit${NC}"
-    fi
+show_recovery_instructions() {
+    echo -e "${CYAN}Recovery:${NC}"
+    echo -e "${CYAN}  - Fix failing tests: npm test${NC}"
+    echo -e "${CYAN}  - Fix ESLint issues: npm run lint${NC}"
+    echo -e "${CYAN}  - Fix TypeScript: npm run typecheck${NC}"
+    echo -e "${CYAN}  - Re-run QA: npm run qa${NC}"
 }
 
 ##
@@ -146,8 +133,8 @@ main() {
         show_coverage_stats  
         show_eslint_stats
         show_typescript_stats
-        show_report_locations
-        show_git_instructions
+        show_diagnostic_locations
+        show_recovery_instructions
         echo
     )
     

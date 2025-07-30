@@ -5,7 +5,7 @@
  * Handles authentication, API client initialization, and service wiring.
  */
 
-import simpleGit, { SimpleGit } from 'simple-git'
+import createGitClient, { SimpleGit } from 'simple-git'
 
 import { OrchestratorError } from '../../../core/error/OrchestratorError.js'
 import { TOrchestratorServiceMap } from '../../../core/interfaces/IOrchestratorService.js'
@@ -52,7 +52,7 @@ export async function createGitHubServices(): Promise<TOrchestratorServiceMap> {
     }
     
     // Initialize git client
-    const gitClient: SimpleGit = simpleGit()
+    const gitClient: SimpleGit = createGitClient()
     
     // Create service instances
     const restApiService = new GitHubRestApiService(token)
@@ -132,7 +132,7 @@ export async function createTypedGitHubServices() {
   }
   
   // Initialize git client
-  const gitClient: SimpleGit = simpleGit()
+  const gitClient: SimpleGit = createGitClient()
   
   // Create service instances
   const restApiService = new GitHubRestApiService(token)
