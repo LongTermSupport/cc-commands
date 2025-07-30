@@ -119,7 +119,7 @@ show_report_locations() {
 show_git_instructions() {
     # Check if there are any changes to commit
     if ! git diff --quiet || ! git diff --cached --quiet || [[ -n "$(git ls-files --others --exclude-standard)" ]]; then
-        echo -e "${GREEN}Ready to commit and push changes${NC}"
+        echo -e "${GREEN}Commit and push (QA failing → passing transition)${NC}"
     else
         echo -e "${CYAN}No changes to commit${NC}"
     fi
