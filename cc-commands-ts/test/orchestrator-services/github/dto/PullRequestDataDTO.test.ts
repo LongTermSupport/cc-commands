@@ -296,7 +296,7 @@ describe('PullRequestDataDTO', () => {
 
   describe('fromGitHubApiResponse', () => {
     it('should create DTO from valid REST API response', () => {
-      /* eslint-disable camelcase */
+       
       const apiResponseGitHubData = {
         additions: 120,
         assignees: [
@@ -337,7 +337,7 @@ describe('PullRequestDataDTO', () => {
         updated_at: '2025-01-10T16:30:00Z',
         user: { login: 'pr-creator' }
       }
-      /* eslint-enable camelcase */
+       
 
       const dto = PullRequestDataDTO.fromGitHubApiResponse(apiResponseGitHubData)
 
@@ -368,7 +368,7 @@ describe('PullRequestDataDTO', () => {
     })
 
     it('should handle merged PR from API response', () => {
-      /* eslint-disable camelcase */
+       
       const mergedApiResponseGitHubData = {
         body: 'Merged PR',
         closed_at: '2025-01-11T14:20:00Z',
@@ -389,7 +389,7 @@ describe('PullRequestDataDTO', () => {
         updated_at: '2025-01-11T14:20:00Z',
         user: { login: 'contributor' }
       }
-      /* eslint-enable camelcase */
+       
 
       const dto = PullRequestDataDTO.fromGitHubApiResponse(mergedApiResponseGitHubData)
 

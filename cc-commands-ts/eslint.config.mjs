@@ -69,5 +69,13 @@ export default [
     rules: {
       'camelcase': 'off' // GitHub API responses use snake_case properties
     }
+  },
+  {
+    // Test files - enforce type-safe mocking patterns and relax some rules for mock data
+    files: ['test/**/*.ts', 'test/**/*.js', '**/*.test.ts', '**/*.spec.ts'],
+    rules: {
+      'cc-commands/prefer-production-types-in-mocks': 'error', // Enforce production types over any/unknown in mocks
+      'camelcase': 'off' // Allow snake_case in test mocks to match API responses
+    }
   }
 ]

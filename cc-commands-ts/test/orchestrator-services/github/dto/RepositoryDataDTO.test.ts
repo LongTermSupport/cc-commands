@@ -266,7 +266,7 @@ describe('RepositoryDataDTO', () => {
 
   describe('fromGitHubApiResponse', () => {
     it('should create DTO from valid GitHub API response', () => {
-      /* eslint-disable camelcase */
+       
       const apiResponse = {
         archived: false,
         clone_url: 'https://github.com/testuser/test-repo.git',
@@ -307,7 +307,7 @@ describe('RepositoryDataDTO', () => {
         url: 'https://api.github.com/repos/testuser/test-repo',
         watchers_count: 38
       }
-      /* eslint-enable camelcase */
+       
 
       const dto = RepositoryDataDTO.fromGitHubApiResponse(apiResponse)
 
@@ -328,7 +328,7 @@ describe('RepositoryDataDTO', () => {
     })
 
     it('should handle private repository from API response', () => {
-      /* eslint-disable camelcase */
+       
       const apiResponse = {
         archived: false,
         clone_url: 'https://github.com/testorg/private-repo.git',
@@ -362,7 +362,7 @@ describe('RepositoryDataDTO', () => {
         url: 'https://api.github.com/repos/testorg/private-repo',
         watchers_count: 3
       }
-      /* eslint-enable camelcase */
+       
 
       const dto = RepositoryDataDTO.fromGitHubApiResponse(apiResponse)
 
@@ -376,7 +376,7 @@ describe('RepositoryDataDTO', () => {
     })
 
     it('should handle minimal API response with missing optional fields', () => {
-      /* eslint-disable camelcase */
+       
       const minimalResponse = {
         archived: false,
         clone_url: 'https://github.com/user/minimal-repo.git',
@@ -406,7 +406,7 @@ describe('RepositoryDataDTO', () => {
         url: 'https://api.github.com/repos/user/minimal-repo',
         watchers_count: 0
       }
-      /* eslint-enable camelcase */
+       
 
       const dto = RepositoryDataDTO.fromGitHubApiResponse(minimalResponse)
 

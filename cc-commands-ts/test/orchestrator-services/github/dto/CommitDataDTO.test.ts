@@ -181,7 +181,7 @@ describe('CommitDataDTO', () => {
 
   describe('fromGitHubApiResponse', () => {
     it('should create DTO from complete API response', () => {
-      /* eslint-disable camelcase */
+       
       const apiResponseGitHubData = {
         author: {
           date: '2025-01-16T09:15:00Z',
@@ -224,7 +224,7 @@ describe('CommitDataDTO', () => {
           total: 6
         }
       }
-      /* eslint-enable camelcase */
+       
 
       const dto = CommitDataDTO.fromGitHubApiResponse(apiResponseGitHubData)
 
@@ -284,11 +284,11 @@ describe('CommitDataDTO', () => {
     })
 
     it('should extract repository from repository_url when full_name missing', () => {
-      /* eslint-disable camelcase */
+       
       const apiResponseGitHubData = {
         repository_url: 'https://api.github.com/repos/extracted/from-url'
       }
-      /* eslint-enable camelcase */
+       
 
       const dto = CommitDataDTO.fromGitHubApiResponse(apiResponseGitHubData)
 

@@ -190,7 +190,7 @@ describe('IssueDataDTO', () => {
 
   describe('fromGitHubApiResponse', () => {
     it('should create DTO from valid REST API response', () => {
-      /* eslint-disable camelcase */
+       
       const apiResponseGitHubData = {
         assignees: [
           { login: 'dev1' },
@@ -215,7 +215,7 @@ describe('IssueDataDTO', () => {
         updated_at: '2025-01-10T16:30:00Z',
         user: { login: 'issue-reporter' }
       }
-      /* eslint-enable camelcase */
+       
 
       const dto = IssueDataDTO.fromGitHubApiResponse(apiResponseGitHubData)
 
@@ -234,7 +234,7 @@ describe('IssueDataDTO', () => {
     })
 
     it('should handle closed issue from API response', () => {
-      /* eslint-disable camelcase */
+       
       const closedApiResponseGitHubData = {
         body: 'Fixed issue',
         closed_at: '2025-01-11T14:20:00Z',
@@ -251,7 +251,7 @@ describe('IssueDataDTO', () => {
         updated_at: '2025-01-11T14:20:00Z',
         user: { login: 'closer' }
       }
-      /* eslint-enable camelcase */
+       
 
       const dto = IssueDataDTO.fromGitHubApiResponse(closedApiResponseGitHubData)
 

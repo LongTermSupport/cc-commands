@@ -7,6 +7,7 @@ import noUnsafeTypeCasting from './no-unsafe-type-casting.js'
 import noStringBasedServiceArgs from './no-string-based-service-args.js'
 import requireTypedDataAccess from './require-typed-data-access.js'
 import noApiResponseAny from './no-api-response-any.js'
+import preferProductionTypesInMocks from './prefer-production-types-in-mocks.js'
 
 export default {
   rules: {
@@ -14,6 +15,7 @@ export default {
     'no-unsafe-type-casting': noUnsafeTypeCasting,
     'no-string-based-service-args': noStringBasedServiceArgs,
     'require-typed-data-access': requireTypedDataAccess,
-    'no-api-response-any': noApiResponseAny
+    'no-api-response-any': noApiResponseAny,
+    'prefer-production-types-in-mocks': preferProductionTypesInMocks
   }
 }
