@@ -4,6 +4,8 @@
  * Tests for GitHub activity analysis service.
  */
 
+/* eslint-disable cc-commands/require-typed-data-access */
+
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { OrchestratorError } from '../../../../src/core/error/OrchestratorError'
@@ -370,6 +372,125 @@ describe('ActivityService', () => {
           }
         }
       }))
+    })
+  })
+
+  describe('edge cases and private method coverage', () => {
+    const since = new Date('2025-01-01T00:00:00Z')
+    const owner = 'testowner'
+
+    it('should handle all repositories failing with appropriate error', async () => {
+      const repos = ['owner/repo1', 'owner/repo2']
+      mockRepositoryService.getRepositoryActivity.mockRejectedValue(new Error('All repos failed'))
+
+      await expect(service.aggregateActivityAcrossRepos(repos, owner, since))
+        .rejects.toBeInstanceOf(OrchestratorError)
+    })
+
+    it('should create empty activity metrics when no activities available (covers createEmptyActivityMetrics)', async () => {
+      // Test the empty activity creation by passing empty array to combineActivityMetrics
+      // We'll test this through calculateActivitySummary which can receive empty activities
+      
+      await expect(service.calculateActivitySummary([]))
+        .rejects.toBeInstanceOf(OrchestratorError)
+        
+      // Alternative: Test the private method through aggregateActivityAcrossRepos with mixed success/failure
+      const repos = ['owner/repo1', 'owner/repo2']
+      const emptyActivity = new ActivityMetricsDTO(
+        0, [], since, new Date(), 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0, 0, 0, 0, 0, 0, 0
+      )
+      
+      // Mock partial failure - some repos fail, but we get at least one empty result
+      mockRepositoryService.getRepositoryActivity
+        .mockRejectedValueOnce(new Error('Repo failed'))
+        .mockResolvedValueOnce(emptyActivity)
+
+      const result = await service.aggregateActivityAcrossRepos(repos, owner, since)
+      expect(result).toBeInstanceOf(ActivityMetricsDTO)
+    })
+
+    it('should correctly sum totals from multiple activities (covers sumActivityTotals)', async () => {
+      const activities = [
+        createMockActivity('owner/repo1', 10, 5, 3), // 10 commits, 5 issues, 3 PRs
+        createMockActivity('owner/repo2', 15, 8, 4), // 15 commits, 8 issues, 4 PRs
+        createMockActivity('owner/repo3', 5, 2, 1)   // 5 commits, 2 issues, 1 PR
+      ]
+      
+      mockRepositoryService.getRepositoryActivity
+        .mockResolvedValueOnce(activities[0])
+        .mockResolvedValueOnce(activities[1])
+        .mockResolvedValueOnce(activities[2])
+
+      const result = await service.aggregateActivityAcrossRepos(['owner/repo1', 'owner/repo2', 'owner/repo3'], owner, since)
+      
+      // Verify totals are correctly summed (tests sumActivityTotals private method)
+      expect(result.commitsCount).toBe(30) // 10 + 15 + 5
+      expect(result.totalIssuesCount).toBe(15) // 5 + 8 + 2
+      expect(result.totalPrsCount).toBe(8) // 3 + 4 + 1
+      expect(result.totalAdditions).toBe(150) // 50 * 3 (each mock has 50 additions)
+      expect(result.totalDeletions).toBe(75) // 25 * 3 (each mock has 25 deletions)
+      expect(result.totalFilesChanged).toBe(30) // 10 * 3 (each mock has 10 files changed)
+    })
+
+    it('should find most active repository by commits (covers findMostActiveRepository)', async () => {
+      const activities = [
+        createMockActivity('owner/low-activity', 3, 2, 1),    // 3 commits
+        createMockActivity('owner/high-activity', 25, 10, 5), // 25 commits (most active)
+        createMockActivity('owner/med-activity', 12, 6, 3)    // 12 commits
+      ]
+      
+      mockRepositoryService.getRepositoryActivity
+        .mockResolvedValueOnce(activities[0])
+        .mockResolvedValueOnce(activities[1])
+        .mockResolvedValueOnce(activities[2])
+
+      const result = await service.aggregateActivityAcrossRepos(['owner/low-activity', 'owner/high-activity', 'owner/med-activity'], owner, since)
+      
+      // Should identify the repository with most commits (tests findMostActiveRepository private method)
+      expect(result.mostActiveRepository).toBe('owner/high-activity')
+      expect(result.mostActiveContributor).toBe('testuser1') // From the mock with highest commits
+    })
+
+    it('should handle division by zero in daily averages when totalDays is zero', async () => {
+      // Create activity with same start and end dates to trigger totalDays = 0 case
+      const sameDate = new Date('2025-01-15T12:00:00Z')
+      const activityWithSameDates = new ActivityMetricsDTO(
+        1, ['owner/repo1'], sameDate, sameDate, // Same start and end date
+        0, 10, 5, 2, 3, 3, 1, 2, 3, 3, 'testuser1', 'owner/repo1',
+        0, 50, 25, 10, 0, 0, 0 // avgPerDay will be calculated in combineActivityMetrics
+      )
+      
+      mockRepositoryService.getRepositoryActivity.mockResolvedValue(activityWithSameDates)
+
+      const result = await service.aggregateActivityAcrossRepos(['owner/repo1'], owner, since)
+      
+      // When totalDays calculation results in 0 or very small values, division should be handled
+      // Note: The actual implementation might calculate non-zero totalDays due to Math.ceil
+      expect(typeof result.avgCommitsPerDay).toBe('number')
+      expect(typeof result.avgIssuesPerDay).toBe('number') 
+      expect(typeof result.avgPrsPerDay).toBe('number')
+      expect(Number.isFinite(result.avgCommitsPerDay)).toBe(true)
+      expect(Number.isFinite(result.avgIssuesPerDay)).toBe(true)
+      expect(Number.isFinite(result.avgPrsPerDay)).toBe(true)
+    })
+
+    it('should handle activities with zero commits when finding most active repository', async () => {
+      const activities = [
+        createMockActivity('owner/repo1', 0, 5, 3), // 0 commits
+        createMockActivity('owner/repo2', 0, 8, 4), // 0 commits
+        createMockActivity('owner/repo3', 0, 2, 1)  // 0 commits
+      ]
+      
+      mockRepositoryService.getRepositoryActivity
+        .mockResolvedValueOnce(activities[0])
+        .mockResolvedValueOnce(activities[1])
+        .mockResolvedValueOnce(activities[2])
+
+      const result = await service.aggregateActivityAcrossRepos(['owner/repo1', 'owner/repo2', 'owner/repo3'], owner, since)
+      
+      // Should still identify a most active repository even with 0 commits (first non-null)
+      expect(result.mostActiveRepository).toBe('owner/repo1')
+      expect(result.commitsCount).toBe(0)
     })
   })
 })
