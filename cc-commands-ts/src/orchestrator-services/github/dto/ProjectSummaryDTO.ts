@@ -9,9 +9,10 @@
  * analysis, interpretation, or quality judgments are included.
  */
 
+import { StatisticsCalculator } from '../../../core/helpers/StatisticsCalculator.js'
 import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO.js'
 import { JqHint } from '../../../core/interfaces/JqHint.js'
-import { DataNamespaceStructure } from '../../../core/types/JsonResultTypes.js'
+import { DataNamespaceStructure, JsonObject } from '../../../core/types/JsonResultTypes.js'
 
 /**
  * Data Transfer Object for GitHub project summaries
@@ -508,35 +509,106 @@ export class ProjectSummaryDTO implements ILLMDataDTO {
 
 
   /**
-   * TEMPORARY STUB: Get jq hints
-   * TODO: Implement comprehensive hints in Phase 3
+   * Get comprehensive jq query hints for project summary data
+   * 
+   * @returns Array of jq hints for efficient project data querying
    */
   getJqHints(): JqHint[] {
     return [
-      {
-        description: 'Project name',
-        query: '.raw.github_api.project_name',
+      // Raw project data queries
+      { 
+        description: 'Project name', 
+        query: '.raw.project_summary.name',
+        scope: 'single_item'
+      },
+      { 
+        description: 'Project owner/organization', 
+        query: '.raw.project_summary.owner',
+        scope: 'single_item' 
+      },
+      { 
+        description: 'Primary programming language', 
+        query: '.raw.project_summary.primary_language',
+        scope: 'single_item'
+      },
+      { 
+        description: 'Total number of repositories', 
+        query: '.raw.project_summary.repository_count',
+        scope: 'single_item'
+      },
+      { 
+        description: 'Total star count across all repositories', 
+        query: '.raw.project_summary.stars_total',
+        scope: 'single_item'
+      },
+      
+      // Calculated metrics queries  
+      { 
+        description: 'Recent commit activity (calculated)', 
+        query: '.calculated.activity_metrics.commits_last_30_days',
+        scope: 'single_item'
+      },
+      { 
+        description: 'Development velocity ratio (calculated)', 
+        query: '.calculated.development_ratios.commits_to_issues_ratio',
+        scope: 'single_item'
+      },
+      { 
+        description: 'Community engagement ratio (calculated)', 
+        query: '.calculated.engagement_metrics.contributors_to_repos_ratio',
+        scope: 'single_item'
+      },
+      { 
+        description: 'Issue resolution rate (calculated)', 
+        query: '.calculated.quality_indicators.issues_closed_ratio',
+        scope: 'single_item'
+      },
+      { 
+        description: 'Project maturity in days (calculated)', 
+        query: '.calculated.time_analysis.age_days',
+        scope: 'single_item'
+      },
+      
+      // Cross-namespace analysis queries
+      { 
+        description: 'Project name and maturity', 
+        query: '{name: .raw.project_summary.name, maturity: .calculated.time_analysis.age_days}',
+        scope: 'single_item'
+      },
+      { 
+        description: 'Available activity measurements', 
+        query: '.calculated.activity_metrics | keys',
+        scope: 'single_item'
+      },
+      { 
+        description: 'All development ratio metrics', 
+        query: '.calculated.development_ratios | to_entries[]',
+        scope: 'all_items'
+      },
+      { 
+        description: 'Quality metrics array', 
+        query: '[.calculated.quality_indicators.issues_closed_ratio, .calculated.quality_indicators.prs_merged_ratio]',
         scope: 'single_item'
       }
     ]
   }
 
   /**
-   * TEMPORARY STUB: Convert to JSON data structure
-   * TODO: Implement full JSON structure in Phase 3
+   * Convert to structured JSON data with clear data provenance
+   * 
+   * @returns Complete project summary with raw and calculated namespaces
    */
   toJsonData(): DataNamespaceStructure {
     return {
       calculated: {
-        'project_metrics': {
-          'total_repositories': this.repositoryCount
-        }
+        'activity_metrics': this.calculateActivityMetrics(),
+        'development_ratios': this.calculateDevelopmentRatios(),
+        'engagement_metrics': this.calculateEngagementMetrics(),
+        'quality_indicators': this.calculateQualityIndicators(),
+        'time_analysis': this.calculateTimeAnalysis()
       },
       raw: {
-        'github_api': {
-          'project_name': this.name || '',
-          'repositories_count': this.repositoryCount
-        }
+        'project_summary': this.buildRawProjectData()
       }
     }
   }
@@ -579,6 +651,183 @@ export class ProjectSummaryDTO implements ILLMDataDTO {
       [ProjectSummaryDTO.Keys.PROJECT_TOTAL_CONTRIBUTORS]: String(this.totalContributors),
       [ProjectSummaryDTO.Keys.PROJECT_UPDATED_AT]: this.updatedAt.toISOString(),
       [ProjectSummaryDTO.Keys.PROJECT_URL]: this.url
+    }
+  }
+
+  /**
+   * Build raw project summary data structure
+   * 
+   * @returns Raw project data with no calculations applied
+   */
+  private buildRawProjectData(): JsonObject {
+    return {
+      'active_contributors': this.activeContributors,
+      'active_repositories': this.activeRepositories,
+      'average_issue_age_days': this.averageIssueAgeDays,
+      'average_pr_age_days': this.averagePrAgeDays,
+      'commits_last_30_days': this.commitsLast30Days,
+      'created_at': this.createdAt.toISOString(),
+      'description': this.description,
+      'issues_open_count': this.issuesOpenCount,
+      'issues_total_count': this.issuesTotalCount,
+      'languages': this.languages,
+      'name': this.name,
+      'owner': this.owner,
+      'primary_language': this.primaryLanguage,
+      'prs_open_count': this.prsOpenCount,
+      'prs_total_count': this.prsTotalCount,
+      'repository_count': this.repositoryCount,
+      'stars_total': this.starsTotal,
+      'total_commits': this.totalCommits,
+      'total_contributors': this.totalContributors,
+      'updated_at': this.updatedAt.toISOString(),
+      'url': this.url
+    }
+  }
+
+  /**
+   * Calculate activity-based metrics
+   * 
+   * @returns Mathematical activity measurements
+   */
+  private calculateActivityMetrics(): JsonObject {
+    return {
+      'active_repo_ratio': this.repositoryCount > 0 ? 
+        Math.round((this.activeRepositories / this.repositoryCount) * 100) / 100 : 0,
+      'activity_density_last_30_days': this.activityDensityLast30Days,
+      'avg_commits_per_day_30d': Math.round((this.commitsLast30Days / 30) * 100) / 100,
+      'commit_velocity': this.totalCommits > 0 ? 
+        Math.round((this.commitsLast30Days / this.totalCommits) * 100) / 100 : 0,
+      'commits_last_30_days': this.commitsLast30Days
+    }
+  }
+
+  /**
+   * Calculate community health score
+   * 
+   * @returns Score from 0-1 representing community health
+   */
+  private calculateCommunityHealthScore(): number {
+    const metrics = [
+      this.activeContributors > 1 ? 0.3 : 0,
+      this.contributorsToReposRatio > 0.5 ? 0.2 : this.contributorsToReposRatio * 0.4,
+      this.starsToReposRatio > 10 ? 0.3 : Math.min(this.starsToReposRatio / 10, 1) * 0.3,
+      this.issuesClosedRatio > 0.7 ? 0.2 : this.issuesClosedRatio * 0.2 / 0.7
+    ]
+    
+    return Math.round(StatisticsCalculator.calculateMean(metrics) * 100) / 100
+  }
+
+  /**
+   * Calculate development workflow ratios
+   * 
+   * @returns Mathematical ratios between development activities
+   */
+  private calculateDevelopmentRatios(): JsonObject {
+    return {
+      'commits_to_issues_ratio': this.commitsToIssuesRatio,
+      'commits_to_prs_ratio': this.commitsToPrsRatio,
+      'contributors_to_repos_ratio': this.contributorsToReposRatio,
+      'issues_to_commits_ratio': this.totalCommits > 0 ? 
+        Math.round((this.issuesTotalCount / this.totalCommits) * 100) / 100 : 0,
+      'prs_to_commits_ratio': this.totalCommits > 0 ? 
+        Math.round((this.prsTotalCount / this.totalCommits) * 100) / 100 : 0,
+      'stars_to_repos_ratio': this.starsToReposRatio
+    }
+  }
+
+  /**
+   * Calculate community engagement metrics
+   * 
+   * @returns Mathematical measures of community involvement
+   */
+  private calculateEngagementMetrics(): JsonObject {
+    return {
+      'active_contributor_ratio': this.totalContributors > 0 ? 
+        Math.round((this.activeContributors / this.totalContributors) * 100) / 100 : 0,
+      'avg_stars_per_repo': this.repositoryCount > 0 ? 
+        Math.round((this.starsTotal / this.repositoryCount) * 100) / 100 : 0,
+      'community_health_score': this.calculateCommunityHealthScore(),
+      'contributor_density': this.repositoryCount > 0 ? 
+        Math.round((this.totalContributors / this.repositoryCount) * 100) / 100 : 0,
+      'contributors_to_repos_ratio': this.contributorsToReposRatio
+    }
+  }
+
+  /**
+   * Calculate maintenance score
+   * 
+   * @returns Score from 0-1 representing project maintenance quality
+   */
+  private calculateMaintenanceScore(): number {
+    const metrics = [
+      this.issuesClosedRatio * 0.4,
+      this.prsMergedRatio * 0.3,
+      Math.max(0, 1 - (this.daysSinceUpdate / 365)) * 0.3
+    ]
+    
+    return Math.round(StatisticsCalculator.calculateMean(metrics) * 100) / 100
+  }
+
+  /**
+   * Calculate project maturity score
+   * 
+   * @returns Score from 0-1 representing project maturity
+   */
+  private calculateProjectMaturityScore(): number {
+    const ageScore = Math.min(this.ageDays / 730, 1) * 0.3  // 2 years = mature
+    const activityScore = (this.totalCommits > 100 ? 1 : this.totalCommits / 100) * 0.3
+    const communityScore = (this.totalContributors > 5 ? 1 : this.totalContributors / 5) * 0.2
+    const starsScore = (this.starsTotal > 50 ? 1 : this.starsTotal / 50) * 0.2
+    
+    return Math.round((ageScore + activityScore + communityScore + starsScore) * 100) / 100
+  }
+
+  /**
+   * Calculate quality and maintenance indicators
+   * 
+   * @returns Mathematical quality measurements
+   */
+  private calculateQualityIndicators(): JsonObject {
+    return {
+      'avg_issue_resolution_days': this.averageIssueAgeDays,
+      'avg_pr_merge_days': this.averagePrAgeDays,
+      'issue_backlog_ratio': this.issuesTotalCount > 0 ? 
+        Math.round((this.issuesOpenCount / this.issuesTotalCount) * 100) / 100 : 0,
+      'issues_closed_ratio': this.issuesClosedRatio,
+      'maintenance_score': this.calculateMaintenanceScore(),
+      'pr_backlog_ratio': this.prsTotalCount > 0 ? 
+        Math.round((this.prsOpenCount / this.prsTotalCount) * 100) / 100 : 0,
+      'prs_merged_ratio': this.prsMergedRatio
+    }
+  }
+
+  /**
+   * Calculate recency score based on update frequency
+   * 
+   * @returns Score from 0-1 representing how recently active
+   */
+  private calculateRecencyScore(): number {
+    if (this.daysSinceUpdate <= 7) return 1
+    if (this.daysSinceUpdate <= 30) return 0.8
+    if (this.daysSinceUpdate <= 90) return 0.5
+    if (this.daysSinceUpdate <= 365) return 0.2
+    return 0
+  }
+
+  /**
+   * Calculate time-based analysis
+   * 
+   * @returns Time-based project measurements
+   */
+  private calculateTimeAnalysis(): JsonObject {
+    return {
+      'age_days': this.ageDays,
+      'age_in_years': Math.round((this.ageDays / 365.25) * 100) / 100,
+      'days_since_update': this.daysSinceUpdate,
+      'months_since_update': Math.round((this.daysSinceUpdate / 30.44) * 100) / 100,
+      'project_maturity_score': this.calculateProjectMaturityScore(),
+      'recency_score': this.calculateRecencyScore()
     }
   }
 }
