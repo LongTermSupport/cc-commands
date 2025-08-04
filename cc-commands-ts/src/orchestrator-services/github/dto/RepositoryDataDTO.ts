@@ -7,6 +7,8 @@
  */
 
 import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO.js'
+import { JqHint } from '../../../core/interfaces/JqHint.js'
+import { DataNamespaceStructure } from '../../../core/types/JsonResultTypes.js'
 import { GitHubCliRepositoryOutput, GitHubRepositoryResponse } from '../types/GitHubApiTypes.js'
 
 /**
@@ -428,6 +430,20 @@ export class RepositoryDataDTO implements ILLMDataDTO {
   }
 
   /**
+   * TEMPORARY STUB: Get jq hints
+   * TODO: Implement comprehensive hints in Phase 3
+   */
+  getJqHints(): JqHint[] {
+    return [
+      {
+        description: 'Repository name',
+        query: '.raw.github_api.name',
+        scope: 'single_item'
+      }
+    ]
+  }
+
+  /**
    * Get a human-readable summary of the repository
    * 
    * @returns Brief repository description for logging/debugging
@@ -458,6 +474,28 @@ export class RepositoryDataDTO implements ILLMDataDTO {
     
     // Active if updated within 90 days or pushed within 30 days
     return daysSinceUpdate <= 90 || (daysSinceLastPush !== null && daysSinceLastPush <= 30)
+  }
+
+  /**
+   * TEMPORARY STUB: Convert to JSON data structure
+   * TODO: Implement full JSON structure in Phase 3
+   */
+  toJsonData(): DataNamespaceStructure {
+    return {
+      calculated: {
+        'repo_metrics': {
+          'is_popular': this.stargazersCount > 100
+        }
+      },
+      raw: {
+        'github_api': {
+          'created_at': this.createdAt.toISOString(),
+          name: this.name,
+          owner: this.owner,
+          'stars_count': this.stargazersCount
+        }
+      }
+    }
   }
 
   /**

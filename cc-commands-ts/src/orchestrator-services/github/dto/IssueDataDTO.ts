@@ -7,6 +7,8 @@
  */
 
 import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO.js'
+import { JqHint } from '../../../core/interfaces/JqHint.js'
+import { DataNamespaceStructure } from '../../../core/types/JsonResultTypes.js'
 
 /**
  * Data Transfer Object for GitHub issues
@@ -331,6 +333,20 @@ export class IssueDataDTO implements ILLMDataDTO {
   }
 
   /**
+   * TEMPORARY STUB: Get jq hints
+   * TODO: Implement comprehensive hints in Phase 3
+   */
+  getJqHints(): JqHint[] {
+    return [
+      {
+        description: 'Issue number',
+        query: '.raw.github_api.number',
+        scope: 'single_item'
+      }
+    ]
+  }
+
+  /**
    * Get a human-readable summary of the issue
    * 
    * @returns Brief issue description for logging/debugging
@@ -396,6 +412,28 @@ export class IssueDataDTO implements ILLMDataDTO {
    */
   isStale(days: number = 30): boolean {
     return this.getDaysSinceUpdate() > days
+  }
+
+  /**
+   * TEMPORARY STUB: Convert to JSON data structure
+   * TODO: Implement full JSON structure in Phase 3
+   */
+  toJsonData(): DataNamespaceStructure {
+    return {
+      calculated: {
+        'issue_metrics': {
+          'is_open': this.state === 'open'
+        }
+      },
+      raw: {
+        'github_api': {
+          'created_at': this.createdAt.toISOString(),
+          number: this.number,
+          state: this.state,
+          title: this.title
+        }
+      }
+    }
   }
 
   /**

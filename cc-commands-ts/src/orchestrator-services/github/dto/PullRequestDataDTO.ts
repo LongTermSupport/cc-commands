@@ -7,6 +7,8 @@
  */
 
 import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO.js'
+import { JqHint } from '../../../core/interfaces/JqHint.js'
+import { DataNamespaceStructure } from '../../../core/types/JsonResultTypes.js'
 
 /**
  * Data Transfer Object for GitHub pull requests
@@ -967,6 +969,20 @@ export class PullRequestDataDTO implements ILLMDataDTO {
   }
 
   /**
+   * TEMPORARY STUB: Get jq hints
+   * TODO: Implement comprehensive hints in Phase 3
+   */
+  getJqHints(): JqHint[] {
+    return [
+      {
+        description: 'Pull request number',
+        query: '.raw.github_api.number',
+        scope: 'single_item'
+      }
+    ]
+  }
+
+  /**
    * Calculate net line changes (additions - deletions)
    * 
    * @returns Net change in lines of code
@@ -1080,6 +1096,28 @@ export class PullRequestDataDTO implements ILLMDataDTO {
    */
   isStale(days: number = 30): boolean {
     return this.getDaysSinceUpdate() > days
+  }
+
+  /**
+   * TEMPORARY STUB: Convert to JSON data structure
+   * TODO: Implement full JSON structure in Phase 3
+   */
+  toJsonData(): DataNamespaceStructure {
+    return {
+      calculated: {
+        'pr_metrics': {
+          'is_closed': this.state === 'closed'
+        }
+      },
+      raw: {
+        'github_api': {
+          'created_at': this.createdAt.toISOString(),
+          number: this.number,
+          state: this.state,
+          title: this.title
+        }
+      }
+    }
   }
 
   /**

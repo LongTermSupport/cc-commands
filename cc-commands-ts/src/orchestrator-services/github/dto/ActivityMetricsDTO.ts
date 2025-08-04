@@ -7,6 +7,8 @@
  */
 
 import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO.js'
+import { JqHint } from '../../../core/interfaces/JqHint.js'
+import { DataNamespaceStructure } from '../../../core/types/JsonResultTypes.js'
 
 /**
  * Data Transfer Object for GitHub activity metrics
@@ -366,6 +368,20 @@ export class ActivityMetricsDTO implements ILLMDataDTO {
   }
 
   /**
+   * TEMPORARY STUB: Get jq hints
+   * TODO: Implement comprehensive hints in Phase 3
+   */
+  getJqHints(): JqHint[] {
+    return [
+      {
+        description: 'Total commit count',
+        query: '.calculated.activity_metrics.commits_count',
+        scope: 'single_item'
+      }
+    ]
+  }
+
+  /**
    * Calculate merge rate percentage for pull requests
    * 
    * @returns Percentage of PRs that were merged (0-100)
@@ -395,6 +411,29 @@ export class ActivityMetricsDTO implements ILLMDataDTO {
     // Consider active if there's at least 1 commit per week on average
     const weeklyCommitThreshold = this.analysisPeriodDays / 7
     return this.commitsCount >= weeklyCommitThreshold && this.activeContributors > 0
+  }
+
+  /**
+   * TEMPORARY STUB: Convert to JSON data structure
+   * TODO: Implement full JSON structure in Phase 3
+   */
+  toJsonData(): DataNamespaceStructure {
+    return {
+      calculated: {
+        'activity_metrics': {
+          'avg_commits_per_day': this.avgCommitsPerDay,
+          'commits_count': this.commitsCount,
+          'contributors_count': this.contributorsCount,
+          'issues_count': this.totalIssuesCount,
+          'prs_count': this.totalPrsCount
+        }
+      },
+      raw: {
+        'github_api': {
+          // Raw API data will be implemented in Phase 3
+        }
+      }
+    }
   }
 
   /**

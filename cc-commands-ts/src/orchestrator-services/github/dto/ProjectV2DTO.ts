@@ -4,7 +4,9 @@
  * STUB IMPLEMENTATION - Will be corrected when real GraphQL API calls reveal actual structure.
  */
 
-import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO'
+import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO.js'
+import { JqHint } from '../../../core/interfaces/JqHint.js'
+import { DataNamespaceStructure } from '../../../core/types/JsonResultTypes.js'
 import { ProjectV2GraphQLResponse } from '../types/GitHubGraphQLTypes.js'
 
 /**
@@ -86,6 +88,20 @@ export class ProjectV2DTO implements ILLMDataDTO {
   }
 
   /**
+   * TEMPORARY STUB: Get jq hints
+   * TODO: Implement comprehensive hints in Phase 3
+   */
+  getJqHints(): JqHint[] {
+    return [
+      {
+        description: 'Project ID',
+        query: '.raw.github_api.id',
+        scope: 'single_item'
+      }
+    ]
+  }
+
+  /**
    * Get a human-readable summary of the project
    */
   getSummary(): string {
@@ -97,6 +113,26 @@ export class ProjectV2DTO implements ILLMDataDTO {
    */
   hasItems(): boolean {
     return this.itemCount > 0
+  }
+
+  /**
+   * TEMPORARY STUB: Convert to JSON data structure
+   * TODO: Implement full JSON structure in Phase 3
+   */
+  toJsonData(): DataNamespaceStructure {
+    return {
+      calculated: {
+        'project_metrics': {
+          'has_title': Boolean(this.title)
+        }
+      },
+      raw: {
+        'github_api': {
+          id: this.id,
+          title: this.title
+        }
+      }
+    }
   }
 
   /**

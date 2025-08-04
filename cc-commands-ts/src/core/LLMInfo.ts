@@ -18,6 +18,8 @@
  */
 
 import { OrchestratorError } from './error/OrchestratorError.js';
+import { JqHint, JqHintScope } from './interfaces/JqHint.js';
+import { ResultJsonStructure } from './types/JsonResultTypes.js';
 
 /**
  * Action performed by the command with its result
@@ -67,6 +69,10 @@ export class LLMInfo {
   private error?: OrchestratorError
   private readonly files: FileOperation[] = []
   private readonly instructions: string[] = []
+private readonly jqHints: JqHint[] = []
+  private jsonData: null | ResultJsonStructure = null
+  // NEW: JSON result file support
+  private resultJsonPath?: string
 
   /**
    * Private constructor prevents extension and direct instantiation
@@ -197,6 +203,19 @@ export class LLMInfo {
   }
 
   /**
+   * Add jq query hint for efficient data access
+   * 
+   * @param query - jq query string
+   * @param description - Human-readable description
+   * @param scope - How hint is transformed during merge
+   * @returns This instance for method chaining
+   */
+  addJqHint(query: string, description: string, scope: JqHintScope = 'parent_level'): this {
+    this.jqHints.push({ description, query, scope })
+    return this
+  }
+
+  /**
    * Get the actions for testing or debugging
    * @internal
    */
@@ -220,6 +239,30 @@ export class LLMInfo {
   }
 
   /**
+   * Get jq hints (for testing)
+   * @internal
+   */
+  getJqHints(): readonly JqHint[] {
+    return [...this.jqHints]
+  }
+
+  /**
+   * Get JSON data (for testing)
+   * @internal
+   */
+  getJsonData(): null | ResultJsonStructure {
+    return this.jsonData
+  }
+
+  /**
+   * Get result file path (for testing)
+   * @internal
+   */
+  getResultPath(): string | undefined {
+    return this.resultJsonPath
+  }
+
+  /**
    * Check if this response contains an error
    */
   hasError(): boolean {
@@ -231,16 +274,17 @@ export class LLMInfo {
    * Used by orchestrators to combine results from multiple services.
    *
    * @param other - The LLMInfo instance to merge
+   * @param mergeKey - Optional key for hierarchical JSON merging (e.g., 'repositories.repo1')
    * @returns This instance for method chaining
    *
    * @example
    * ```typescript
    * const result = LLMInfo.create()
    * const serviceResult = await service.execute()
-   * result.merge(serviceResult)
+   * result.merge(serviceResult, 'repositories.my-repo')
    * ```
    */
-  merge(other: LLMInfo): this {
+  merge(other: LLMInfo, mergeKey?: string): this {
     // If the other has an error, this should also have an error
     if (other.hasError() && other.error) {
       this.setError(other.error)
@@ -267,6 +311,21 @@ export class LLMInfo {
       this.instructions.push(instruction)
     }
 
+    // NEW: Merge JSON data if both have it
+    if (other.jsonData && this.jsonData && mergeKey) {
+      this.mergeJsonData(other.jsonData, mergeKey)
+    } else if (other.jsonData && !this.jsonData) {
+      this.jsonData = other.jsonData
+    }
+
+    // NEW: Merge jq hints with transformation and deduplication
+    this.mergeJqHints(other.jqHints, mergeKey)
+
+    // NEW: Merge result path if not already set
+    if (other.resultJsonPath && !this.resultJsonPath) {
+      this.resultJsonPath = other.resultJsonPath
+    }
+
     return this
   }
 
@@ -280,6 +339,28 @@ export class LLMInfo {
    */
   setError(error: OrchestratorError): this {
     this.error = error
+    return this
+  }
+
+  /**
+   * Set complete JSON data structure
+   * 
+   * @param data - Complete result JSON structure
+   * @returns This instance for method chaining
+   */
+  setJsonData(data: ResultJsonStructure): this {
+    this.jsonData = data
+    return this
+  }
+
+  /**
+   * Set path where JSON result file will be written
+   * 
+   * @param path - Absolute path to the compressed JSON result file
+   * @returns This instance for method chaining
+   */
+  setResultPath(path: string): this {
+    this.resultJsonPath = path
     return this
   }
 
@@ -472,6 +553,29 @@ export class LLMInfo {
   }
 
   /**
+   * Format jq query examples section
+   */
+  private formatJqExamples(): string {
+    if (!this.resultJsonPath || this.jqHints.length === 0) return ''
+
+    let output = '=== QUERY EXAMPLES ===\n'
+    output += 'Use these jq queries to explore the result data:\n\n'
+
+    // Show first 5 hints as examples
+    const exampleHints = this.jqHints.slice(0, 5)
+    for (const hint of exampleHints) {
+      output += `xzcat ${this.resultJsonPath} | jq '${hint.query}'  # ${hint.description}\n`
+    }
+
+    if (this.jqHints.length > 5) {
+      output += `\n... and ${this.jqHints.length - 5} more queries available in the result file\n`
+    }
+
+    output += '\n'
+    return output
+  }
+
+  /**
    * Format recovery instructions
    */
   private formatRecoveryInstructions(): string {
@@ -496,12 +600,22 @@ export class LLMInfo {
       output += `DEBUG_LOG=${this.debugLogPath}\n`
     }
 
+    // NEW: Add result file information when present
+    if (this.resultJsonPath) {
+      output += `RESULT_FILE=${this.resultJsonPath}\n`
+    }
+
     output += '\n'
 
     output += this.formatActionLog()
     output += this.formatFileOperations()
     output += this.formatDataSection()
     output += this.formatInstructions()
+
+    // NEW: Add jq query examples
+    if (this.resultJsonPath && this.jqHints.length > 0) {
+      output += this.formatJqExamples()
+    }
 
     return output
   }
@@ -511,5 +625,86 @@ export class LLMInfo {
    */
   private isValidKey(key: string): boolean {
     return /^[A-Z][A-Z0-9_]*$/.test(key)
+  }
+
+  /**
+   * Merge and transform jq hints
+   */
+  private mergeJqHints(otherHints: readonly JqHint[], mergeKey?: string): void {
+    const existingQueries = new Set(this.jqHints.map(h => h.query))
+
+    for (const hint of otherHints) {
+      if (mergeKey && hint.scope === 'single_item') {
+        // Transform single_item hints for specific path
+        const transformedHint = {
+          description: `${hint.description} for specific item`,
+          query: `.${mergeKey}${hint.query}`,
+          scope: 'single_item' as JqHintScope
+        }
+
+        if (!existingQueries.has(transformedHint.query)) {
+          this.jqHints.push(transformedHint)
+          existingQueries.add(transformedHint.query)
+        }
+
+        // Also add all_items variant if mergeKey suggests array access
+        if (mergeKey.includes('.')) {
+          const pathParts = mergeKey.split('.')
+          if (pathParts.length >= 2) {
+            const arrayPath = pathParts.slice(0, -1).join('.') + '[]'
+            const allItemsQuery = `${hint.query}`.replace(/^\./, `.${arrayPath}.`)
+            const allItemsHint = {
+              description: `${hint.description} for all items`,
+              query: allItemsQuery,
+              scope: 'all_items' as JqHintScope
+            }
+
+            if (!existingQueries.has(allItemsHint.query)) {
+              this.jqHints.push(allItemsHint)
+              existingQueries.add(allItemsHint.query)
+            }
+          }
+        }
+      } else if (!existingQueries.has(hint.query)) {
+        // Add parent_level and all_items hints unchanged
+        this.jqHints.push(hint)
+        existingQueries.add(hint.query)
+      }
+    }
+  }
+
+  /**
+   * Merge JSON data into nested structure
+   */
+  private mergeJsonData(otherData: ResultJsonStructure, mergeKey: string): void {
+    if (!this.jsonData) return
+
+    const keys = mergeKey.split('.')
+    let target: Record<string, unknown> = this.jsonData
+
+    // Navigate to parent object
+    for (let i = 0; i < keys.length - 1; i++) {
+      const key = keys[i]
+      if (!key) continue // Skip empty keys
+      if (!(key in target)) {
+        target[key] = {}
+      }
+
+      // More complex control flow for path generation
+      const nextTarget = target[key]
+      if (typeof nextTarget === 'object' && nextTarget !== null && !Array.isArray(nextTarget)) {
+        target = nextTarget as Record<string, unknown>
+      } else {
+        // Create new object if target is not suitable for navigation
+        target[key] = {}
+        target = target[key] as Record<string, unknown>
+      }
+    }
+
+    // Set final key to merged data
+    const finalKey = keys.at(-1)
+    if (finalKey) {
+      target[finalKey] = otherData
+    }
   }
 }

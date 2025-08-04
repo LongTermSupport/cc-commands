@@ -5,6 +5,8 @@
  */
 
 import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO.js'
+import { JqHint } from '../../../core/interfaces/JqHint.js'
+import { DataNamespaceStructure } from '../../../core/types/JsonResultTypes.js'
 import { ProjectV2ItemGraphQLResponse } from '../types/GitHubGraphQLTypes.js'
 
 /**
@@ -95,10 +97,44 @@ export class ProjectV2ItemDTO implements ILLMDataDTO {
   }
 
   /**
+   * TEMPORARY STUB: Get jq hints
+   * TODO: Implement comprehensive hints in Phase 3
+   */
+  getJqHints(): JqHint[] {
+    return [
+      {
+        description: 'Item ID',
+        query: '.raw.github_api.id',
+        scope: 'single_item'
+      }
+    ]
+  }
+
+  /**
    * Check if item has content (not a draft issue)
    */
   hasContent(): boolean {
     return this.title !== null && this.url !== null
+  }
+
+  /**
+   * TEMPORARY STUB: Convert to JSON data structure
+   * TODO: Implement full JSON structure in Phase 3
+   */
+  toJsonData(): DataNamespaceStructure {
+    return {
+      calculated: {
+        'item_metrics': {
+          'has_id': Boolean(this.id)
+        }
+      },
+      raw: {
+        'github_api': {
+          id: this.id,
+          type: this.type
+        }
+      }
+    }
   }
 
   /**

@@ -10,6 +10,8 @@
  */
 
 import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO.js'
+import { JqHint } from '../../../core/interfaces/JqHint.js'
+import { DataNamespaceStructure } from '../../../core/types/JsonResultTypes.js'
 
 /**
  * Data Transfer Object for GitHub project summaries
@@ -504,6 +506,40 @@ export class ProjectSummaryDTO implements ILLMDataDTO {
 
 
 
+
+  /**
+   * TEMPORARY STUB: Get jq hints
+   * TODO: Implement comprehensive hints in Phase 3
+   */
+  getJqHints(): JqHint[] {
+    return [
+      {
+        description: 'Project name',
+        query: '.raw.github_api.project_name',
+        scope: 'single_item'
+      }
+    ]
+  }
+
+  /**
+   * TEMPORARY STUB: Convert to JSON data structure
+   * TODO: Implement full JSON structure in Phase 3
+   */
+  toJsonData(): DataNamespaceStructure {
+    return {
+      calculated: {
+        'project_metrics': {
+          'total_repositories': this.repositoryCount
+        }
+      },
+      raw: {
+        'github_api': {
+          'project_name': this.name || '',
+          'repositories_count': this.repositoryCount
+        }
+      }
+    }
+  }
 
   /**
    * Convert project summary data to LLM-compatible key-value pairs

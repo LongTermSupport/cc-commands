@@ -7,6 +7,8 @@
  */
 
 import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO.js'
+import { JqHint } from '../../../core/interfaces/JqHint.js'
+import { DataNamespaceStructure } from '../../../core/types/JsonResultTypes.js'
 
 /**
  * Data Transfer Object for GitHub commits
@@ -743,6 +745,20 @@ export class CommitDataDTO implements ILLMDataDTO {
   }
 
   /**
+   * TEMPORARY STUB: Get jq hints
+   * TODO: Implement comprehensive hints in Phase 3
+   */
+  getJqHints(): JqHint[] {
+    return [
+      {
+        description: 'Commit SHA hash',
+        query: '.raw.github_api.sha',
+        scope: 'single_item'
+      }
+    ]
+  }
+
+  /**
    * Get net line changes (additions - deletions)
    * 
    * @returns Net change in lines of code
@@ -788,6 +804,28 @@ export class CommitDataDTO implements ILLMDataDTO {
    */
   isVerified(): boolean {
     return this.verificationVerified
+  }
+
+  /**
+   * TEMPORARY STUB: Convert to JSON data structure
+   * TODO: Implement full JSON structure in Phase 3
+   */
+  toJsonData(): DataNamespaceStructure {
+    return {
+      calculated: {
+        'commit_metrics': {
+          'total_changes': (this.additions || 0) + (this.deletions || 0)
+        }
+      },
+      raw: {
+        'github_api': {
+          author: this.authorName,
+          date: this.authorDate.toISOString(),
+          message: this.message,
+          sha: this.sha
+        }
+      }
+    }
   }
 
   /**
