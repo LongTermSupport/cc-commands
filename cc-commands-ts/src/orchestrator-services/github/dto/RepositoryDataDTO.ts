@@ -6,9 +6,10 @@
  * responses to the standardized LLMInfo data format.
  */
 
+import { TimeCalculator } from '../../../core/helpers/TimeCalculator.js'
 import { ILLMDataDTO } from '../../../core/interfaces/ILLMDataDTO.js'
 import { JqHint } from '../../../core/interfaces/JqHint.js'
-import { DataNamespaceStructure } from '../../../core/types/JsonResultTypes.js'
+import { DataNamespaceStructure, JsonObject } from '../../../core/types/JsonResultTypes.js'
 import { GitHubCliRepositoryOutput, GitHubRepositoryResponse } from '../types/GitHubApiTypes.js'
 
 /**
@@ -430,14 +431,80 @@ export class RepositoryDataDTO implements ILLMDataDTO {
   }
 
   /**
-   * TEMPORARY STUB: Get jq hints
-   * TODO: Implement comprehensive hints in Phase 3
+   * Get comprehensive jq query hints for repository data
+   * 
+   * @returns Array of jq hints for efficient data querying
    */
   getJqHints(): JqHint[] {
     return [
-      {
-        description: 'Repository name',
+      // Raw data queries
+      { 
+        description: 'Repository name from GitHub API', 
         query: '.raw.github_api.name',
+        scope: 'single_item'
+      },
+      { 
+        description: 'Full repository name (owner/repo)', 
+        query: '.raw.github_api.full_name',
+        scope: 'single_item' 
+      },
+      { 
+        description: 'Star count from GitHub API', 
+        query: '.raw.github_api.stargazers_count',
+        scope: 'single_item'
+      },
+      { 
+        description: 'Primary programming language', 
+        query: '.raw.github_api.language',
+        scope: 'single_item'
+      },
+      { 
+        description: 'Repository topics array', 
+        query: '.raw.github_api.topics',
+        scope: 'single_item'
+      },
+      { 
+        description: 'Repository privacy status', 
+        query: '.raw.github_api.is_private',
+        scope: 'single_item'
+      },
+      
+      // Calculated data queries  
+      { 
+        description: 'Repository age in days (calculated)', 
+        query: '.calculated.time_calculations.age_days',
+        scope: 'single_item'
+      },
+      { 
+        description: 'Days since last update (calculated)', 
+        query: '.calculated.time_calculations.days_since_updated',
+        scope: 'single_item'
+      },
+      { 
+        description: 'Community engagement ratio (calculated)', 
+        query: '.calculated.popularity_metrics.engagement_ratio',
+        scope: 'single_item'
+      },
+      { 
+        description: 'Fork to star ratio (calculated)', 
+        query: '.calculated.popularity_metrics.fork_star_ratio',
+        scope: 'single_item'
+      },
+      
+      // Cross-namespace queries
+      { 
+        description: 'Repository name and calculated age', 
+        query: '{name: .raw.github_api.name, age_days: .calculated.time_calculations.age_days}',
+        scope: 'single_item'
+      },
+      { 
+        description: 'Available calculation categories', 
+        query: '.calculated | keys',
+        scope: 'single_item'
+      },
+      { 
+        description: 'Available raw data sources', 
+        query: '.raw | keys',
         scope: 'single_item'
       }
     ]
@@ -477,23 +544,19 @@ export class RepositoryDataDTO implements ILLMDataDTO {
   }
 
   /**
-   * TEMPORARY STUB: Convert to JSON data structure
-   * TODO: Implement full JSON structure in Phase 3
+   * Convert to structured JSON data with clear data provenance
+   * 
+   * @returns Complete repository data with raw and calculated namespaces
    */
   toJsonData(): DataNamespaceStructure {
     return {
       calculated: {
-        'repo_metrics': {
-          'is_popular': this.stargazersCount > 100
-        }
+        'popularity_metrics': this.calculatePopularityMetrics(),
+        'repository_characteristics': this.calculateRepositoryCharacteristics(),
+        'time_calculations': this.calculateTimeMetrics()
       },
       raw: {
-        'github_api': {
-          'created_at': this.createdAt.toISOString(),
-          name: this.name,
-          owner: this.owner,
-          'stars_count': this.stargazersCount
-        }
+        'github_api': this.buildRawGitHubData()
       }
     }
   }
@@ -533,6 +596,110 @@ export class RepositoryDataDTO implements ILLMDataDTO {
       [RepositoryDataDTO.Keys.REPOSITORY_URL]: this.url,
       [RepositoryDataDTO.Keys.REPOSITORY_VISIBILITY]: this.visibility,
       [RepositoryDataDTO.Keys.REPOSITORY_WATCHERS_COUNT]: String(this.watchersCount)
+    }
+  }
+
+  /**
+   * Build raw GitHub API data structure
+   * 
+   * @returns Raw GitHub data exactly as received from API
+   */
+  private buildRawGitHubData(): JsonObject {
+    return {
+      'created_at': this.createdAt.toISOString(),
+      'default_branch': this.defaultBranch,
+      'description': this.description,
+      'forks_count': this.forksCount,
+      'full_name': this.fullName,
+      'has_issues': this.hasIssues,
+      'has_projects': this.hasProjects,
+      'has_wiki': this.hasWiki,
+      'homepage': this.homepage,
+      'id': this.id,
+      'is_archived': this.isArchived,
+      'is_fork': this.isFork,
+      'is_private': this.isPrivate,
+      'language': this.language,
+      'languages': this.languages,
+      'license': this.license,
+      'name': this.name,
+      'open_issues_count': this.openIssuesCount,
+      'owner': this.owner,
+      'owner_type': this.ownerType,
+      'pushed_at': this.pushedAt ? this.pushedAt.toISOString() : null,
+      'size': this.size,
+      'stargazers_count': this.stargazersCount,
+      'topics': this.topics,
+      'updated_at': this.updatedAt.toISOString(),
+      'url': this.url,
+      'visibility': this.visibility,
+      'watchers_count': this.watchersCount
+    }
+  }
+
+  /**
+   * Calculate popularity and engagement metrics
+   * 
+   * @returns Mathematical ratios and popularity measures
+   */
+  private calculatePopularityMetrics(): JsonObject {
+    return {
+      'engagement_ratio': (this.stargazersCount + this.forksCount + this.watchersCount) / 
+        Math.max(1, this.stargazersCount),
+      'fork_star_ratio': this.stargazersCount > 0 ? 
+        Math.round((this.forksCount / this.stargazersCount) * 100) / 100 : 0,
+      'popularity_score': Math.round(
+        (Number(this.stargazersCount) + this.forksCount * 1.5 + this.watchersCount * 0.5) * 100
+      ) / 100,
+      'size_to_stars_ratio': this.stargazersCount > 0 ? 
+        Math.round((this.size / this.stargazersCount) * 100) / 100 : this.size,
+      'watcher_star_ratio': this.stargazersCount > 0 ? 
+        Math.round((this.watchersCount / this.stargazersCount) * 100) / 100 : 0
+    }
+  }
+
+  /**
+   * Calculate repository characteristics and patterns
+   * 
+   * @returns Numerical characteristics derived from repository data
+   */
+  private calculateRepositoryCharacteristics(): JsonObject {
+    const hasMultipleLanguages = this.languages.length > 1
+    const topicCount = this.topics.length
+    const hasDocumentation = this.hasWiki || this.homepage !== null
+    
+    return {
+      'development_maturity_score': Math.round(
+        (topicCount * 0.1 + 
+         (hasDocumentation ? 0.2 : 0) + 
+         (hasMultipleLanguages ? 0.1 : 0) + 
+         Math.min(this.stargazersCount / 100, 1) * 0.6) * 100
+      ) / 100,
+      'has_documentation': hasDocumentation,
+      'has_multiple_languages': hasMultipleLanguages,
+      'has_significant_engagement': this.hasSignificantEngagement(),
+      'is_active': this.isActivelyMaintained(),
+      'is_popular': this.stargazersCount >= 100,
+      'language_count': this.languages.length,
+      'topic_count': topicCount
+    }
+  }
+
+  /**
+   * Calculate time-based metrics
+   * 
+   * @returns Time calculations for repository lifecycle
+   */
+  private calculateTimeMetrics(): JsonObject {
+    const now = new Date()
+    const pushedAt = this.pushedAt || this.updatedAt
+    
+    return {
+      'age_days': TimeCalculator.daysBetween(this.createdAt, now),
+      'business_days_since_activity': TimeCalculator.businessDaysBetween(this.updatedAt, now),
+      'days_since_created': TimeCalculator.daysBetween(this.createdAt, now),
+      'days_since_pushed': TimeCalculator.daysBetween(pushedAt, now),
+      'days_since_updated': TimeCalculator.daysBetween(this.updatedAt, now)
     }
   }
 }

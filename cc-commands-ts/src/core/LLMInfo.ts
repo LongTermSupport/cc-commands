@@ -377,6 +377,57 @@ private readonly jqHints: JqHint[] = []
   }
 
   /**
+   * Add all_items variant for array access patterns
+   */
+  private addAllItemsVariant(
+    hint: JqHint, 
+    mergeKey: string, 
+    existingQueries: Set<string>
+  ): void {
+    const pathParts = mergeKey.split('.')
+    if (pathParts.length >= 2) {
+      const arrayPath = pathParts.slice(0, -1).join('.') + '[]'
+      const allItemsQuery = `${hint.query}`.replace(/^\./, `.${arrayPath}.`)
+      const allItemsHint = {
+        description: `${hint.description} for all items`,
+        query: allItemsQuery,
+        scope: 'all_items' as JqHintScope
+      }
+
+      if (!existingQueries.has(allItemsHint.query)) {
+        this.jqHints.push(allItemsHint)
+        existingQueries.add(allItemsHint.query)
+      }
+    }
+  }
+
+  /**
+   * Add transformed single item hint with array access variant
+   */
+  private addTransformedSingleItemHint(
+    hint: JqHint, 
+    mergeKey: string, 
+    existingQueries: Set<string>
+  ): void {
+    // Transform single_item hints for specific path
+    const transformedHint = {
+      description: `${hint.description} for specific item`,
+      query: `.${mergeKey}${hint.query}`,
+      scope: 'single_item' as JqHintScope
+    }
+
+    if (!existingQueries.has(transformedHint.query)) {
+      this.jqHints.push(transformedHint)
+      existingQueries.add(transformedHint.query)
+    }
+
+    // Also add all_items variant if mergeKey suggests array access
+    if (mergeKey.includes('.')) {
+      this.addAllItemsVariant(hint, mergeKey, existingQueries)
+    }
+  }
+
+  /**
    * Format action log section
    */
   private formatActionLog(): string {
@@ -635,36 +686,7 @@ private readonly jqHints: JqHint[] = []
 
     for (const hint of otherHints) {
       if (mergeKey && hint.scope === 'single_item') {
-        // Transform single_item hints for specific path
-        const transformedHint = {
-          description: `${hint.description} for specific item`,
-          query: `.${mergeKey}${hint.query}`,
-          scope: 'single_item' as JqHintScope
-        }
-
-        if (!existingQueries.has(transformedHint.query)) {
-          this.jqHints.push(transformedHint)
-          existingQueries.add(transformedHint.query)
-        }
-
-        // Also add all_items variant if mergeKey suggests array access
-        if (mergeKey.includes('.')) {
-          const pathParts = mergeKey.split('.')
-          if (pathParts.length >= 2) {
-            const arrayPath = pathParts.slice(0, -1).join('.') + '[]'
-            const allItemsQuery = `${hint.query}`.replace(/^\./, `.${arrayPath}.`)
-            const allItemsHint = {
-              description: `${hint.description} for all items`,
-              query: allItemsQuery,
-              scope: 'all_items' as JqHintScope
-            }
-
-            if (!existingQueries.has(allItemsHint.query)) {
-              this.jqHints.push(allItemsHint)
-              existingQueries.add(allItemsHint.query)
-            }
-          }
-        }
+        this.addTransformedSingleItemHint(hint, mergeKey, existingQueries)
       } else if (!existingQueries.has(hint.query)) {
         // Add parent_level and all_items hints unchanged
         this.jqHints.push(hint)
