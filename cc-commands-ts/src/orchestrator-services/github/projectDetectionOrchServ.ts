@@ -232,14 +232,16 @@ async function detectProjectFromGitRemote(
   const project = await services.projectService.detectProjectFromGitRemote()
   
   if (!project) {
-    result.addAction('Auto-detect project from git remote', 'failed', 'No project found in git remote')
+    result.addAction('Auto-detect project from git remote', 'failed', 'No accessible GitHub project found')
     throw new OrchestratorError(
       new Error('Could not detect GitHub project from git remote'),
       [
         'Ensure you are in a git repository directory',
-        'Verify the git remote is set to a GitHub repository',
-        'Check if the repository is associated with a GitHub project',
-        'Consider specifying the project URL or organization manually'
+        'Verify the git remote is set to a GitHub repository', 
+        'Check GitHub token permissions - you may need organization membership to access projects',
+        'For organization repositories, ensure your GitHub account is a member with project access',
+        'Try specifying the project URL directly instead of auto-detection',
+        'Consider using your organization\'s GitHub token if available'
       ]
     )
   }

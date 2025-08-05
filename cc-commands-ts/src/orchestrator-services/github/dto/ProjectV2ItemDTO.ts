@@ -38,7 +38,7 @@ export class ProjectV2ItemDTO implements ILLMDataDTO {
   static fromGraphQLResponse(response: ProjectV2ItemGraphQLResponse): ProjectV2ItemDTO {
     const title = response.content?.title || null
     const url = response.content?.url || null
-    const repository = response.content?.repository.nameWithOwner || null
+    const repository = response.content?.repository?.nameWithOwner || null
     
     // Process field values based on real API structure
     const fieldValues: Record<string, string> = {}

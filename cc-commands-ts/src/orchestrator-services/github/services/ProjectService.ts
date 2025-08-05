@@ -51,9 +51,16 @@ export class ProjectService {
       // Find projects for this owner
       const projects = await this.graphqlService.findProjectsByOwner(owner)
       
+      // If no projects found, provide context about potential permissions issues
+      if (projects.length === 0) {
+        // This is not an error - it's a legitimate case where no projects are accessible
+        // Return null to indicate no project was found (not an error condition)
+        return null
+      }
+      
       // For now, return the first project found
       // Future enhancement: implement logic to match project to specific repository
-      return projects.length > 0 ? projects[0] ?? null : null
+      return projects.at(0) ?? null
       
     } catch (error) {
       throw new OrchestratorError(

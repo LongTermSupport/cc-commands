@@ -658,7 +658,8 @@ private readonly jqHints: JqHint[] = []
 
     output += '\n'
 
-    output += this.formatActionLog()
+    // For success: only show action summary, not detailed action log
+    output += this.formatActionSummary()
     output += this.formatFileOperations()
     output += this.formatDataSection()
     output += this.formatInstructions()

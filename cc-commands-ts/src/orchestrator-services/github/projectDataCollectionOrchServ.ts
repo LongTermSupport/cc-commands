@@ -7,6 +7,9 @@
 
 import { OrchestratorError } from '../../core/error/OrchestratorError.js'
 import { LLMInfo } from '../../core/LLMInfo.js'
+import { createCompressedJsonFile } from '../../core/utils/CompressionUtils.js'
+import { ensureResultsDirectory, generateResultFilePath } from '../../core/utils/ResultFileUtils.js'
+import { ProjectSummaryDTO } from './dto/ProjectSummaryDTO.js'
 import { RepositoryDataDTO } from './dto/RepositoryDataDTO.js'
 import { IProjectDataCollectionArgs } from './types/ArgumentTypes.js'
 import { TGitHubServices } from './types/ServiceTypes.js'
@@ -30,6 +33,7 @@ export const projectDataCollectionOrchServ = async (
   services: TGitHubServices
 ): Promise<LLMInfo> => {
   const result = LLMInfo.create()
+  const executionStartTime = new Date()
   
   try {
     // Validate project node ID
@@ -41,7 +45,7 @@ export const projectDataCollectionOrchServ = async (
           'Use the project detection service first to identify the project',
           'Verify the project exists and is accessible'
         ],
-        { args }
+        { projectNodeId: args.projectNodeId }
       )
     }
     
@@ -170,9 +174,92 @@ export const projectDataCollectionOrchServ = async (
     result.addData('LANGUAGES', languages.join(', '))
     result.addData('PRIMARY_LANGUAGE', languages.at(0) ?? 'Unknown')
     
+    // Create comprehensive project summary DTO with collected data
+    const executionEndTime = new Date()
+    const projectSummary = ProjectSummaryDTO.fromAggregatedData({
+      activeContributors: 0, // Will be populated by activity analysis
+      activeRepositories: repositoryDataResults.filter(repo => {
+        const daysSinceLastPush = repo.getDaysSinceLastPush()
+        return daysSinceLastPush !== null && daysSinceLastPush <= 90  // Consider repos active if pushed within 90 days
+      }).length,
+      commitsLast30Days: 0, // Will be populated by activity analysis
+      createdAt: projectData.createdAt,
+      description: projectData.description || 'No description available',
+      issuesOpenCount: repositoryDataResults.reduce((sum, repo) => sum + repo.openIssuesCount, 0),
+      issuesTotalCount: repositoryDataResults.reduce((sum, repo) => sum + repo.openIssuesCount, 0), // Only open issues available from basic data
+      languages: languages.filter(lang => lang !== null),
+      name: projectData.title,
+      owner: projectData.owner,
+      primaryLanguage: languages.find(lang => lang !== null) ?? 'Unknown',
+      prsOpenCount: 0, // Will be populated by activity analysis
+      prsTotalCount: 0, // Will be populated by activity analysis
+      repositoryCount: repositoryDataResults.length,
+      starsTotal: totalStars,
+      // Basic repository data available - other metrics will be calculated by activity analysis
+      totalCommits: 0, // Will be populated by activity analysis
+      totalContributors: 0, // Will be populated by activity analysis  
+      updatedAt: projectData.updatedAt,
+      url: projectData.url
+    })
+    
+    // Generate JSON result file
+    try {
+      const resultFilePath = generateResultFilePath('project_summary')
+      const projectJsonData = projectSummary.toJsonData()
+      
+      // Add execution metadata
+      const completeJsonData = {
+        metadata: {
+          arguments: args.projectNodeId,
+          command: 'g-gh-project-summary',
+          // eslint-disable-next-line camelcase
+          execution_time_ms: executionEndTime.getTime() - executionStartTime.getTime(),
+          // eslint-disable-next-line camelcase
+          generated_at: executionEndTime.toISOString()
+        },
+        ...projectJsonData,
+        repositories: Object.fromEntries(
+          repositoryDataResults.map(repo => [repo.name, repo.toJsonData()])
+        )
+      }
+      
+      // Write compressed JSON file
+      ensureResultsDirectory()
+      await createCompressedJsonFile(completeJsonData, resultFilePath)
+      
+      // Set JSON data and result path in LLMInfo
+      result.setJsonData(completeJsonData)
+      result.setResultPath(resultFilePath)
+      
+      // Add all jq hints from project summary and repositories
+      const allHints = projectSummary.getJqHints()
+      // Add repository-level hints from first repository (they'll be transformed during merge)
+      // eslint-disable-next-line cc-commands/require-typed-data-access
+      const repoHints = repositoryDataResults[0]?.getJqHints()
+      if (repoHints) {
+        allHints.push(...repoHints)
+      }
+      
+      for (const hint of allHints) {
+        result.addJqHint(hint.query, hint.description, hint.scope)
+      }
+      
+      result.addAction('Generate JSON result file', 'success', `Created: ${resultFilePath}`)
+      
+    } catch (jsonError) {
+      // JSON generation failed - log but don't fail the entire operation
+      result.addAction('Generate JSON result file', 'failed', 
+        jsonError instanceof Error ? jsonError.message : 'JSON generation failed')
+    }
+    
+    // Add project summary data to result for LLM consumption
+    result.addDataBulk(projectSummary.toLLMData())
+    
     result.addInstruction('Use the collected repository data for activity analysis')
     result.addInstruction('Focus on repositories with recent activity for meaningful insights')
     result.addInstruction('Consider the primary languages when generating summaries')
+    result.addInstruction('Reference RESULT_FILE for detailed programmatic data access and complex queries')
+    result.addInstruction('Use raw namespace for exact API data, calculated namespace for computed insights')
     
     return result
     
@@ -187,7 +274,7 @@ export const projectDataCollectionOrchServ = async (
           'Check GitHub authentication and permissions',
           'Ensure the project contains accessible repositories'
         ],
-        { args, error: error instanceof Error ? error.message : String(error) }
+        { error: error instanceof Error ? error.message : String(error), projectNodeId: args.projectNodeId }
       ))
     }
     

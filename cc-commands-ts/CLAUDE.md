@@ -247,6 +247,114 @@ src/
 
 TypeScript code (orchestrators) performs deterministic operations and returns raw KEY=value data. The LLM interprets commands and decides how to format output based on audience needs.
 
+## JSON Result Files Architecture
+
+The cc-commands system generates **dual outputs** to serve different consumption patterns:
+
+1. **Stdout**: Key=value pairs for LLM consumption (existing functionality, unchanged)
+2. **JSON Files**: Comprehensive, queryable data for programmatic access (new functionality)
+
+### Data Provenance Separation
+
+All JSON files use strict namespacing to clarify data sources for LLM analysis:
+
+- **`raw` namespace**: Direct API responses, unmodified
+  - `raw.github_api`: GitHub API responses exactly as received
+  - `raw.git_remote`: Git command outputs (future)
+  - `raw.filesystem`: File system data (future)
+
+- **`calculated` namespace**: TypeScript mathematical computations
+  - `calculated.time_calculations`: Date math, age calculations, time deltas
+  - `calculated.activity_metrics`: Commit/issue/PR counts and rates
+  - `calculated.mathematical_ratios`: All ratio and percentage calculations
+  - `calculated.statistical_measures`: Averages, medians, standard deviations
+  - `calculated.distribution_analysis`: Gini coefficients, contributor patterns
+
+### File Structure and Compression
+
+**Location**: `var/results/` directory (gitignored)
+**Format**: Timestamped XZ-compressed JSON files
+**Example**: `var/results/g-gh-project-summary_2025-01-29_14-30-25.json.xz`
+
+**Hierarchical Structure**:
+```json
+{
+  "metadata": {
+    "generated_at": "2025-01-29T10:30:00Z",
+    "command": "g-gh-project-summary",
+    "arguments": "github",
+    "execution_time_ms": 4500
+  },
+  "raw": {
+    "github_api": {
+      "project_detection": {
+        "mode": "owner",
+        "input": "github",
+        "resolved_project_url": "https://github.com/orgs/github/projects/4"
+      },
+      "repositories_discovered": ["actions-runner", "docs", "cli"]
+    }
+  },
+  "calculated": {
+    "project_totals": {
+      "repository_count": 3,
+      "total_stars": 15420,
+      "total_contributors": 89
+    },
+    "time_calculations": {
+      "age_days": 1095,
+      "days_since_update": 2
+    },
+    "mathematical_ratios": {
+      "stars_to_repos_ratio": 5140.0,
+      "contributors_to_repos_ratio": 29.67
+    }
+  },
+  "repositories": {
+    "actions-runner": { /* Complete RepositoryDataDTO JSON structure */ },
+    "docs": { /* Complete RepositoryDataDTO JSON structure */ },
+    "cli": { /* Complete RepositoryDataDTO JSON structure */ }
+  }
+}
+```
+
+### jq Query System
+
+Each JSON file includes intelligent query hints for efficient data exploration:
+
+**CLI Integration**: Commands automatically output example queries
+```bash
+# Query examples (from actual command output):
+xzcat var/results/g-gh-project-summary_2025-01-29_14-30-25.json.xz | jq '.metadata'  # Basic structure
+xzcat var/results/g-gh-project-summary_2025-01-29_14-30-25.json.xz | jq '.calculated.project_totals'  # Project overview
+xzcat var/results/g-gh-project-summary_2025-01-29_14-30-25.json.xz | jq '.raw.github_api'  # Raw API data
+```
+
+**Programmatic Access**: DTOs provide structured hints
+```typescript
+// Each DTO implements getJqHints() method
+const hints = repositoryDTO.getJqHints()
+// Returns array of { query, description, scope } objects
+```
+
+### Backward Compatibility
+
+**Critical**: JSON file generation is **non-blocking**. If compression fails or XZ is unavailable:
+- Commands continue normal execution
+- Stdout output remains unchanged  
+- Error information is logged but doesn't affect exit codes
+- LLM receives traditional key=value data
+
+### XZ Dependencies
+
+**Requirement**: Commands require `xz` compression tool
+**Installation**:
+- Ubuntu/Debian: `sudo apt-get install xz-utils`
+- macOS: `brew install xz`
+- CentOS/RHEL: `sudo yum install xz`
+
+**Availability Check**: Commands automatically check for XZ availability and provide installation instructions if missing.
+
 ## Dependency Injection & Testability
 
 **No `new` calls anywhere** except for DTO creation (`new RepositoryDataDTO(...)`)

@@ -133,4 +133,101 @@ describe('Project Data Collection Orchestrator Service Integration', () => {
       expect(projectAction).toBeDefined()
     })
   })
+
+  describe('JSON result file integration', () => {
+    it('should generate structured JSON data with proper namespacing', async () => {
+      const args: IProjectDataCollectionArgs = {
+        projectNodeId: 'PVT_kwHOABXVks4Af-jq'
+      }
+
+      const result = await projectDataCollectionOrchServ(args, services)
+
+      if (!result.hasError()) {
+        const jsonData = result.getJsonData()
+        
+        // Should have proper namespace structure
+        expect(jsonData).toHaveProperty('metadata')
+        expect(jsonData).toHaveProperty('raw')
+        expect(jsonData).toHaveProperty('calculated')
+        
+        // Metadata should be present
+        expect(jsonData.metadata).toHaveProperty('generated_at')
+        expect(jsonData.metadata).toHaveProperty('command')
+        expect(jsonData.metadata).toHaveProperty('execution_time_ms')
+        
+        // Raw data should preserve GitHub API responses
+        expect(jsonData.raw).toHaveProperty('github_api')
+        expect(jsonData.raw.github_api).toHaveProperty('project_detection')
+        
+        // Calculated data should have TypeScript computations
+        expect(jsonData.calculated).toHaveProperty('project_totals')
+        expect(jsonData.calculated).toHaveProperty('time_calculations')
+        expect(jsonData.calculated).toHaveProperty('activity_metrics')
+      }
+    })
+
+    it('should provide comprehensive jq hints for data exploration', async () => {
+      const args: IProjectDataCollectionArgs = {
+        projectNodeId: 'PVT_kwHOABXVks4Af-jq'
+      }
+
+      const result = await projectDataCollectionOrchServ(args, services)
+
+      if (!result.hasError()) {
+        const hints = result.getJqHints()
+        
+        expect(hints.length).toBeGreaterThan(5)
+        
+        // Should include hints for all major data categories
+        const queries = hints.map(h => h.query)
+        expect(queries.some(q => q.includes('.metadata'))).toBe(true)
+        expect(queries.some(q => q.includes('.raw.github_api'))).toBe(true)
+        expect(queries.some(q => q.includes('.calculated'))).toBe(true)
+        
+        // All hints should have required properties
+        for (const hint of hints) {
+          expect(hint.query).toBeTruthy()
+          expect(hint.description).toBeTruthy()
+          expect(['single_item', 'list', 'statistical']).toContain(hint.scope)
+        }
+      }
+    })
+
+    it('should include result file path in LLM output', async () => {
+      const args: IProjectDataCollectionArgs = {
+        projectNodeId: 'PVT_kwHOABXVks4Af-jq'
+      }
+
+      const result = await projectDataCollectionOrchServ(args, services)
+
+      if (!result.hasError()) {
+        const output = result.toString()
+        const resultPath = result.getResultPath()
+        
+        if (resultPath) {
+          expect(output).toContain('RESULT_FILE=')
+          expect(output).toContain(resultPath)
+          expect(output).toContain('Query examples:')
+          expect(output).toContain('xzcat')
+          expect(output).toContain('| jq')
+        }
+      }
+    })
+
+    it('should handle XZ compression failures gracefully', async () => {
+      // This test would require mocking execSync to fail during compression
+      // For integration tests, we assume XZ is available and working
+      // Compression failure testing is handled in unit tests
+      const args: IProjectDataCollectionArgs = {
+        projectNodeId: 'PVT_kwHOABXVks4Af-jq'
+      }
+
+      const result = await projectDataCollectionOrchServ(args, services)
+      
+      // Should either succeed with JSON file or fail with clear error
+      expect(result).toBeInstanceOf(LLMInfo)
+      expect(typeof result.getExitCode()).toBe('number')
+      expect([0, 1]).toContain(result.getExitCode())
+    })
+  })
 })

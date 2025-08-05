@@ -475,4 +475,139 @@ describe('ProjectSummaryDTO', () => {
       expect(keys).toHaveLength(expectedKeys.length)
     })
   })
+
+  describe('JSON methods for result files', () => {
+    let dto: ProjectSummaryDTO
+    
+    beforeEach(() => {
+      dto = new ProjectSummaryDTO(
+        'Test Project', 
+        'test-org', 
+        'A comprehensive test project for validation',
+        'https://github.com/orgs/test/projects/1',
+        'TypeScript',
+        ['TypeScript', 'JavaScript', 'Python'], 
+        new Date('2023-01-01T00:00:00Z'), 
+        new Date('2025-01-15T00:00:00Z'),
+        3, 150, 25, 45, 20, 8, 12,
+        10, 20, 5, 100, 365, 5, 0.33
+      )
+    })
+    
+    describe('toJsonData', () => {
+      it('should return structured project data with all namespaces', () => {
+        const jsonData = dto.toJsonData()
+        
+        expect(jsonData).toHaveProperty('raw')
+        expect(jsonData).toHaveProperty('calculated')
+        expect(jsonData.raw).toHaveProperty('github_api')
+        expect(jsonData.calculated).toHaveProperty('project_totals')
+        expect(jsonData.calculated).toHaveProperty('time_calculations')
+        expect(jsonData.calculated).toHaveProperty('activity_metrics')
+        expect(jsonData.calculated).toHaveProperty('mathematical_ratios')
+        expect(jsonData.calculated).toHaveProperty('statistical_measures')
+      })
+      
+      it('should preserve raw project data unchanged', () => {
+        const jsonData = dto.toJsonData()
+        const rawData = jsonData.raw.github_api
+        
+        expect(rawData.name).toBe('Test Project')
+        expect(rawData.url).toBe('https://github.com/orgs/test/projects/1')
+        expect(rawData.description).toBe('A comprehensive test project for validation')
+        expect(rawData.owner).toBe('test-org')
+        expect(rawData.primary_language).toBe('TypeScript')
+      })
+      
+      it('should calculate project totals correctly', () => {
+        const jsonData = dto.toJsonData()
+        const totals = jsonData.calculated.project_totals
+        
+        expect(totals.repository_count).toBe(3)
+        expect(totals.total_stars).toBe(150)
+        expect(totals.total_contributors).toBe(25)
+        expect(totals.total_commits).toBe(45)
+        expect(totals.issues_total_count).toBe(20)
+        expect(totals.prs_total_count).toBe(12)
+      })
+      
+      it('should calculate activity metrics correctly', () => {
+        const jsonData = dto.toJsonData()
+        const activity = jsonData.calculated.activity_metrics
+        
+        expect(activity.commits_last_30_days).toBe(10)
+        expect(activity.issues_open_count).toBe(8)
+        expect(activity.prs_open_count).toBe(5)
+        expect(activity.active_contributors).toBe(20)
+        expect(activity.active_repositories).toBe(5)
+      })
+      
+      it('should calculate mathematical ratios correctly', () => {
+        const jsonData = dto.toJsonData()
+        const ratios = jsonData.calculated.mathematical_ratios
+        
+        expect(ratios.stars_to_repos_ratio).toBeCloseTo(150/3, 2)
+        expect(ratios.contributors_to_repos_ratio).toBeCloseTo(25/3, 2)
+        expect(ratios.commits_to_issues_ratio).toBeCloseTo(45/20, 2)
+        expect(ratios.commits_to_prs_ratio).toBeCloseTo(45/12, 2)
+        expect(ratios.issues_closed_ratio).toBeCloseTo((20-8)/20, 2)
+        expect(ratios.prs_merged_ratio).toBeCloseTo((12-5)/12, 2)
+      })
+      
+      it('should calculate time-based metrics correctly', () => {
+        const jsonData = dto.toJsonData()
+        const timeCalcs = jsonData.calculated.time_calculations
+        
+        expect(timeCalcs.age_days).toBeGreaterThan(700) // More than 2 years
+        expect(timeCalcs.days_since_update).toBeGreaterThan(0)
+        expect(timeCalcs.activity_density_last_30_days).toBe(0.33)
+        expect(timeCalcs.created_at_iso).toBe('2023-01-01T00:00:00.000Z')
+        expect(timeCalcs.updated_at_iso).toBe('2025-01-15T00:00:00.000Z')
+      })
+      
+      it('should calculate statistical measures', () => {
+        const jsonData = dto.toJsonData()
+        const stats = jsonData.calculated.statistical_measures
+        
+        expect(stats.average_issue_age_days).toBe(100)
+        expect(stats.average_pr_age_days).toBe(365)
+        expect(typeof stats.repository_count_percentile).toBe('number')
+        expect(typeof stats.contributor_count_percentile).toBe('number')
+      })
+    })
+    
+    describe('getJqHints', () => {
+      it('should return comprehensive project-level jq hints', () => {
+        const hints = dto.getJqHints()
+        
+        expect(hints.length).toBeGreaterThan(10)
+        expect(hints).toContainEqual(expect.objectContaining({
+          description: expect.stringContaining('repositories'),
+          query: '.calculated.project_totals.repository_count',
+          scope: 'single_item'
+        }))
+      })
+      
+      it('should include hints for all project calculation categories', () => {
+        const hints = dto.getJqHints()
+        const queries = hints.map(h => h.query)
+        
+        expect(queries.some(q => q.includes('project_totals'))).toBe(true)
+        expect(queries.some(q => q.includes('time_calculations'))).toBe(true)
+        expect(queries.some(q => q.includes('activity_metrics'))).toBe(true)
+        expect(queries.some(q => q.includes('mathematical_ratios'))).toBe(true)
+        expect(queries.some(q => q.includes('statistical_measures'))).toBe(true)
+      })
+      
+      it('should provide project-specific query examples', () => {
+        const hints = dto.getJqHints()
+        const descriptions = hints.map(h => h.description.toLowerCase())
+        
+        expect(descriptions.some(d => d.includes('project'))).toBe(true)
+        expect(descriptions.some(d => d.includes('repository') || d.includes('repo'))).toBe(true)
+        expect(descriptions.some(d => d.includes('contributor'))).toBe(true)
+        expect(descriptions.some(d => d.includes('issue') || d.includes('pull request'))).toBe(true)
+      })
+    })
+  })
 })

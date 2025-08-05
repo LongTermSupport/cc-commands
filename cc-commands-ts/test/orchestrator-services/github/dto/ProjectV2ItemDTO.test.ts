@@ -130,6 +130,44 @@ describe('ProjectV2ItemDTO', () => {
       expect(dto.hasContent()).toBe(false)
       expect(dto.getFieldValue('Title')).toBe('Draft: New feature idea')
     })
+
+    it('should handle items with content but no repository', () => {
+      // RED: This test reproduces the real-world error we encountered
+      // Some project items have content (title, url) but no repository link
+      const stubResponse: ProjectV2ItemGraphQLResponse = {
+        __typename: 'ProjectV2Item',
+        content: {
+          __typename: 'Issue',
+          id: 'I_kwHOABXVks4Af-jq',
+          // repository is undefined - this causes the error
+          title: 'Test Issue without repo link',
+          url: 'https://github.com/test-org/test-repo/issues/1'
+        },
+        fieldValues: {
+          nodes: [
+            {
+              __typename: 'ProjectV2ItemFieldTextValue',
+              field: {
+                __typename: 'ProjectV2Field',
+                id: 'PVTF_status123',
+                name: 'Status'
+              },
+              text: 'In Progress'
+            }
+          ]
+        },
+        id: 'PVTI_no_repo_123',
+        type: 'ISSUE'
+      }
+
+      // This should NOT throw an error - it should handle missing repository gracefully
+      expect(() => {
+        const dto = ProjectV2ItemDTO.fromGraphQLResponse(stubResponse)
+        expect(dto.repository).toBeNull() // Should be null, not cause a crash
+        expect(dto.title).toBe('Test Issue without repo link')
+        expect(dto.url).toBe('https://github.com/test-org/test-repo/issues/1')
+      }).not.toThrow()
+    })
   })
 
   describe('instance methods', () => {

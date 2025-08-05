@@ -5,17 +5,19 @@
  * Replaces error-prone string parsing with structured objects.
  */
 
+import { JsonObject } from '../../../core/types/JsonResultTypes.js'
+
 /**
  * Arguments for project detection operations
  */
-export interface IProjectDetectionArgs {
+export interface IProjectDetectionArgs extends JsonObject {
   /**
    * Input value based on mode:
    * - For 'url': Full GitHub project URL
    * - For 'owner': Organization or user name
    * - For 'auto': Not used (empty string)
    */
-  input: string
+  readonly input: string
   
   /** 
    * Detection mode - determines how to find the project
@@ -23,45 +25,43 @@ export interface IProjectDetectionArgs {
    * - 'url': Parse from GitHub project URL
    * - 'owner': Find from organization/owner name
    */
-  mode: 'auto' | 'owner' | 'url'
+  readonly mode: 'auto' | 'owner' | 'url'
 }
 
 /**
  * Arguments for project data collection operations
  */
-export interface IProjectDataCollectionArgs {
-  /** Index signature for LLMInfo context compatibility */
-  [key: string]: boolean | null | number | string
+export interface IProjectDataCollectionArgs extends JsonObject {
   /** GitHub Project v2 node ID (e.g., "PVT_kwHOABDmBM4AHJKL") */
-  projectNodeId: string
+  readonly projectNodeId: string
 }
 
 /**
  * Arguments for activity analysis operations
  */
-export interface IActivityAnalysisArgs {
+export interface IActivityAnalysisArgs extends JsonObject {
   /** Repository owner (user or organization) */
-  owner: string
+  readonly owner: string
   
   /** List of repository names (without owner prefix) */
-  repositories: string[]
+  readonly repositories: string[]
   
   /** Time window for analysis in days (1-365) */
-  timeWindowDays: number
+  readonly timeWindowDays: number
 }
 
 /**
  * Combined arguments for the main summary orchestrator
  */
-export interface ISummaryOrchestratorArgs {
+export interface ISummaryOrchestratorArgs extends JsonObject {
   /** Output format preference */
-  format?: 'detailed' | 'executive' | 'technical'
+  readonly format?: 'detailed' | 'executive' | 'technical'
   
   /** Project detection arguments */
-  projectArgs: IProjectDetectionArgs
+  readonly projectArgs: IProjectDetectionArgs
   
   /** Time window for analysis in days */
-  timeWindowDays: number
+  readonly timeWindowDays: number
 }
 
 /**

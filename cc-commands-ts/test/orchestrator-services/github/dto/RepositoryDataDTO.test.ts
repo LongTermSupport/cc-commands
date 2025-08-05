@@ -916,4 +916,122 @@ describe('RepositoryDataDTO', () => {
       expect(llmData.REPOSITORY_HOMEPAGE).toBe('https://example.com/🌍')
     })
   })
+
+  describe('JSON methods for result files', () => {
+    let dto: RepositoryDataDTO
+    
+    beforeEach(() => {
+      dto = new RepositoryDataDTO(
+        validRepositoryData.id,
+        validRepositoryData.name,
+        validRepositoryData.fullName,
+        validRepositoryData.description,
+        validRepositoryData.homepage,
+        validRepositoryData.language,
+        validRepositoryData.languages,
+        validRepositoryData.license,
+        validRepositoryData.topics,
+        validRepositoryData.owner,
+        validRepositoryData.isPrivate,
+        validRepositoryData.isFork,
+        validRepositoryData.isArchived,
+        validRepositoryData.hasIssues,
+        validRepositoryData.hasProjects,
+        validRepositoryData.hasWiki,
+        validRepositoryData.defaultBranch,
+        validRepositoryData.stargazersCount,
+        validRepositoryData.watchersCount,
+        validRepositoryData.forksCount,
+        validRepositoryData.openIssuesCount,
+        validRepositoryData.size,
+        validRepositoryData.createdAt,
+        validRepositoryData.updatedAt,
+        validRepositoryData.pushedAt
+      )
+    })
+    
+    describe('toJsonData', () => {
+      it('should return structured data with raw and calculated namespaces', () => {
+        const jsonData = dto.toJsonData()
+        
+        expect(jsonData).toHaveProperty('raw')
+        expect(jsonData).toHaveProperty('calculated')
+        expect(jsonData.raw).toHaveProperty('github_api')
+        expect(jsonData.calculated).toHaveProperty('time_calculations')
+        expect(jsonData.calculated).toHaveProperty('activity_metrics')
+        expect(jsonData.calculated).toHaveProperty('mathematical_ratios')
+      })
+      
+      it('should preserve raw repository data unchanged', () => {
+        const jsonData = dto.toJsonData()
+        
+        expect(jsonData.raw.github_api.name).toBe('test-repo')
+        expect(jsonData.raw.github_api.full_name).toBe('testuser/test-repo')
+        expect(jsonData.raw.github_api.description).toBe('A test repository for validation')
+        expect(jsonData.raw.github_api.language).toBe('TypeScript')
+        expect(jsonData.raw.github_api.stargazers_count).toBe(42)
+      })
+      
+      it('should calculate time metrics correctly', () => {
+        const jsonData = dto.toJsonData()
+        const timeCalcs = jsonData.calculated.time_calculations
+        
+        expect(timeCalcs.age_days).toBeGreaterThan(0)
+        expect(timeCalcs.days_since_updated).toBeGreaterThanOrEqual(0)
+        expect(typeof timeCalcs.business_days_since_activity).toBe('number')
+        expect(timeCalcs.created_at_iso).toBe('2023-01-01T00:00:00.000Z')
+      })
+      
+      it('should calculate activity metrics', () => {
+        const jsonData = dto.toJsonData()
+        const activityMetrics = jsonData.calculated.activity_metrics
+        
+        expect(activityMetrics.stargazers_count).toBe(42)
+        expect(activityMetrics.forks_count).toBe(12)
+        expect(activityMetrics.open_issues_count).toBe(8)
+        expect(activityMetrics.watchers_count).toBe(38)
+      })
+      
+      it('should calculate mathematical ratios', () => {
+        const jsonData = dto.toJsonData()
+        const ratios = jsonData.calculated.mathematical_ratios
+        
+        expect(ratios.watchers_to_stars_ratio).toBeCloseTo(38/42, 2)
+        expect(ratios.forks_to_stars_ratio).toBeCloseTo(12/42, 2)
+        expect(ratios.issues_to_stars_ratio).toBeCloseTo(8/42, 2)
+      })
+    })
+    
+    describe('getJqHints', () => {
+      it('should return comprehensive jq hints', () => {
+        const hints = dto.getJqHints()
+        
+        expect(hints.length).toBeGreaterThan(5)
+        expect(hints).toContainEqual(expect.objectContaining({
+          description: expect.stringContaining('name'),
+          query: '.raw.github_api.name',
+          scope: 'single_item'
+        }))
+      })
+      
+      it('should include hints for all calculation categories', () => {
+        const hints = dto.getJqHints()
+        const queries = hints.map(h => h.query)
+        
+        expect(queries.some(q => q.includes('time_calculations'))).toBe(true)
+        expect(queries.some(q => q.includes('activity_metrics'))).toBe(true)
+        expect(queries.some(q => q.includes('mathematical_ratios'))).toBe(true)
+      })
+      
+      it('should provide helpful descriptions and scopes', () => {
+        const hints = dto.getJqHints()
+        
+        for (const hint of hints) {
+          expect(hint.query).toBeTruthy()
+          expect(hint.description).toBeTruthy()
+          expect(['single_item', 'list', 'statistical']).toContain(hint.scope)
+        }
+      })
+    })
+  })
 })

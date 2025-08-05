@@ -113,18 +113,28 @@ async function activityAnalysisOrchServImpl(
     result.addData('HAS_PR_DATA', String(aggregatedActivity.totalPrsCount > 0))
     result.addData('HAS_CONTRIBUTOR_DATA', String(aggregatedActivity.contributorsCount > 0))
     
-    // Comprehensive LLM Instructions for Analysis
-    result.addInstruction('ANALYZE the mathematical activity data and generate insights about:')
-    result.addInstruction('1. PROJECT VELOCITY: Interpret commits-to-issues ratio, daily activity patterns')
-    result.addInstruction('2. DEVELOPMENT PATTERNS: Analyze commit frequency, PR merge rates, issue resolution')
-    result.addInstruction('3. TEAM DYNAMICS: Interpret contributor distribution, collaboration patterns')
-    result.addInstruction('4. PROJECT HEALTH: Assess based on activity consistency, issue management')
-    result.addInstruction('5. REPOSITORY DISTRIBUTION: Identify most/least active repositories and significance')
-    result.addInstruction('PROVIDE specific recommendations based on the mathematical ratios and patterns')
-    result.addInstruction('HIGHLIGHT concerning patterns (low ratios, declining activity, bottlenecks)')
-    result.addInstruction('SUGGEST improvements based on the data (more contributors, better issue flow, etc.)')
-    result.addInstruction('ADAPT analysis depth based on data completeness and repository coverage')
-    result.addInstruction('INCLUDE confidence levels based on data quality and time window coverage')
+    // Enhanced LLM Instructions for Mathematical Analysis
+    result.addInstruction('Analyze the mathematical activity facts to assess project health using ISSUE_OPEN_CLOSE_RATIO and AVERAGE_RESOLUTION_TIME_DAYS')
+    result.addInstruction('Evaluate development velocity using COMMITS_PER_DAY, ISSUES_PER_DAY, and PRS_PER_DAY rates from the provided mathematical data')
+    result.addInstruction('Assess contributor engagement using CONTRIBUTOR_CONCENTRATION ratios and cross-activity participation metrics')
+    result.addInstruction('Determine maintenance quality using DAYS_SINCE_LAST_PUSH and resolution time statistical measures')
+    result.addInstruction('Identify activity patterns using timing data and calculate activity consistency from the mathematical facts')
+    
+    // Risk and sustainability analysis
+    result.addInstruction('Assess bus factor risk using TOP_CONTRIBUTOR_PERCENTAGE and CONTRIBUTOR_GINI_COEFFICIENT from the data')
+    result.addInstruction('Identify potential bottlenecks through PR_MERGE_SUCCESS_RATE and issue backlog ratios')
+    result.addInstruction('Evaluate project sustainability using contributor growth rates and cross-repository activity patterns')
+    
+    // Data-driven insights
+    result.addInstruction('Base all conclusions on specific numerical thresholds: PR merge rates >80% = healthy process, resolution times <7 days = active maintenance')
+    result.addInstruction('Use statistical percentiles (P25, P50, P75, P90) to identify outliers and provide distribution context')
+    result.addInstruction('Support recommendations with mathematical evidence from the ratios and statistical measures provided')
+    result.addInstruction('Highlight mathematical trends that indicate improvement or decline in project metrics')
+    
+    // Output formatting guidance
+    result.addInstruction('Structure analysis sections based on mathematical domains: Activity Velocity, Quality Metrics, Sustainability Indicators, Risk Factors')
+    result.addInstruction('Include confidence indicators based on ANALYSIS_PERIOD_DAYS and data completeness metrics')
+    result.addInstruction('Provide actionable recommendations that can be measured against the mathematical thresholds provided')
     
     return result
     
@@ -143,7 +153,7 @@ async function activityAnalysisOrchServImpl(
         { 
           error: error instanceof Error ? error.message : String(error),
           owner: args.owner,
-          repositories: args.repositories,
+          repositories: JSON.stringify(args.repositories),
           timeWindowDays: args.timeWindowDays 
         }
       ))

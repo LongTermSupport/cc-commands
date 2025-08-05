@@ -7,6 +7,7 @@
 
 import { OrchestratorError } from '../../../../core/error/OrchestratorError.js'
 import { LLMInfo } from '../../../../core/LLMInfo.js'
+import { ensureXzAvailable } from '../../../../core/utils/CompressionUtils.js'
 import { IActivityAnalysisArgs, IProjectDataCollectionArgs, IProjectDetectionArgs, ISummaryOrchestratorArgs } from '../../../../orchestrator-services/github/types/ArgumentTypes.js'
 
 /**
@@ -66,6 +67,9 @@ export const summaryOrch = async (
   const result = LLMInfo.create()
   
   try {
+    // Ensure XZ compression is available before starting
+    ensureXzAvailable()
+    
     // Add initial context
     result.addInstruction('Generate a comprehensive GitHub project summary report')
     result.addData('PROJECT_INPUT', args.projectArgs.input)
@@ -139,11 +143,37 @@ export const summaryOrch = async (
     
     result.addAction('Analyze project activity', 'success')
     
-    // Final instructions for LLM
+    // Final instructions for LLM - Enhanced analytical guidance
     result.addData('EXECUTION_PHASE', 'complete')
-    result.addInstruction('Synthesize the collected data into a comprehensive project summary')
-    result.addInstruction('Adapt the report style based on the AUDIENCE parameter')
-    result.addInstruction('Highlight key insights and actionable recommendations')
+    
+    // Core analysis instructions based on mathematical facts
+    result.addInstruction('Analyze project health using mathematical ratios: ISSUE_OPEN_CLOSE_RATIO, PR_MERGE_SUCCESS_RATE, and resolution time metrics')
+    result.addInstruction('Evaluate development velocity using COMMITS_PER_DAY, COMMIT_GROWTH_RATE, and daily activity patterns from the provided facts')
+    result.addInstruction('Assess project sustainability using CONTRIBUTOR_CONCENTRATION, CROSS_ACTIVITY_CONTRIBUTOR_RATIO, and contributor distribution metrics')
+    result.addInstruction('Determine maintenance quality using DAYS_SINCE_LAST_PUSH, AVERAGE_RESOLUTION_TIME_DAYS, and MEDIAN_MERGE_TIME_DAYS')
+    result.addInstruction('Identify trends using growth rate calculations and time-based activity patterns from the mathematical data')
+    
+    // Risk assessment instructions
+    result.addInstruction('Identify potential risks using contributor concentration ratios and declining activity trends')
+    result.addInstruction('Assess bus factor risk using TOP_CONTRIBUTOR_PERCENTAGE and CONTRIBUTOR_GINI_COEFFICIENT')
+    result.addInstruction('Evaluate technical debt indicators through PR_SIZE metrics and increasing resolution times')
+    
+    // Audience-specific formatting instructions
+    result.addInstruction('Adapt analysis depth based on OUTPUT_FORMAT: technical=detailed metrics, executive=business impact, comprehensive=full analysis')
+    result.addInstruction('For technical audiences: include specific ratio values, percentiles, and statistical measures')
+    result.addInstruction('For executive audiences: translate mathematical insights into business impact and strategic implications')
+    result.addInstruction('For comprehensive reports: provide both technical details and business context')
+    
+    // Output structure guidance
+    result.addInstruction('Structure analysis with clear sections: Project Overview, Activity Analysis, Health Assessment, Sustainability Review, Risk Factors, Recommendations')
+    result.addInstruction('Support all conclusions with specific mathematical facts and ratios from the provided data')
+    result.addInstruction('Provide actionable recommendations based on quantitative thresholds and trend analysis')
+    result.addInstruction('Include confidence indicators based on data completeness and analysis period length')
+    
+    // Data interpretation guidance
+    result.addInstruction('Base all quality assessments on numerical thresholds: PR merge rates >80% indicate good process, resolution times <7 days suggest active maintenance')
+    result.addInstruction('Use statistical measures (mean, median, percentiles) to provide context for outliers and distribution patterns')
+    result.addInstruction('Reference raw namespace for authoritative API data, calculated namespace for mathematical insights')
     
     return result
     

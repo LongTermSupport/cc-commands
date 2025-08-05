@@ -57,6 +57,21 @@ As you work through the plan:
 * ALWAYS - stick to editing/updating a single plan file. Do not make new plan files related to the same plan, eg blah-blah-"updated".md 
   * UNLESS - you have been specifically asked to make a new plan
 
+## Plan Archiving
+
+**Manual Process Only** - Plans are never automatically archived.
+
+When a user requests plan archiving:
+
+1. **Verification Required**: Check that the plan shows "ALL DONE!" status in the Progress section
+2. **Alert if Incomplete**: If plan is not complete, alert the user and do not archive
+3. **User Confirmation**: Only archive when user explicitly requests or confirms archiving
+4. **Archive Process**: 
+   * Move completed plan from `CLAUDE/plan/` to `CLAUDE/plan/archive/`
+   * Prepend the completion date to filename in YYYY-MM-DD format
+   * Example: `task-name.md` becomes `archive/2025-01-29-task-name.md`
+5. **Propose Only**: May suggest archiving completed plans, but never do it automatically
+
 ## Notes
 
 The progress section of the plan must be kept up to date as things are updated.

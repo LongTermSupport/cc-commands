@@ -407,6 +407,15 @@ export class RepositoryDataDTO implements ILLMDataDTO {
   }
 
   /**
+   * Get community engagement count (mathematical fact)
+   * 
+   * @returns Total engagement count (stars + forks + watchers)
+   */
+  getCommunityEngagementCount(): number {
+    return this.stargazersCount + this.forksCount + this.watchersCount
+  }
+
+  /**
    * Get days since last push
    * 
    * @returns Number of days since last push, or null if never pushed
@@ -511,6 +520,18 @@ export class RepositoryDataDTO implements ILLMDataDTO {
   }
 
   /**
+   * Get maintenance activity timing (mathematical facts)
+   * 
+   * @returns Object with timing measurements for maintenance assessment
+   */
+  getMaintenanceTimingFacts(): { daysSinceLastPush: null | number; daysSinceUpdate: number } {
+    return {
+      daysSinceLastPush: this.getDaysSinceLastPush(),
+      daysSinceUpdate: this.getDaysSinceUpdate()
+    }
+  }
+
+  /**
    * Get a human-readable summary of the repository
    * 
    * @returns Brief repository description for logging/debugging
@@ -519,28 +540,6 @@ export class RepositoryDataDTO implements ILLMDataDTO {
     const visibility = this.isPrivate ? 'private' : 'public'
     const language = this.language ? ` (${this.language})` : ''
     return `${this.fullName}${language} - ${visibility}, ${this.stargazersCount} stars, ${this.forksCount} forks`
-  }
-
-  /**
-   * Check if repository has significant community engagement
-   * 
-   * @returns True if repository has good community metrics
-   */
-  hasSignificantEngagement(): boolean {
-    return this.stargazersCount >= 10 || this.forksCount >= 5 || this.watchersCount >= 5
-  }
-
-  /**
-   * Check if repository appears to be actively maintained
-   * 
-   * @returns True if repository shows signs of active maintenance
-   */
-  isActivelyMaintained(): boolean {
-    const daysSinceUpdate = this.getDaysSinceUpdate()
-    const daysSinceLastPush = this.getDaysSinceLastPush()
-    
-    // Active if updated within 90 days or pushed within 30 days
-    return daysSinceUpdate <= 90 || (daysSinceLastPush !== null && daysSinceLastPush <= 30)
   }
 
   /**
@@ -669,6 +668,9 @@ export class RepositoryDataDTO implements ILLMDataDTO {
     const hasDocumentation = this.hasWiki || this.homepage !== null
     
     return {
+      'community_engagement_count': this.getCommunityEngagementCount(),
+      'days_since_last_push': this.getDaysSinceLastPush() ?? 0,
+      'days_since_update': this.getDaysSinceUpdate(),
       'development_maturity_score': Math.round(
         (topicCount * 0.1 + 
          (hasDocumentation ? 0.2 : 0) + 
@@ -677,8 +679,6 @@ export class RepositoryDataDTO implements ILLMDataDTO {
       ) / 100,
       'has_documentation': hasDocumentation,
       'has_multiple_languages': hasMultipleLanguages,
-      'has_significant_engagement': this.hasSignificantEngagement(),
-      'is_active': this.isActivelyMaintained(),
       'is_popular': this.stargazersCount >= 100,
       'language_count': this.languages.length,
       'topic_count': topicCount

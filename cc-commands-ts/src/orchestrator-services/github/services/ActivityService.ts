@@ -185,15 +185,15 @@ export class ActivityService {
     }
 
     try {
-      // Calculate activity score for each repository
+      // Calculate total activity count for each repository (mathematical fact only)
       const repositoryScores = activities.map(activity => ({
         repository: activity.mostActiveRepository || 'unknown/unknown',
-        score: this.calculateRepositoryActivityScore(activity)
+        totalActivity: this.getTotalActivityCount(activity)
       }))
 
-      // Sort by activity score descending and return repository names
+      // Sort by total activity count descending and return repository names
       return repositoryScores
-        .sort((a, b) => b.score - a.score)
+        .sort((a, b) => b.totalActivity - a.totalActivity)
         .map(item => item.repository)
         .filter(repo => repo !== 'unknown/unknown')
 
@@ -202,7 +202,7 @@ export class ActivityService {
         error instanceof Error ? error : new Error(String(error)),
         [
           'Verify activity metrics contain valid repository data',
-          'Check if activity scores can be calculated',
+          'Check if activity counts can be calculated',
           'Ensure all repositories have valid names'
         ],
         { activitiesCount: activities.length }
@@ -264,19 +264,6 @@ export class ActivityService {
     return { earliestStart, latestEnd, totalDays }
   }
 
-
-  /**
-   * Calculate repository activity score for ranking purposes
-   */
-  private calculateRepositoryActivityScore(activity: ActivityMetricsDTO): number {
-    // Score based on multiple activity factors
-    return (
-      activity.commitsCount * 2 +        // Commits weighted highest
-      activity.totalPrsCount * 1.5 +     // PRs weighted high
-      Number(activity.totalIssuesCount) * 1 +    // Issues weighted medium
-      activity.contributorsCount * 3     // Contributors weighted very high
-    )
-  }
 
   /**
    * Collect all unique repositories from activities
@@ -366,7 +353,6 @@ export class ActivityService {
     )
   }
 
-
   /**
    * Find most active repository (by commits)
    */
@@ -379,6 +365,20 @@ export class ActivityService {
     }
 
     return mostActiveRepo
+  }
+
+
+  /**
+   * Get raw activity count for repository ranking (mathematical fact only)
+   */
+  private getTotalActivityCount(activity: ActivityMetricsDTO): number {
+    // Return pure mathematical sum - no weighted scoring
+    return (
+      activity.commitsCount + 
+      activity.totalPrsCount + 
+      Number(activity.totalIssuesCount) + 
+      activity.contributorsCount
+    )
   }
 
   /**

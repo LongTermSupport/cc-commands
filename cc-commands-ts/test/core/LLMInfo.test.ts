@@ -389,13 +389,13 @@ describe('LLMInfo', () => {
         expect(output).toContain('=== EXECUTION SUMMARY ===')
         expect(output).toContain('EXECUTION_STATUS=SUCCESS')
 
-        expect(output).toContain('=== ACTION LOG ===')
-        expect(output).toContain('ACTION_0_EVENT=Setup project')
-        expect(output).toContain('ACTION_0_RESULT=success')
-        expect(output).toContain('ACTION_0_DETAILS=Project configured')
-        expect(output).toContain('ACTION_0_DURATION_MS=500')
-        expect(output).toContain('ACTION_1_EVENT=Deploy code')
-        expect(output).toContain('ACTION_1_RESULT=failed')
+        // NEW: Success output should have brief action summary, not detailed log
+        expect(output).not.toContain('=== ACTION LOG ===')
+        expect(output).not.toContain('ACTION_0_EVENT=Setup project')
+        expect(output).not.toContain('ACTION_0_DETAILS=Project configured')
+        expect(output).not.toContain('ACTION_0_DURATION_MS=500')
+        
+        // But should still have action summary stats
         expect(output).toContain('TOTAL_ACTIONS=2')
         expect(output).toContain('ACTIONS_SUCCEEDED=1')
         expect(output).toContain('ACTIONS_FAILED=1')
@@ -436,6 +436,33 @@ describe('LLMInfo', () => {
         expect(output).not.toContain('=== FILES AFFECTED ===')
         expect(output).not.toContain('=== DATA ===')
         expect(output).not.toContain('=== INSTRUCTIONS FOR LLM ===')
+      })
+
+      it('should exclude verbose action log in success output', () => {
+        // RED: This test expects the new behavior - action log should be minimal in success
+        llmInfo.addData('PROJECT_ID', '123')
+        llmInfo.addAction('Setup project', 'success', 'Project configured', 500)
+        llmInfo.addAction('Deploy code', 'success', 'Deployment complete', 2000)
+        llmInfo.addAction('Run tests', 'success', 'All tests passed', 1500)
+
+        const output = llmInfo.toString()
+
+        // Should still have execution summary and data
+        expect(output).toContain('=== EXECUTION SUMMARY ===')
+        expect(output).toContain('EXECUTION_STATUS=SUCCESS')
+        expect(output).toContain('=== DATA ===')
+        expect(output).toContain('PROJECT_ID=123')
+
+        // Should NOT have verbose action log details in success output
+        expect(output).not.toContain('=== ACTION LOG ===')
+        expect(output).not.toContain('ACTION_0_EVENT=Setup project')
+        expect(output).not.toContain('ACTION_0_DETAILS=Project configured')
+        expect(output).not.toContain('ACTION_0_DURATION_MS=500')
+
+        // Should have brief summary instead
+        expect(output).toContain('TOTAL_ACTIONS=3')
+        expect(output).toContain('ACTIONS_SUCCEEDED=3')
+        expect(output).toContain('ACTIONS_FAILED=0')
       })
     })
 
