@@ -11,6 +11,16 @@ import { PullRequestDataDTO } from '../dto/PullRequestDataDTO.js'
 import { RepositoryDataDTO } from '../dto/RepositoryDataDTO.js'
 
 /**
+ * Rate limit information from GitHub API
+ */
+export interface GitHubRateLimit {
+  readonly limit: number
+  readonly remaining: number
+  readonly reset: number
+  readonly used: number
+}
+
+/**
  * Interface for GitHub REST API service operations
  * 
  * This interface defines the contract for accessing GitHub data via REST API.
@@ -33,6 +43,14 @@ export interface IGitHubRestApiService {
    * @throws {OrchestratorError} When authentication fails or API is unavailable
    */
   getAuthenticatedUser(): Promise<string>
+
+  /**
+   * Get current rate limit status
+   * 
+   * @returns Current rate limit information
+   * @throws {OrchestratorError} When rate limit check fails
+   */
+  getRateLimit(): Promise<GitHubRateLimit>
 
   /**
    * Get repository data

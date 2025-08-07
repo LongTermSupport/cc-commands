@@ -6,6 +6,8 @@
  * methods, calculated metrics, and edge cases.
  */
 
+/* eslint-disable max-nested-callbacks */
+
 import { describe, expect, it } from 'vitest'
 
 import { ProjectSummaryDTO } from '../../../../src/orchestrator-services/github/dto/ProjectSummaryDTO'

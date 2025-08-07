@@ -5,6 +5,8 @@
  * toLLMData method, factory methods, utility methods, and edge cases.
  */
 
+/* eslint-disable max-nested-callbacks */
+
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { RepositoryDataDTO } from '../../../../src/orchestrator-services/github/dto/RepositoryDataDTO'

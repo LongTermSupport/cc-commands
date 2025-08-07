@@ -15,6 +15,7 @@ import { CommitDataDTO } from '../dto/CommitDataDTO.js'
 import { IssueDataDTO } from '../dto/IssueDataDTO.js'
 import { PullRequestDataDTO } from '../dto/PullRequestDataDTO.js'
 import { RepositoryDataDTO } from '../dto/RepositoryDataDTO.js'
+import { GitHubRateLimit } from '../interfaces/IGitHubRestApiService.js'
 import { GitHubIssueResponse, GitHubPullRequestResponse, GitHubRepositoryResponse } from '../types/GitHubApiTypes.js'
 import { isGitHubLabel, isGitHubUser } from '../utils/TypeGuards.js'
 
@@ -62,6 +63,30 @@ export class GitHubRestApiService {
       throw new OrchestratorError(
         error instanceof Error ? error : new Error(String(error)),
         ['Check GitHub token is valid', 'Verify token has required permissions', 'Check network connectivity']
+      )
+    }
+  }
+
+  /**
+   * Get current rate limit status
+   * 
+   * @returns Current rate limit information
+   * @throws {OrchestratorError} When rate limit check fails
+   */
+  async getRateLimit(): Promise<GitHubRateLimit> {
+    try {
+      const { data } = await this.octokit.rest.rateLimit.get()
+      return {
+        limit: data.rate.limit,
+        remaining: data.rate.remaining,
+        reset: data.rate.reset,
+        used: data.rate.used
+      }
+    } catch (error) {
+      throw new OrchestratorError(
+        error instanceof Error ? error : new Error(String(error)),
+        ['Check GitHub token permissions', 'Verify network connectivity'],
+        {}
       )
     }
   }
