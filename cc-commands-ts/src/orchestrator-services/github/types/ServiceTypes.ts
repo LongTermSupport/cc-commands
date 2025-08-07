@@ -7,6 +7,7 @@
 
 import { IActivityService } from '../interfaces/IActivityService.js'
 import { IAuthService } from '../interfaces/IAuthService.js'
+import { IComprehensiveDataCollectionService, IRateLimitService } from '../interfaces/IComprehensiveDataCollectionService.js'
 import { IGitHubGraphQLService } from '../interfaces/IGitHubGraphQLService.js'
 import { IGitHubRestApiService } from '../interfaces/IGitHubRestApiService.js'
 import { IProjectService } from '../interfaces/IProjectService.js'
@@ -31,11 +32,17 @@ export type TGitHubServices = {
   /** GitHub authentication management service */
   authService: IAuthService
   
+  /** Comprehensive data collection service for complete GitHub project data */
+  comprehensiveDataCollectionService: IComprehensiveDataCollectionService
+  
   /** GitHub GraphQL service for Projects v2 data */
   graphqlService: IGitHubGraphQLService
   
   /** High-level project operations service */
   projectService: IProjectService
+  
+  /** GitHub API rate limit monitoring and management service */
+  rateLimitService: IRateLimitService
   
   /** Repository data operations service */
   repositoryService: IRepositoryService

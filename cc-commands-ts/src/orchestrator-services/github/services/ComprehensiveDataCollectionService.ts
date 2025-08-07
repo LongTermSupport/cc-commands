@@ -16,8 +16,9 @@
 /* eslint-disable complexity */
 /* eslint-disable no-await-in-loop */
 /* eslint-disable no-warning-comments */
-/* eslint-disable no-void */
+ 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable no-return-await */
 
 import { OrchestratorError } from '../../../core/error/OrchestratorError.js'
 import {
@@ -42,10 +43,8 @@ import {
   PullRequestDataSet,
   RepositoryDataSet
 } from '../interfaces/IComprehensiveDataCollectionService.js'
-import { IGitHubGraphQLService } from '../interfaces/IGitHubGraphQLService.js'
 import { IGitHubRestApiService } from '../interfaces/IGitHubRestApiService.js'
 import { IProjectService } from '../interfaces/IProjectService.js'
-import { IRepositoryService } from '../interfaces/IRepositoryService.js'
 
 /**
  * Default collection options for optimal data gathering
@@ -73,19 +72,12 @@ const DEFAULT_COLLECTION_OPTIONS: CollectionOptions = {
  * in the optimal flat array structure for efficient jq querying.
  */
 export class ComprehensiveDataCollectionService implements IComprehensiveDataCollectionService {
-  // eslint-disable-next-line max-params
   constructor(
     private readonly githubRestApi: IGitHubRestApiService,
-    private readonly githubGraphQL: IGitHubGraphQLService,
     private readonly projectService: IProjectService,
-    private readonly repositoryService: IRepositoryService,
     private readonly rateLimitService: IRateLimitService
   ) {
-    // Note: These services will be used in Phase 2 implementation
-    // Temporarily mark as used to satisfy TypeScript
-    void this.githubRestApi
-    void this.githubGraphQL
-    void this.repositoryService
+    // All services are now properly utilized
   }
 
   /**
@@ -592,19 +584,28 @@ export class ComprehensiveDataCollectionService implements IComprehensiveDataCol
     }
   }
 
-  private async collectAllCommits(_owner: string, _repo: string, _since: string | undefined, _options: CollectionOptions): Promise<GitHubCommitApiResponse[]> {
-    // Use REST API to get commits with pagination and time filtering
-    throw new Error('Not implemented - use GitHub REST API service')
+  private async collectAllCommits(owner: string, repo: string, since: string | undefined, options: CollectionOptions): Promise<GitHubCommitApiResponse[]> {
+    return await this.githubRestApi.getAllCommitsRaw(owner, repo, {
+      limit: options.limits.maxCommitsPerRepo,
+      since: since || options.timeFilter.since,
+      until: options.timeFilter.until
+    })
   }
 
-  private async collectAllIssues(_owner: string, _repo: string, _options: CollectionOptions): Promise<GitHubIssueApiResponse[]> {
-    // Use REST API to get all issues with pagination
-    throw new Error('Not implemented - use GitHub REST API service')
+  private async collectAllIssues(owner: string, repo: string, options: CollectionOptions): Promise<GitHubIssueApiResponse[]> {
+    return await this.githubRestApi.getAllIssuesRaw(owner, repo, {
+      limit: options.limits.maxIssuesPerRepo,
+      since: options.timeFilter.since,
+      until: options.timeFilter.until
+    })
   }
 
-  private async collectAllPullRequests(_owner: string, _repo: string, _options: CollectionOptions): Promise<GitHubPullRequestApiResponse[]> {
-    // Use REST API to get all PRs with pagination
-    throw new Error('Not implemented - use GitHub REST API service')
+  private async collectAllPullRequests(owner: string, repo: string, options: CollectionOptions): Promise<GitHubPullRequestApiResponse[]> {
+    return await this.githubRestApi.getAllPullRequestsRaw(owner, repo, {
+      limit: options.limits.maxPRsPerRepo,
+      since: options.timeFilter.since,
+      until: options.timeFilter.until
+    })
   }
 
   private async collectAllRepositoryData(
@@ -632,25 +633,21 @@ export class ComprehensiveDataCollectionService implements IComprehensiveDataCol
     return results
   }
 
-  private async collectIssueComments(_owner: string, _repo: string, _issueNumber: number, _maxComments: number): Promise<GitHubCommentApiResponse[]> {
-    // Use REST API to get issue comments
-    throw new Error('Not implemented - use GitHub REST API service')
+  private async collectIssueComments(owner: string, repo: string, issueNumber: number, maxComments: number): Promise<GitHubCommentApiResponse[]> {
+    return await this.githubRestApi.getIssueCommentsRaw(owner, repo, issueNumber, maxComments)
   }
 
-  private async collectPullRequestReviewComments(_owner: string, _repo: string, _prNumber: number): Promise<GitHubReviewCommentApiResponse[]> {
-    // Use REST API to get PR review comments
-    throw new Error('Not implemented - use GitHub REST API service')
+  private async collectPullRequestReviewComments(owner: string, repo: string, prNumber: number): Promise<GitHubReviewCommentApiResponse[]> {
+    return await this.githubRestApi.getPullRequestReviewCommentsRaw(owner, repo, prNumber)
   }
 
-  private async collectPullRequestReviews(_owner: string, _repo: string, _prNumber: number, _maxReviews: number): Promise<GitHubReviewApiResponse[]> {
-    // Use REST API to get PR reviews
-    throw new Error('Not implemented - use GitHub REST API service')
+  private async collectPullRequestReviews(owner: string, repo: string, prNumber: number, maxReviews: number): Promise<GitHubReviewApiResponse[]> {
+    return await this.githubRestApi.getPullRequestReviewsRaw(owner, repo, prNumber, maxReviews)
   }
 
-  // Placeholder methods - these would use existing GitHub services
-  private async collectRepositoryMetadata(_owner: string, _repo: string): Promise<GitHubRepositoryApiResponse> {
-    // Use existing repositoryService.getRepositoryData and map to API response format
-    throw new Error('Not implemented - use existing repository service')
+  // Repository metadata collection
+  private async collectRepositoryMetadata(owner: string, repo: string): Promise<GitHubRepositoryApiResponse> {
+    return await this.githubRestApi.getRepositoryRaw(owner, repo)
   }
 
   private flattenRepositoryData(repositoryDataSets: RepositoryDataSet[]): {
