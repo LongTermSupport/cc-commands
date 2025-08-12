@@ -71,6 +71,44 @@ export default [
     }
   },
   {
+    // Environment domain DTOs - allow snake_case for JSON data structures
+    files: [
+      'src/orchestrator-services/environment/dto/*.ts',
+      'src/orchestrator-services/environment/services/*.ts'
+    ],
+    rules: {
+      'camelcase': 'off' // JSON data structures use snake_case for consistency with API responses
+    }
+  },
+  {
+    // Argument parsing DTOs - allow snake_case for JSON data structures
+    files: [
+      'src/orchestrator-services/argument-parsing/dto/*.ts',
+      'src/orchestrator-services/argument-parsing/services/*.ts'
+    ],
+    rules: {
+      'camelcase': 'off' // JSON data structures use snake_case for consistency with external data formats
+    }
+  },
+  {
+    // Filesystem DTOs - allow snake_case for JSON data structures
+    files: [
+      'src/orchestrator-services/filesystem/dto/*.ts'
+    ],
+    rules: {
+      'camelcase': 'off' // JSON data structures use snake_case for consistency with external data formats
+    }
+  },
+  {
+    // File operations interface - allow BufferEncoding global type
+    files: [
+      'src/orchestrator-services/filesystem/interfaces/IFileOperationsService.ts'
+    ],
+    rules: {
+      'no-undef': 'off' // BufferEncoding is a global Node.js type
+    }
+  },
+  {
     // Test files - enforce type-safe mocking patterns and relax some rules for mock data
     files: ['test/**/*.ts', 'test/**/*.js', '**/*.test.ts', '**/*.spec.ts'],
     rules: {

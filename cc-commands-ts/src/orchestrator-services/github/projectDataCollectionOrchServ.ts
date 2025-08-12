@@ -15,6 +15,15 @@ import { IProjectDataCollectionArgs } from './types/ArgumentTypes.js'
 import { TGitHubServices } from './types/ServiceTypes.js'
 
 /**
+ * Minimal GitHub repository interface for API response handling
+ */
+interface GitHubRepositoryMinimal {
+  forks_count?: number
+  language?: null | string
+  stargazers_count?: number
+}
+
+/**
  * Project Data Collection Orchestrator Service
  * 
  * This orchestrator service coordinates the collection of comprehensive
@@ -107,16 +116,16 @@ export const projectDataCollectionOrchServ = async (
     const comprehensiveResult = await services.comprehensiveDataCollectionService.collectCompleteProjectData(
       args.projectNodeId,
       {
+        includeComments: true,
+        includeCommits: true,
         includeIssues: true,
         includePullRequests: true,
-        includeCommits: true,
-        includeComments: true,
         includeReviews: true,
         limits: {
+          maxCommentsPerIssue: 50,
+          maxCommitsPerRepo: 1000,
           maxIssuesPerRepo: 500,
           maxPRsPerRepo: 200,
-          maxCommitsPerRepo: 1000,
-          maxCommentsPerIssue: 50,
           maxReviewsPerPR: 20
         },
         timeFilter: {
@@ -135,38 +144,39 @@ export const projectDataCollectionOrchServ = async (
     
     // Add comprehensive collection metadata to result
     result.addDataBulk({
-      COLLECTION_TYPE: 'comprehensive',
+      AUTHORS_INDEXED: Object.keys(comprehensiveResult.indexes.items_by_author).length,
       COLLECTION_COMPLETED_AT: comprehensiveResult.metadata.collection.collection_completed_at,
       COLLECTION_DURATION_MS: comprehensiveResult.metadata.execution.execution_time_ms,
-      TOTAL_REPOSITORIES: comprehensiveResult.raw.repositories.length,
-      TOTAL_ISSUES: comprehensiveResult.raw.issues.length,
-      TOTAL_PULL_REQUESTS: comprehensiveResult.raw.pull_requests.length,
-      TOTAL_COMMITS: comprehensiveResult.raw.commits.length,
-      TOTAL_ISSUE_COMMENTS: comprehensiveResult.raw.issue_comments.length,
-      TOTAL_PR_REVIEWS: comprehensiveResult.raw.pr_reviews.length,
-      TOTAL_PR_REVIEW_COMMENTS: comprehensiveResult.raw.pr_review_comments.length,
-      
-      // Index information for query performance
-      REPOSITORIES_INDEXED: Object.keys(comprehensiveResult.indexes.issues_by_repo).length,
-      AUTHORS_INDEXED: Object.keys(comprehensiveResult.indexes.items_by_author).length,
+      COLLECTION_TYPE: 'comprehensive',
       LABELS_INDEXED: Object.keys(comprehensiveResult.indexes.items_by_label).length,
-      
+      RATE_LIMIT_REMAINING: comprehensiveResult.metadata.api_usage.github_rest_api.remaining,
       // Rate limit usage
       RATE_LIMIT_USED: comprehensiveResult.metadata.api_usage.github_rest_api.calls_made,
-      RATE_LIMIT_REMAINING: comprehensiveResult.metadata.api_usage.github_rest_api.remaining
+      // Index information for query performance
+      REPOSITORIES_INDEXED: Object.keys(comprehensiveResult.indexes.issues_by_repo).length,
+      TOTAL_COMMITS: comprehensiveResult.raw.commits.length,
+      TOTAL_ISSUE_COMMENTS: comprehensiveResult.raw.issue_comments.length,
+      
+      TOTAL_ISSUES: comprehensiveResult.raw.issues.length,
+      TOTAL_PR_REVIEW_COMMENTS: comprehensiveResult.raw.pr_review_comments.length,
+      TOTAL_PR_REVIEWS: comprehensiveResult.raw.pr_reviews.length,
+      
+      TOTAL_PULL_REQUESTS: comprehensiveResult.raw.pull_requests.length,
+      TOTAL_REPOSITORIES: comprehensiveResult.raw.repositories.length
     })
     
     // Calculate summary statistics from comprehensive data
-    const totalStars = comprehensiveResult.raw.repositories.reduce(
-      (sum: number, repo: any) => sum + (repo.stargazers_count || 0), 0
+    const repoData = comprehensiveResult.raw.repositories as unknown as GitHubRepositoryMinimal[]
+    const totalStars = repoData.reduce(
+      (sum: number, repo: GitHubRepositoryMinimal) => sum + (repo.stargazers_count || 0), 0
     )
-    const totalForks = comprehensiveResult.raw.repositories.reduce(
-      (sum: number, repo: any) => sum + (repo.forks_count || 0), 0
+    const totalForks = repoData.reduce(
+      (sum: number, repo: GitHubRepositoryMinimal) => sum + (repo.forks_count || 0), 0
     )
     const languages = [...new Set(
-      comprehensiveResult.raw.repositories
-        .map((repo: any) => repo.language)
-        .filter((lang: any) => lang !== null && lang !== undefined)
+      repoData
+        .map((repo: GitHubRepositoryMinimal) => repo.language)
+        .filter((lang: null | string | undefined) => lang !== null && lang !== undefined)
     )]
     
     result.addData('TOTAL_STARS', String(totalStars))
@@ -192,21 +202,7 @@ export const projectDataCollectionOrchServ = async (
         // Required: calculated namespace
         calculated: comprehensiveResult.metrics || {},
         
-        // Required: metadata in expected format
-        metadata: {
-          arguments: args.projectNodeId,
-          command: 'g-gh-project-summary',
-          // eslint-disable-next-line camelcase
-          execution_time_ms: executionEndTime.getTime() - executionStartTime.getTime(),
-          // eslint-disable-next-line camelcase
-          generated_at: executionEndTime.toISOString()
-        },
-        
-        // Required: raw namespace - use comprehensive raw data
-        raw: comprehensiveResult.raw,
-        
-        // Additional data: indexes and comprehensive metadata
-        indexes: comprehensiveResult.indexes,
+        /* eslint-disable camelcase */
         comprehensive_metadata: {
           api_usage: comprehensiveResult.metadata.api_usage,
           collection: comprehensiveResult.metadata.collection,
@@ -224,7 +220,23 @@ export const projectDataCollectionOrchServ = async (
             url: projectData.url,
             visibility: projectData.visibility
           }
-        }
+        },
+        /* eslint-enable camelcase */
+        
+        // Additional data: indexes and comprehensive metadata
+        indexes: comprehensiveResult.indexes,
+        
+        // Required: metadata in expected format
+        metadata: {
+          arguments: args.projectNodeId,
+          command: 'g-gh-project-summary',
+          // eslint-disable-next-line camelcase
+          execution_time_ms: executionEndTime.getTime() - executionStartTime.getTime(),
+          // eslint-disable-next-line camelcase
+          generated_at: executionEndTime.toISOString()
+        },
+        // Required: raw namespace - use comprehensive raw data
+        raw: comprehensiveResult.raw
       }
       
       // Write compressed JSON file
@@ -238,31 +250,31 @@ export const projectDataCollectionOrchServ = async (
       // Add comprehensive jq hints optimized for flat array structure
       const comprehensiveHints = [
         // Repository queries
-        { query: '.raw.repositories[] | select(.name == "repo-name")', description: 'Find specific repository' },
-        { query: '.raw.repositories | map(.language) | unique', description: 'List all programming languages' },
-        { query: '.raw.repositories | sort_by(.stargazers_count) | reverse', description: 'Repositories by stars' },
+        { description: 'Find specific repository', query: '.raw.repositories[] | select(.name == "repo-name")' },
+        { description: 'List all programming languages', query: '.raw.repositories | map(.language) | unique' },
+        { description: 'Repositories by stars', query: '.raw.repositories | sort_by(.stargazers_count) | reverse' },
         
         // Issue queries with flat array performance
-        { query: '.raw.issues[] | select(.repository_name == "repo-name")', description: 'Issues for specific repository' },
-        { query: '.raw.issues | map(select(.state == "open")) | length', description: 'Count open issues' },
-        { query: '.raw.issues | group_by(.repository_name) | map({repo: .[0].repository_name, count: length})', description: 'Issues per repository' },
+        { description: 'Issues for specific repository', query: '.raw.issues[] | select(.repository_name == "repo-name")' },
+        { description: 'Count open issues', query: '.raw.issues | map(select(.state == "open")) | length' },
+        { description: 'Issues per repository', query: '.raw.issues | group_by(.repository_name) | map({repo: .[0].repository_name, count: length})' },
         
         // PR queries with flat array performance
-        { query: '.raw.pull_requests[] | select(.repository_name == "repo-name")', description: 'PRs for specific repository' },
-        { query: '.raw.pull_requests | map(select(.merged_at != null)) | length', description: 'Count merged PRs' },
-        { query: '.raw.pull_requests | group_by(.user.login) | map({author: .[0].user.login, count: length})', description: 'PRs per author' },
+        { description: 'PRs for specific repository', query: '.raw.pull_requests[] | select(.repository_name == "repo-name")' },
+        { description: 'Count merged PRs', query: '.raw.pull_requests | map(select(.merged_at != null)) | length' },
+        { description: 'PRs per author', query: '.raw.pull_requests | group_by(.user.login) | map({author: .[0].user.login, count: length})' },
         
         // Commit queries with flat array performance
-        { query: '.raw.commits[] | select(.repository_name == "repo-name")', description: 'Commits for specific repository' },
-        { query: '.raw.commits | group_by(.commit.author.email) | map({author: .[0].commit.author.email, count: length}) | sort_by(.count) | reverse', description: 'Commits per author' },
+        { description: 'Commits for specific repository', query: '.raw.commits[] | select(.repository_name == "repo-name")' },
+        { description: 'Commits per author', query: '.raw.commits | group_by(.commit.author.email) | map({author: .[0].commit.author.email, count: length}) | sort_by(.count) | reverse' },
         
         // Cross-item relationship queries using repository_name field
-        { query: '.raw | {issues: (.issues | group_by(.repository_name)), prs: (.pull_requests | group_by(.repository_name))} | to_entries | map({repo: .key, issues: .value.issues | length, prs: .value.prs | length})', description: 'Activity summary per repository' },
+        { description: 'Activity summary per repository', query: '.raw | {issues: (.issues | group_by(.repository_name)), prs: (.pull_requests | group_by(.repository_name))} | to_entries | map({repo: .key, issues: .value.issues | length, prs: .value.prs | length})' },
         
         // Pre-computed index queries for instant performance
-        { query: '.indexes.issues_by_repo', description: 'Issues grouped by repository (instant)' },
-        { query: '.indexes.items_by_author', description: 'All items grouped by author (instant)' },
-        { query: '.indexes.items_by_label', description: 'All items grouped by label (instant)' }
+        { description: 'Issues grouped by repository (instant)', query: '.indexes.issues_by_repo' },
+        { description: 'All items grouped by author (instant)', query: '.indexes.items_by_author' },
+        { description: 'All items grouped by label (instant)', query: '.indexes.items_by_label' }
       ]
       
       for (const hint of comprehensiveHints) {
