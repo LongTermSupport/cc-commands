@@ -5,7 +5,7 @@
  * toLLMData method, toJsonData method, factory methods, and utility methods.
  */
 
-/* eslint-disable max-nested-callbacks */
+ 
 
 import { beforeEach, describe, expect, it } from 'vitest'
 

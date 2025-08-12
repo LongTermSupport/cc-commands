@@ -141,7 +141,7 @@ describe('ArgumentValidationService', () => {
       const validBooleans = ['true', 'false', '1', '0', 'yes', 'no', 'TRUE', 'FALSE']
       
       for (const value of validBooleans) {
-        // eslint-disable-next-line no-await-in-loop
+         
         const isValid = await service.validateArgumentFormat('bool', value, ARGUMENT_FORMATS.BOOLEAN)
         expect(isValid).toBe(true)
       }
@@ -181,7 +181,7 @@ describe('ArgumentValidationService', () => {
       const validLevels = ['low', 'medium', 'high', 'LOW', 'MEDIUM', 'HIGH']
       
       for (const level of validLevels) {
-        // eslint-disable-next-line no-await-in-loop
+         
         const isValid = await service.validateArgumentFormat('perm', level, ARGUMENT_FORMATS.PERMISSION_LEVEL)
         expect(isValid).toBe(true)
       }

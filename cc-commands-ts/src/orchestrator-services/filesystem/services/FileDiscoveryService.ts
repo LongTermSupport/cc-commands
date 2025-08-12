@@ -8,7 +8,7 @@
 
 import { glob } from 'glob'
 import { promises as fs } from 'node:fs'
-import * as path from 'node:path'
+import { join, parse, resolve } from 'node:path'
 
 import { DirectoryStructureDTO } from '../dto/DirectoryStructureDTO.js'
 import { FileDiscoveryResultDTO } from '../dto/FileDiscoveryResultDTO.js'
@@ -54,7 +54,7 @@ export class FileDiscoveryService implements IFileDiscoveryService {
       const entries = await fs.readdir(directory, { withFileTypes: true })
       
       for (const entry of entries) {
-        const fullPath = path.join(directory, entry.name)
+        const fullPath = join(directory, entry.name)
         
         if (entry.isFile()) {
           fileCount++
@@ -87,14 +87,14 @@ export class FileDiscoveryService implements IFileDiscoveryService {
    */
   async findFiles(pattern: string, directory = '.'): Promise<FileDiscoveryResultDTO> {
     const startTime = Date.now()
-    const searchDirectory = path.resolve(directory)
+    const searchDirectory = resolve(directory)
     
     try {
       if (!(await this.fileOperations.pathExists(searchDirectory))) {
         throw FileOperationError.directoryNotFound(searchDirectory)
       }
       
-      const searchPattern = path.join(searchDirectory, pattern)
+      const searchPattern = join(searchDirectory, pattern)
       const matches = await glob(searchPattern, { 
         dot: false, // Don't include hidden files by default
         ignore: ['**/node_modules/**', '**/.git/**'] // Common excludes
@@ -126,7 +126,7 @@ export class FileDiscoveryService implements IFileDiscoveryService {
    * Find files by file extensions
    */
   async findFilesByExtension(extensions: string[], directory = '.'): Promise<FileDiscoveryResultDTO> {
-    const searchDirectory = path.resolve(directory)
+    const searchDirectory = resolve(directory)
     
     try {
       // Create glob pattern for extensions
@@ -149,7 +149,7 @@ export class FileDiscoveryService implements IFileDiscoveryService {
     until?: Date
   ): Promise<FileDiscoveryResultDTO> {
     const startTime = Date.now()
-    const searchDirectory = path.resolve(directory)
+    const searchDirectory = resolve(directory)
     
     try {
       // First find all files
@@ -187,7 +187,7 @@ export class FileDiscoveryService implements IFileDiscoveryService {
     pattern = '**/*'
   ): Promise<FileDiscoveryResultDTO> {
     const startTime = Date.now()
-    const searchDirectory = path.resolve(directory)
+    const searchDirectory = resolve(directory)
     
     try {
       // First find all matching files
@@ -219,7 +219,7 @@ export class FileDiscoveryService implements IFileDiscoveryService {
     options: TDirectoryScanOptions = {}
   ): Promise<DirectoryStructureDTO> {
     const startTime = Date.now()
-    const rootPath = path.resolve(dirPath)
+    const rootPath = resolve(dirPath)
     
     try {
       if (!(await this.fileOperations.pathExists(rootPath))) {
@@ -269,7 +269,7 @@ export class FileDiscoveryService implements IFileDiscoveryService {
    * Get detailed metadata for a specific file
    */
   async getFileMetadata(filePath: string): Promise<FileMetadataDTO> {
-    const resolvedPath = path.resolve(filePath)
+    const resolvedPath = resolve(filePath)
     
     try {
       if (!(await this.fileOperations.pathExists(resolvedPath))) {
@@ -277,7 +277,7 @@ export class FileDiscoveryService implements IFileDiscoveryService {
       }
       
       const stat = await fs.stat(resolvedPath)
-      const parsedPath = path.parse(resolvedPath)
+      const parsedPath = parse(resolvedPath)
       
       return new FileMetadataDTO(
         resolvedPath,
@@ -327,7 +327,7 @@ export class FileDiscoveryService implements IFileDiscoveryService {
     } = options
     
     const startTime = Date.now()
-    const searchDirectory = path.resolve(directory)
+    const searchDirectory = resolve(directory)
     
     try {
       let searchPattern = pattern
@@ -340,7 +340,7 @@ export class FileDiscoveryService implements IFileDiscoveryService {
         searchPattern = extPattern
       }
       
-      const fullPattern = path.join(searchDirectory, searchPattern)
+      const fullPattern = join(searchDirectory, searchPattern)
       const ignorePatterns = [
         ...excludePatterns,
         '**/node_modules/**',
@@ -396,11 +396,16 @@ export class FileDiscoveryService implements IFileDiscoveryService {
    * @returns Formatted permissions string (e.g., 'rwxr-xr-x')
    */
   private formatPermissions(mode: number): string {
+    // eslint-disable-next-line no-bitwise
     const perms = mode & 0o777
+    // eslint-disable-next-line no-bitwise
     const owner = (perms >> 6) & 7
+    // eslint-disable-next-line no-bitwise
     const group = (perms >> 3) & 7
+    // eslint-disable-next-line no-bitwise
     const other = perms & 7
     
+    // eslint-disable-next-line no-bitwise
     const toRwx = (n: number): string => (n & 4 ? 'r' : '-') + (n & 2 ? 'w' : '-') + (n & 1 ? 'x' : '-')
     
     return toRwx(owner) + toRwx(group) + toRwx(other)
@@ -437,7 +442,7 @@ export class FileDiscoveryService implements IFileDiscoveryService {
       const results: TDirectoryEntry[] = []
       
       for (const entry of entries) {
-        const fullPath = path.join(dirPath, entry.name)
+        const fullPath = join(dirPath, entry.name)
         
         // Handle symlinks
         if (entry.isSymbolicLink() && !options.followSymlinks) {

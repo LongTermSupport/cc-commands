@@ -288,7 +288,6 @@ export class DocumentationService implements IDocumentationService {
     
     for (const filePath of paths) {
       try {
-        // eslint-disable-next-line no-await-in-loop
         const preview = await this.createFilePreview(filePath, previewLines)
         previews.push(preview)
       } catch (error) {
@@ -329,7 +328,6 @@ export class DocumentationService implements IDocumentationService {
       // Get file metadata for all files
       for (const filePath of allPaths) {
         try {
-          // eslint-disable-next-line no-await-in-loop
           const metadata = await this.fileDiscovery.getFileMetadata(filePath)
           totalSize += metadata.size
           
@@ -427,7 +425,6 @@ export class DocumentationService implements IDocumentationService {
       
       for (const filePath of allPaths) {
         try {
-          // eslint-disable-next-line no-await-in-loop
           const content = await this.fileOperations.readFile(filePath)
           const lines = content.split('\n')
           

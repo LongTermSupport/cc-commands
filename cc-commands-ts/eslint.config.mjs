@@ -96,7 +96,18 @@ export default [
       'src/orchestrator-services/filesystem/dto/*.ts'
     ],
     rules: {
-      'camelcase': 'off' // JSON data structures use snake_case for consistency with external data formats
+      'camelcase': 'off', // JSON data structures use snake_case for consistency with external data formats
+      'cc-commands/require-typed-data-access': 'off' // DTOs use bounds-checked array access patterns
+    }
+  },
+  {
+    // Filesystem services - allow await in loops for sequential file operations
+    files: [
+      'src/orchestrator-services/filesystem/services/*.ts'
+    ],
+    rules: {
+      'max-depth': 'off', // File operations often need nested directory traversal
+      'no-await-in-loop': 'off' // Sequential file processing is often necessary
     }
   },
   {
@@ -113,7 +124,9 @@ export default [
     files: ['test/**/*.ts', 'test/**/*.js', '**/*.test.ts', '**/*.spec.ts'],
     rules: {
       'cc-commands/prefer-production-types-in-mocks': 'error', // Enforce production types over any/unknown in mocks
-      'camelcase': 'off' // Allow snake_case in test mocks to match API responses
+      'camelcase': 'off', // Allow snake_case in test mocks to match API responses
+      'max-nested-callbacks': 'off', // Allow deeper nesting in test describe/it blocks
+      'no-await-in-loop': 'off' // Allow await in loops for sequential test scenarios
     }
   }
 ]
