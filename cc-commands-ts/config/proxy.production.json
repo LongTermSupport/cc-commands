@@ -1,0 +1,49 @@
+{
+  "server": {
+    "port": 3001,
+    "host": "127.0.0.1",
+    "timeout": 30000,
+    "keepAliveTimeout": 65000
+  },
+  "cache": {
+    "defaultTtlSeconds": 120,
+    "maxSizeBytes": 104857600,
+    "compressionEnabled": true,
+    "etagSupport": true,
+    "domains": {
+      "api.github.com": {
+        "ttlSeconds": 120,
+        "conditional": true
+      },
+      "github.com": {
+        "ttlSeconds": 300,
+        "conditional": true
+      }
+    }
+  },
+  "rateLimit": {
+    "enabled": true,
+    "globalLimit": 4000,
+    "windowSeconds": 3600,
+    "domains": {
+      "api.github.com": {
+        "requestsPerHour": 4000,
+        "burstAllowance": 100,
+        "safetyMarginPercent": 20
+      }
+    }
+  },
+  "monitoring": {
+    "metricsEnabled": true,
+    "healthCheckEnabled": true,
+    "logLevel": "info",
+    "performanceTracking": true
+  },
+  "proxy": {
+    "userAgent": "cc-commands-ts/production-proxy/1.0.0",
+    "followRedirects": true,
+    "maxRedirects": 5,
+    "validateCerts": true,
+    "requestDeduplication": true
+  }
+}

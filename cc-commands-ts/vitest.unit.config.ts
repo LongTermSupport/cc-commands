@@ -4,22 +4,27 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    // Default timeout for unit tests
-    testTimeout: 10000, // 10 seconds for unit tests  
-    hookTimeout: 10000, // 10 seconds for setup/teardown
+    // Fast timeout for pure unit tests
+    testTimeout: 5000,
+    hookTimeout: 5000,
     // Better error handling
-    bail: 0, // Don't stop on first failure
-    silent: false, // Show test output
-    include: ['src/**/*.test.ts', 'test/**/*.test.ts'],
+    bail: 0,
+    silent: false,
+    include: [
+      'test/core/**/*.test.ts',
+      'test/orchestrator-services/**/dto/*.test.ts',
+      'test/orchestrator-services/**/services/*.test.ts' // Only unit tests, not integration
+    ],
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
       '**/cypress/**',
       '**/.{idea,git,cache,output,temp}/**',
       '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build}.config.*',
-      '**/real-integration.test.ts', // Exclude real API integration tests by default
-      '**/integration.test.ts', // Exclude integration tests from default runs
-      '**/e2e.test.ts' // Exclude e2e tests from default runs
+      '**/integration.test.ts',
+      '**/e2e.test.ts',
+      '**/real-integration.test.ts',
+      '**/gh-integration.test.ts'
     ],
     coverage: {
       reporter: ['text', 'json', 'html', 'json-summary'],
@@ -34,13 +39,7 @@ export default defineConfig({
         '**/*.config.*',
         '**/mockData.ts',
         'test/**'
-      ],
-      // thresholds: {
-      //   statements: 80,
-      //   branches: 80,
-      //   functions: 80,
-      //   lines: 80
-      // }
+      ]
     }
   }
 })

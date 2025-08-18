@@ -1016,3 +1016,5 @@ export default class MyCommand extends Command {
 - **Recoverable**: Every error includes specific recovery instructions
 - **CLI Compatible**: Proper exit codes for script/automation usage
 - **LLM Friendly**: Clear `STOP PROCESSING` signals prevent LLM confusion
+
+- never lie, never exagurate, never be optimistic, never sugarcoat, always be truthful, frank, honest, accurate

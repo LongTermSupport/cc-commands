@@ -6,7 +6,7 @@
  * All operations are read-only.
  */
 
-import { glob } from 'glob'
+import * as glob from 'glob'
 import { promises as fs } from 'node:fs'
 import { join, parse, resolve } from 'node:path'
 
@@ -85,7 +85,15 @@ export class FileDiscoveryService implements IFileDiscoveryService {
   /**
    * Find files matching a glob pattern
    */
-  async findFiles(pattern: string, directory = '.'): Promise<FileDiscoveryResultDTO> {
+  async findFiles(directory: string, pattern: string | string[], options?: TFileSearchOptions): Promise<FileDiscoveryResultDTO> {
+    if (!directory) {
+      throw new Error('Directory path is required')
+    }
+
+    if (!pattern || (Array.isArray(pattern) && pattern.length === 0)) {
+      throw new Error('Search pattern is required')
+    }
+    
     const startTime = Date.now()
     const searchDirectory = resolve(directory)
     
@@ -94,29 +102,122 @@ export class FileDiscoveryService implements IFileDiscoveryService {
         throw FileOperationError.directoryNotFound(searchDirectory)
       }
       
-      const searchPattern = join(searchDirectory, pattern)
-      const matches = await glob(searchPattern, { 
-        dot: false, // Don't include hidden files by default
-        ignore: ['**/node_modules/**', '**/.git/**'] // Common excludes
-      })
-      
-      const files: FileMetadataDTO[] = []
-      
-      for (const match of matches) {
-        if (await this.fileOperations.isFile(match)) {
-          const metadata = await this.getFileMetadata(match)
-          files.push(metadata)
+      // Handle both string patterns and arrays of patterns
+      let searchPattern: string
+      if (Array.isArray(pattern)) {
+        searchPattern = pattern.join(',')
+        // Use glob pattern syntax for multiple patterns
+        let globPattern: string
+        if (pattern.length === 1) {
+          const singlePattern = pattern[0] || '**/*'
+          // Handle patterns that start with **/ (already recursive)
+          globPattern = singlePattern.startsWith('**/') 
+            ? singlePattern
+            : `**/${singlePattern}`
+        } else {
+          // For multiple patterns, create a group pattern
+          const cleanedPatterns = pattern.map(p => p.startsWith('**/') ? p.slice(3) : p)
+          globPattern = `**/{${cleanedPatterns.join(',')}}`
         }
+        
+        let matches: string[]
+        try {
+          // Use glob.glob with callback converted to Promise
+          matches = await new Promise<string[]>((resolve, reject) => {
+            (glob as any)(globPattern, {
+              absolute: true,  // Return absolute paths
+              cwd: searchDirectory,  // Use cwd instead of joining paths
+              dot: options?.includeHidden || false,
+              ignore: ['**/node_modules/**', '**/.git/**', ...(options?.excludePatterns || [])],
+              maxDepth: options?.maxDepth
+            }, (err: any, files: string[]) => {
+              if (err) reject(err)
+              else resolve(files)
+            })
+          })
+        } catch (error) {
+          // Log the actual glob error for debugging
+          console.error('Glob error:', error)
+          throw FileOperationError.readError(searchDirectory, error as Error)
+        }
+        
+        // Ensure matches is an array
+        if (!Array.isArray(matches)) {
+          console.error('Glob returned non-array:', typeof matches, matches)
+          matches = []
+        }
+        
+        const files: FileMetadataDTO[] = []
+        
+        for (const match of matches) {
+          if (await this.fileOperations.isFile(match)) {
+            const metadata = await this.getFileMetadata(match)
+            files.push(metadata)
+          }
+        }
+        
+        const duration = Date.now() - startTime
+        
+        return FileDiscoveryResultDTO.fromSearchResults(
+          files,
+          searchPattern,
+          searchDirectory,
+          { searchDuration: duration }
+        )
       }
+ 
+        searchPattern = pattern
+        let globPattern = pattern || '**/*'
+        // Handle patterns that start with **/ (already recursive) 
+        if (!globPattern.startsWith('**/') && !globPattern.startsWith('/')) {
+          globPattern = `**/${globPattern}`
+        }
+        
+        let matches: string[]
+        try {
+          // Use glob.glob with callback converted to Promise
+          matches = await new Promise<string[]>((resolve, reject) => {
+            (glob as any)(globPattern, {
+              absolute: true,  // Return absolute paths
+              cwd: searchDirectory,  // Use cwd instead of joining paths
+              dot: options?.includeHidden || false,
+              ignore: ['**/node_modules/**', '**/.git/**', ...(options?.excludePatterns || [])],
+              maxDepth: options?.maxDepth
+            }, (err: any, files: string[]) => {
+              if (err) reject(err)
+              else resolve(files)
+            })
+          })
+        } catch (error) {
+          // Log the actual glob error for debugging
+          console.error('Glob error:', error)
+          throw FileOperationError.readError(searchDirectory, error as Error)
+        }
+        
+        // Ensure matches is an array
+        if (!Array.isArray(matches)) {
+          console.error('Glob returned non-array:', typeof matches, matches)
+          matches = []
+        }
+        
+        const files: FileMetadataDTO[] = []
+        
+        for (const match of matches) {
+          if (await this.fileOperations.isFile(match)) {
+            const metadata = await this.getFileMetadata(match)
+            files.push(metadata)
+          }
+        }
+        
+        const duration = Date.now() - startTime
+        
+        return FileDiscoveryResultDTO.fromSearchResults(
+          files,
+          searchPattern,
+          searchDirectory,
+          { searchDuration: duration }
+        )
       
-      const duration = Date.now() - startTime
-      
-      return FileDiscoveryResultDTO.fromSearchResults(
-        files,
-        pattern,
-        searchDirectory,
-        { searchDuration: duration }
-      )
     } catch (error) {
       throw FileOperationError.readError(searchDirectory, error as Error)
     }
@@ -134,7 +235,7 @@ export class FileDiscoveryService implements IFileDiscoveryService {
         ? `**/*${extensions[0]}`
         : `**/*.{${extensions.map(ext => ext.replace('.', '')).join(',')}}`
       
-      return await this.findFiles(extensionPattern, directory)
+      return await this.findFiles(directory, extensionPattern)
     } catch (error) {
       throw FileOperationError.readError(searchDirectory, error as Error)
     }
@@ -153,7 +254,7 @@ export class FileDiscoveryService implements IFileDiscoveryService {
     
     try {
       // First find all files
-      const allFilesResult = await this.findFiles('**/*', directory)
+      const allFilesResult = await this.findFiles(directory, '**/*')
       
       // Filter by modification time
       const filteredFiles = allFilesResult.files.filter(file => {
@@ -191,7 +292,7 @@ export class FileDiscoveryService implements IFileDiscoveryService {
     
     try {
       // First find all matching files
-      const allFilesResult = await this.findFiles(pattern, directory)
+      const allFilesResult = await this.findFiles(directory, pattern)
       
       // Filter by size
       const largeFiles = allFilesResult.files.filter(file => file.size >= minSize)
@@ -295,6 +396,112 @@ export class FileDiscoveryService implements IFileDiscoveryService {
   }
 
   /**
+   * Get file preview (required by tests)
+   * 
+   * @param filePath - Path to file to preview
+   * @param options - Preview options
+   * @returns Promise resolving to file preview data
+   */
+  async getFilePreview(
+    filePath: string,
+    options?: { encoding?: string; maxLines?: number }
+  ): Promise<{
+    content: string
+    encoding: string
+    filePath: string
+    isBinary: boolean
+    isComplete: boolean
+    lineCount: number
+    path: string
+    size: number
+  }> {
+    if (!filePath) {
+      throw new Error('File path is required')
+    }
+
+    if (!(await this.fileOperations.pathExists(filePath))) {
+      throw FileOperationError.fileNotFound(filePath, 'preview')
+    }
+
+    if (await this.fileOperations.isDirectory(filePath)) {
+      throw FileOperationError.invalidPath(filePath, 'path is a directory, not a file')
+    }
+
+    try {
+      const encoding = (options?.encoding as BufferEncoding) ?? 'utf8'
+      const maxLines = options?.maxLines ?? 100
+      
+      // Read file content
+      let content: string
+      try {
+        content = await this.fileOperations.readFile(filePath, encoding)
+      } catch {
+        // Might be binary file, try reading as buffer
+        const buffer = await this.fileOperations.readFileBuffer(filePath)
+        const isBinary = this.isBinaryContent(buffer)
+        
+        if (isBinary) {
+          return {
+            content: `[Binary file - ${buffer.length} bytes]`,
+            encoding,
+            filePath,
+            isBinary: true,
+            isComplete: true,
+            lineCount: 1,
+        path: filePath,
+            size: buffer.length
+          }
+        }
+        
+        content = buffer.toString(encoding)
+      }
+
+      const lines = content.split('\n')
+      const isComplete = lines.length <= maxLines
+      const previewContent = isComplete ? content : lines.slice(0, maxLines).join('\n')
+      
+      return {
+        content: previewContent,
+        encoding,
+        filePath,
+        isBinary: false,
+        isComplete,
+        lineCount: lines.length,
+        path: filePath,
+        size: Buffer.from(content, encoding).length
+      }
+
+    } catch (error) {
+      throw FileOperationError.readError(filePath, error instanceof Error ? error : new Error(String(error)))
+    }
+  }
+
+  /**
+   * Get files by type (required by tests)
+   * 
+   * @param directory - Directory to search
+   * @param fileType - Type of files to find
+   * @returns Promise resolving to FileDiscoveryResultDTO
+   */
+  async getFilesByType(
+    directory: string,
+    fileType: 'configuration' | 'documentation' | 'source-code' | string
+  ): Promise<FileDiscoveryResultDTO> {
+    const extensions: Record<string, string[]> = {
+      'configuration': ['.json', '.yaml', '.yml', '.toml', '.ini', '.conf', '.config', '.env'],
+      'documentation': ['.md', '.txt', '.rst', '.adoc', '.tex'],
+      'source-code': ['.js', '.ts', '.tsx', '.jsx', '.py', '.java', '.cpp', '.c', '.cs', '.php', '.rb', '.go', '.rs', '.kt']
+    }
+
+    const typeExtensions = extensions[fileType]
+    if (!typeExtensions) {
+      throw FileOperationError.invalidPath(fileType, `Unknown file type. Use one of: ${Object.keys(extensions).join(', ')}`)
+    }
+
+    return await this.findFilesByExtension(typeExtensions, directory)
+  }
+
+  /**
    * Get metadata for multiple files
    */
   async getMultipleFileMetadata(paths: string[]): Promise<FileMetadataDTO[]> {
@@ -311,6 +518,39 @@ export class FileDiscoveryService implements IFileDiscoveryService {
     }
     
     return results
+  }
+
+  /**
+   * Scan directory with options (required by tests)
+   * 
+   * @param directory - Directory to scan
+   * @param options - Scan options
+   * @returns Promise resolving to FileDiscoveryResultDTO
+   */
+  async scanDirectory(
+    directory: string, 
+    options?: TDirectoryScanOptions
+  ): Promise<DirectoryStructureDTO> {
+    if (!directory) {
+      throw new Error('Directory path is required')
+    }
+
+    if (!(await this.fileOperations.pathExists(directory))) {
+      throw FileOperationError.directoryNotFound(directory)
+    }
+
+    if (!(await this.fileOperations.isDirectory(directory))) {
+      throw FileOperationError.invalidPath(directory, 'not a directory')
+    }
+
+    try {
+      // Use existing getDirectoryStructure method to scan directory
+      const result = await this.getDirectoryStructure(directory, options)
+      return result
+
+    } catch (error) {
+      throw FileOperationError.readError(directory, error instanceof Error ? error : new Error(String(error)))
+    }
   }
 
   /**
@@ -347,10 +587,15 @@ export class FileDiscoveryService implements IFileDiscoveryService {
         '**/.git/**'
       ]
       
-      const matches = await glob(fullPattern, {
-        dot: includeHidden,
-        ignore: ignorePatterns,
-        maxDepth
+      const matches = await new Promise<string[]>((resolve, reject) => {
+        (glob as any)(fullPattern, {
+          dot: includeHidden,
+          ignore: ignorePatterns,
+          maxDepth
+        }, (err: any, files: string[]) => {
+          if (err) reject(err)
+          else resolve(files)
+        })
       })
       
       const files: FileMetadataDTO[] = []
@@ -409,6 +654,25 @@ export class FileDiscoveryService implements IFileDiscoveryService {
     const toRwx = (n: number): string => (n & 4 ? 'r' : '-') + (n & 2 ? 'w' : '-') + (n & 1 ? 'x' : '-')
     
     return toRwx(owner) + toRwx(group) + toRwx(other)
+  }
+
+  /**
+   * Check if buffer content appears to be binary
+   * 
+   * @private
+   * @param buffer - Buffer to check
+   * @returns True if content appears binary
+   */
+  private isBinaryContent(buffer: Buffer): boolean {
+    // Simple binary detection - look for null bytes in first 512 bytes
+    const sampleSize = Math.min(buffer.length, 512)
+    for (let i = 0; i < sampleSize; i++) {
+      if (buffer[i] === 0) {
+        return true
+      }
+    }
+
+    return false
   }
 
   /**

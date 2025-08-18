@@ -1,0 +1,647 @@
+/**
+ * @file Proxy-Aware GitHub REST API Service
+ * 
+ * Drop-in replacement for GitHubRestApiService that uses the caching proxy
+ * for improved performance and rate limit management.
+ */
+
+import type { ApiClient } from '../../../infrastructure/http/ApiClient.js'
+
+import { OrchestratorError } from '../../../core/error/OrchestratorError.js'
+import {
+  GitHubCommitApiResponse,
+  GitHubIssueApiResponse,
+  GitHubPullRequestApiResponse,
+  GitHubRepositoryApiResponse
+} from '../../../core/types/JsonResultTypes.js'
+import { createProxyAwareGitHubClient } from '../../../infrastructure/http/ProxyAwareClient.js'
+import { RepositoryDataDTO } from '../dto/RepositoryDataDTO.js'
+import { GitHubRateLimit } from '../interfaces/IGitHubRestApiService.js'
+import { GitHubRepositoryResponse } from '../types/GitHubApiTypes.js'
+import { isGitHubLabel } from '../utils/TypeGuards.js'
+
+/**
+ * Proxy-aware GitHub REST API Service
+ * 
+ * This service uses the caching proxy for improved performance and rate limit management.
+ * It provides the same interface as GitHubRestApiService but with proxy benefits.
+ */
+export class ProxyAwareGitHubService {
+  private readonly apiClient: Promise<ApiClient>
+  private readonly token: string
+
+  constructor(token: string) {
+    this.token = token
+    // Initialize API client asynchronously to allow proxy startup
+    this.apiClient = this.initializeApiClient()
+  }
+
+  /**
+   * Check if user has access to repository
+   * 
+   * @param owner - Repository owner
+   * @param repo - Repository name
+   * @returns True if accessible, false otherwise
+   */
+  async checkRepositoryAccess(owner: string, repo: string): Promise<boolean> {
+    try {
+      const client = await this.apiClient
+      await client.get(`/repos/${owner}/${repo}`)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Get all commits for a repository with complete API responses and pagination
+   */
+  async getAllCommitsRaw(
+    owner: string, 
+    repo: string, 
+    options?: { limit?: number; since?: string; until?: string }
+  ): Promise<GitHubCommitApiResponse[]> {
+    try {
+      const client = await this.apiClient
+      const allCommits: GitHubCommitApiResponse[] = []
+      const perPage = 100
+      const maxPages = options?.limit ? Math.ceil(options.limit / perPage) : 10
+      
+      let page = 1
+      let hasNextPage = true
+      
+      while (hasNextPage && page <= maxPages) {
+        const params: Record<string, string> = {
+          page: page.toString(),
+          per_page: perPage.toString()
+        }
+        
+        if (options?.since) {
+          params['since'] = options.since
+        }
+        
+        if (options?.until) {
+          params['until'] = options.until
+        }
+        
+        const response = await client.get(`/repos/${owner}/${repo}/commits`, { params })
+        
+        if (!Array.isArray(response.data)) {
+          throw new TypeError('Invalid response format: expected array of commits')
+        }
+        
+        const mappedCommits = response.data.map(commit => this.mapCommitToApiResponse(commit))
+        allCommits.push(...mappedCommits)
+        
+        // Stop if we've hit our limit or there are no more commits
+        if (response.data.length < perPage || (options?.limit && allCommits.length >= options.limit)) {
+          hasNextPage = false
+        } else {
+          page++
+        }
+      }
+      
+      // Apply final limit
+      const finalCommits = options?.limit 
+        ? allCommits.slice(0, options.limit) 
+        : allCommits
+      
+      return finalCommits
+      
+    } catch (error) {
+      throw new OrchestratorError(
+        error instanceof Error ? error : new Error(String(error)),
+        ['Check repository exists and is accessible', 'Verify GitHub token permissions', 'Check rate limits'],
+        { options: options || {}, owner, repo }
+      )
+    }
+  }
+
+  /**
+   * Get all issues for a repository with complete API responses and pagination
+   */
+  async getAllIssuesRaw(
+    owner: string, 
+    repo: string, 
+    options?: { limit?: number; since?: string; until?: string }
+  ): Promise<GitHubIssueApiResponse[]> {
+    try {
+      const client = await this.apiClient
+      const allIssues: GitHubIssueApiResponse[] = []
+      const perPage = 100
+      const maxPages = options?.limit ? Math.ceil(options.limit / perPage) : 10
+      
+      let page = 1
+      let hasNextPage = true
+      
+      while (hasNextPage && page <= maxPages) {
+        const params: Record<string, string> = {
+          direction: 'desc',
+          page: page.toString(),
+          per_page: perPage.toString(),
+          sort: 'updated',
+          state: 'all'
+        }
+        
+        if (options?.since) {
+          params['since'] = options.since
+        }
+        
+        const response = await client.get(`/repos/${owner}/${repo}/issues`, { params })
+        
+        if (!Array.isArray(response.data)) {
+          throw new TypeError('Invalid response format: expected array of issues')
+        }
+        
+        const mappedIssues = response.data.map(issue => this.mapIssueToApiResponse(issue))
+        allIssues.push(...mappedIssues)
+        
+        // Stop if we've hit our limit or there are no more issues
+        if (response.data.length < perPage || (options?.limit && allIssues.length >= options.limit)) {
+          hasNextPage = false
+        } else {
+          page++
+        }
+        
+        // Apply until filter if specified
+        if (options?.until) {
+          const untilDate = new Date(options.until)
+          const lastIssueDate = new Date(response.data.at(-1)?.updated_at || '')
+          if (lastIssueDate < untilDate) {
+            hasNextPage = false
+          }
+        }
+      }
+      
+      // Apply final limit and until filter
+      let filteredIssues = allIssues
+      
+      if (options?.until) {
+        const untilDate = new Date(options.until)
+        filteredIssues = filteredIssues.filter(issue => {
+          const issueDate = new Date(issue.updated_at)
+          return issueDate < untilDate
+        })
+      }
+      
+      if (options?.limit) {
+        filteredIssues = filteredIssues.slice(0, options.limit)
+      }
+      
+      return filteredIssues
+      
+    } catch (error) {
+      throw new OrchestratorError(
+        error instanceof Error ? error : new Error(String(error)),
+        ['Check repository exists and is accessible', 'Verify GitHub token permissions', 'Check rate limits'],
+        { options: options || {}, owner, repo }
+      )
+    }
+  }
+
+  /**
+   * Get all pull requests for a repository with complete API responses and pagination
+   */
+  async getAllPullRequestsRaw(
+    owner: string, 
+    repo: string, 
+    options?: { limit?: number; since?: string; until?: string }
+  ): Promise<GitHubPullRequestApiResponse[]> {
+    try {
+      const client = await this.apiClient
+      const allPRs: GitHubPullRequestApiResponse[] = []
+      const perPage = 100
+      const maxPages = options?.limit ? Math.ceil(options.limit / perPage) : 5
+      
+      let page = 1
+      let hasNextPage = true
+      
+      while (hasNextPage && page <= maxPages) {
+        const params: Record<string, string> = {
+          direction: 'desc',
+          page: page.toString(),
+          per_page: perPage.toString(),
+          sort: 'updated',
+          state: 'all'
+        }
+        
+        const response = await client.get(`/repos/${owner}/${repo}/pulls`, { params })
+        
+        if (!Array.isArray(response.data)) {
+          throw new TypeError('Invalid response format: expected array of pull requests')
+        }
+        
+        const mappedPRs = response.data.map(pr => this.mapPRToApiResponse(pr))
+        
+        // Apply since filter
+        const filteredPRs = options?.since 
+          ? mappedPRs.filter(pr => new Date(pr.updated_at) >= new Date(options.since!))
+          : mappedPRs
+          
+        allPRs.push(...filteredPRs)
+        
+        // Stop if we've hit our limit or there are no more PRs
+        if (response.data.length < perPage || (options?.limit && allPRs.length >= options.limit)) {
+          hasNextPage = false
+        } else {
+          page++
+        }
+        
+        // Apply until filter if specified
+        if (options?.until) {
+          const untilDate = new Date(options.until)
+          const lastPRDate = new Date(response.data.at(-1)?.updated_at || '')
+          if (lastPRDate < untilDate) {
+            hasNextPage = false
+          }
+        }
+      }
+      
+      // Apply final limit and until filter
+      let finalPRs = allPRs
+      
+      if (options?.until) {
+        const untilDate = new Date(options.until)
+        finalPRs = finalPRs.filter(pr => {
+          const prDate = new Date(pr.updated_at)
+          return prDate < untilDate
+        })
+      }
+      
+      if (options?.limit) {
+        finalPRs = finalPRs.slice(0, options.limit)
+      }
+      
+      return finalPRs
+      
+    } catch (error) {
+      throw new OrchestratorError(
+        error instanceof Error ? error : new Error(String(error)),
+        ['Check repository exists and is accessible', 'Verify GitHub token permissions', 'Check rate limits'],
+        { options: options || {}, owner, repo }
+      )
+    }
+  }
+
+  /**
+   * Get authenticated user information
+   * 
+   * @returns GitHub username of authenticated user
+   */
+  async getAuthenticatedUser(): Promise<string> {
+    try {
+      const client = await this.apiClient
+      const response = await client.get('/user')
+      return response.data.login
+    } catch (error) {
+      throw new OrchestratorError(
+        error instanceof Error ? error : new Error(String(error)),
+        ['Check GitHub token is valid', 'Verify token has required permissions', 'Check network connectivity']
+      )
+    }
+  }
+
+  /**
+   * Get current rate limit status
+   * 
+   * @returns Current rate limit information
+   * @throws {OrchestratorError} When rate limit check fails
+   */
+  async getRateLimit(): Promise<GitHubRateLimit> {
+    try {
+      const client = await this.apiClient
+      const response = await client.get('/rate_limit')
+      const {data} = response
+      
+      return {
+        limit: data.rate.limit,
+        remaining: data.rate.remaining,
+        reset: data.rate.reset,
+        used: data.rate.used
+      }
+    } catch (error) {
+      throw new OrchestratorError(
+        error instanceof Error ? error : new Error(String(error)),
+        ['Check GitHub token permissions', 'Verify network connectivity'],
+        {}
+      )
+    }
+  }
+
+  /**
+   * Get repository data
+   * 
+   * @param owner - Repository owner (user or organization)
+   * @param repo - Repository name
+   * @returns Repository data as DTO
+   */
+  async getRepository(owner: string, repo: string): Promise<RepositoryDataDTO> {
+    try {
+      const client = await this.apiClient
+      const response = await client.get(`/repos/${owner}/${repo}`)
+      
+      // Map API response to our interface
+      const mappedResponse: GitHubRepositoryResponse = {
+        archived: response.data.archived,
+        clone_url: response.data.clone_url,
+        created_at: response.data.created_at,
+        default_branch: response.data.default_branch,
+        description: response.data.description,
+        disabled: response.data.disabled,
+        fork: response.data.fork,
+        forks_count: response.data.forks_count,
+        full_name: response.data.full_name,
+        has_issues: response.data.has_issues,
+        has_pages: response.data.has_pages,
+        has_projects: response.data.has_projects,
+        has_wiki: response.data.has_wiki,
+        html_url: response.data.html_url,
+        id: response.data.id,
+        language: response.data.language,
+        name: response.data.name,
+        open_issues_count: response.data.open_issues_count,
+        owner: {
+          avatar_url: response.data.owner.avatar_url,
+          id: response.data.owner.id,
+          login: response.data.owner.login,
+          node_id: response.data.owner.node_id,
+          type: response.data.owner.type as 'Organization' | 'User',
+          url: response.data.owner.url
+        },
+        private: response.data.private,
+        pushed_at: response.data.pushed_at,
+        size: response.data.size,
+        ssh_url: response.data.ssh_url,
+        stargazers_count: response.data.stargazers_count,
+        updated_at: response.data.updated_at,
+        url: response.data.url,
+        visibility: response.data.visibility,
+        watchers_count: response.data.watchers_count
+      }
+      
+      return RepositoryDataDTO.fromGitHubApiResponse(mappedResponse)
+    } catch (error) {
+      throw new OrchestratorError(
+        error instanceof Error ? error : new Error(String(error)),
+        ['Check repository exists and is accessible', 'Verify GitHub token permissions', 'Check network connectivity'],
+        { owner, repo }
+      )
+    }
+  }
+
+  /**
+   * Get repository metadata with complete API response
+   */
+  async getRepositoryRaw(owner: string, repo: string): Promise<GitHubRepositoryApiResponse> {
+    try {
+      const client = await this.apiClient
+      const response = await client.get(`/repos/${owner}/${repo}`)
+      return this.mapRepositoryToApiResponse(response.data)
+    } catch (error) {
+      throw new OrchestratorError(
+        error instanceof Error ? error : new Error(String(error)),
+        ['Check repository exists and is accessible', 'Verify GitHub token permissions', 'Check network connectivity'],
+        { owner, repo }
+      )
+    }
+  }
+
+  /**
+   * Initialize API client with proxy awareness
+   */
+  private async initializeApiClient(): Promise<ApiClient> {
+    try {
+      return await createProxyAwareGitHubClient(this.token)
+    } catch (error) {
+      throw new OrchestratorError(
+        error instanceof Error ? error : new Error(String(error)),
+        ['Check GitHub token is valid', 'Verify proxy configuration', 'Check network connectivity'],
+        { hasToken: Boolean(this.token) }
+      )
+    }
+  }
+
+  // Private mapping methods (reused from original service)
+  private mapCommitToApiResponse(commit: any): GitHubCommitApiResponse {
+    return {
+      author: commit.author,
+      comments_url: commit.comments_url,
+      commit: commit.commit,
+      committer: commit.committer,
+      files: commit.files,
+      html_url: commit.html_url,
+      node_id: commit.node_id,
+      parents: commit.parents,
+      sha: commit.sha,
+      stats: commit.stats,
+      url: commit.url
+    }
+  }
+
+  private mapIssueToApiResponse(issue: any): GitHubIssueApiResponse {
+    return {
+      active_lock_reason: issue.active_lock_reason,
+      assignee: issue.assignee,
+      assignees: issue.assignees || [],
+      body: issue.body,
+      body_html: issue.body_html || null,
+      body_text: issue.body_text || null,
+      closed_at: issue.closed_at,
+      closed_by: issue.closed_by,
+      comments: issue.comments,
+      comments_url: issue.comments_url,
+      created_at: issue.created_at,
+      draft: Boolean(issue.draft),
+      events_url: issue.events_url,
+      html_url: issue.html_url,
+      id: issue.id,
+      labels: issue.labels?.filter((label: any) => typeof label !== 'string' && isGitHubLabel(label)) || [],
+      labels_url: issue.labels_url,
+      locked: issue.locked,
+      milestone: issue.milestone,
+      node_id: issue.node_id,
+      number: issue.number,
+      pull_request: issue.pull_request,
+      repository_url: issue.repository_url,
+      state: issue.state,
+      state_reason: issue.state_reason,
+      timeline_url: issue.timeline_url,
+      title: issue.title,
+      updated_at: issue.updated_at,
+      url: issue.url,
+      user: issue.user || {
+        avatar_url: '',
+        events_url: '',
+        followers_url: '',
+        following_url: '',
+        gists_url: '',
+        gravatar_id: null,
+        html_url: '',
+        id: 0,
+        login: 'unknown',
+        node_id: '',
+        organizations_url: '',
+        received_events_url: '',
+        repos_url: '',
+        site_admin: false,
+        starred_url: '',
+        subscriptions_url: '',
+        type: 'User',
+        url: ''
+      }
+    }
+  }
+
+  private mapPRToApiResponse(pr: any): GitHubPullRequestApiResponse {
+    return {
+      _links: pr._links,
+      active_lock_reason: pr.active_lock_reason,
+      additions: pr.additions || 0,
+      assignee: pr.assignee,
+      assignees: pr.assignees || [],
+      author_association: pr.author_association,
+      auto_merge: pr.auto_merge,
+      base: pr.base,
+      body: pr.body,
+      changed_files: pr.changed_files || 0,
+      closed_at: pr.closed_at,
+      comments: pr.comments || 0,
+      comments_url: pr.comments_url,
+      commits: pr.commits || 0,
+      commits_url: pr.commits_url,
+      created_at: pr.created_at,
+      deletions: pr.deletions || 0,
+      diff_url: pr.diff_url,
+      draft: Boolean(pr.draft),
+      head: pr.head,
+      html_url: pr.html_url,
+      id: pr.id,
+      issue_url: pr.issue_url,
+      labels: pr.labels || [],
+      locked: pr.locked,
+      maintainer_can_modify: Boolean(pr.maintainer_can_modify),
+      merge_commit_sha: pr.merge_commit_sha,
+      mergeable: pr.mergeable,
+      mergeable_state: pr.mergeable_state,
+      merged: Boolean(pr.merged_at),
+      merged_at: pr.merged_at,
+      merged_by: pr.merged_by,
+      milestone: pr.milestone,
+      node_id: pr.node_id,
+      number: pr.number,
+      patch_url: pr.patch_url,
+      rebaseable: pr.rebaseable,
+      requested_reviewers: pr.requested_reviewers || [],
+      requested_teams: pr.requested_teams || [],
+      review_comment_url: pr.review_comment_url,
+      review_comments: pr.review_comments || 0,
+      review_comments_url: pr.review_comments_url,
+      state: pr.state,
+      statuses_url: pr.statuses_url,
+      title: pr.title,
+      updated_at: pr.updated_at,
+      url: pr.url,
+      user: pr.user || {}
+    }
+  }
+
+  private mapRepositoryToApiResponse(repo: any): GitHubRepositoryApiResponse {
+    return {
+      allow_auto_merge: Boolean(repo.allow_auto_merge),
+      allow_merge_commit: Boolean(repo.allow_merge_commit),
+      allow_rebase_merge: Boolean(repo.allow_rebase_merge),
+      allow_squash_merge: Boolean(repo.allow_squash_merge),
+      allow_update_branch: Boolean(repo.allow_update_branch),
+      archive_url: repo.archive_url,
+      archived: repo.archived,
+      assignees_url: repo.assignees_url,
+      blobs_url: repo.blobs_url,
+      branches_url: repo.branches_url,
+      clone_url: repo.clone_url,
+      collaborators_url: repo.collaborators_url,
+      comments_url: repo.comments_url,
+      commits_url: repo.commits_url,
+      compare_url: repo.compare_url,
+      contents_url: repo.contents_url,
+      contributors_url: repo.contributors_url,
+      created_at: repo.created_at,
+      default_branch: repo.default_branch,
+      delete_branch_on_merge: Boolean(repo.delete_branch_on_merge),
+      deployments_url: repo.deployments_url,
+      description: repo.description,
+      disabled: repo.disabled,
+      downloads_url: repo.downloads_url,
+      events_url: repo.events_url,
+      fork: repo.fork,
+      forks_count: repo.forks_count,
+      forks_url: repo.forks_url,
+      full_name: repo.full_name,
+      git_commits_url: repo.git_commits_url,
+      git_refs_url: repo.git_refs_url,
+      git_tags_url: repo.git_tags_url,
+      git_url: repo.git_url,
+      has_discussions: Boolean(repo.has_discussions),
+      has_downloads: Boolean(repo.has_downloads),
+      has_issues: repo.has_issues,
+      has_pages: repo.has_pages,
+      has_projects: repo.has_projects,
+      has_wiki: repo.has_wiki,
+      homepage: repo.homepage,
+      hooks_url: repo.hooks_url,
+      html_url: repo.html_url,
+      id: repo.id,
+      is_template: Boolean(repo.is_template),
+      issue_comment_url: repo.issue_comment_url,
+      issue_events_url: repo.issue_events_url,
+      issues_url: repo.issues_url,
+      keys_url: repo.keys_url,
+      labels_url: repo.labels_url,
+      language: repo.language,
+      languages_url: repo.languages_url,
+      license: repo.license,
+      merge_commit_message: repo.merge_commit_message || 'PR_TITLE',
+      merge_commit_title: repo.merge_commit_title || 'MERGE_MESSAGE',
+      merges_url: repo.merges_url,
+      milestones_url: repo.milestones_url,
+      mirror_url: repo.mirror_url,
+      name: repo.name,
+      network_count: repo.network_count || 0,
+      node_id: repo.node_id,
+      notifications_url: repo.notifications_url,
+      open_issues_count: repo.open_issues_count,
+      owner: {
+        id: repo.owner.id,
+        login: repo.owner.login,
+        node_id: repo.owner.node_id,
+        type: repo.owner.type
+      },
+      permissions: repo.permissions,
+      private: repo.private,
+      pulls_url: repo.pulls_url,
+      pushed_at: repo.pushed_at,
+      releases_url: repo.releases_url,
+      size: repo.size,
+      squash_merge_commit_message: repo.squash_merge_commit_message || 'COMMIT_MESSAGES',
+      squash_merge_commit_title: repo.squash_merge_commit_title || 'COMMIT_OR_PR_TITLE',
+      ssh_url: repo.ssh_url,
+      stargazers_count: repo.stargazers_count,
+      stargazers_url: repo.stargazers_url,
+      statuses_url: repo.statuses_url,
+      subscribers_count: repo.subscribers_count || 0,
+      subscribers_url: repo.subscribers_url,
+      subscription_url: repo.subscription_url,
+      svn_url: repo.svn_url,
+      tags_url: repo.tags_url,
+      teams_url: repo.teams_url,
+      temp_clone_token: repo.temp_clone_token,
+      template_repository: repo.template_repository,
+      topics: repo.topics || [],
+      trees_url: repo.trees_url,
+      updated_at: repo.updated_at,
+      url: repo.url,
+      use_squash_pr_title_as_default: Boolean(repo.use_squash_pr_title_as_default),
+      visibility: repo.visibility,
+      watchers_count: repo.watchers_count
+    }
+  }
+}

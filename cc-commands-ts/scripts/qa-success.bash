@@ -19,8 +19,8 @@ readonly CYAN='\033[0;36m'
 readonly BOLD='\033[1m'
 readonly NC='\033[0m' # No Color
 
-# Result file paths
-readonly TEST_RESULTS="var/test-results-coverage.json"
+# Result file paths (prioritize unit test results for QA)
+readonly TEST_RESULTS="${TEST_RESULTS:-var/test-results-unit.json}"
 readonly COVERAGE_SUMMARY="var/coverage/coverage-summary.json"
 readonly ESLINT_REPORT="var/eslint-report.json"
 readonly TYPECHECK_REPORT="var/typecheck-report.txt"

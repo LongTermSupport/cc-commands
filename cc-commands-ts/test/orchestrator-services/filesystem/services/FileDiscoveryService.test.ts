@@ -25,11 +25,19 @@ describe('FileDiscoveryService', () => {
       appendFile: vi.fn(),
       copyFile: vi.fn(),
       createDirectory: vi.fn(),
+      createTempDirectory: vi.fn(),
+      createTempFile: vi.fn(),
+      deleteDirectory: vi.fn(),
       deleteFile: vi.fn(),
-      exists: vi.fn(),
-      listDirectory: vi.fn(),
+      getSize: vi.fn(),
+      isDirectory: vi.fn(),
+      isFile: vi.fn(),
       moveFile: vi.fn(),
+      pathExists: vi.fn(),
       readFile: vi.fn(),
+      readFileBuffer: vi.fn(),
+      setPermissions: vi.fn(),
+      watchPath: vi.fn(),
       writeFile: vi.fn()
     } satisfies IFileOperationsService
     service = new FileDiscoveryService(mockFileOpsService)
@@ -180,6 +188,7 @@ describe('FileDiscoveryService', () => {
     it('should find files by single pattern', async () => {
       mockFileOpsService.pathExists.mockResolvedValue(true)
       mockFileOpsService.isDirectory.mockResolvedValue(true)
+      mockFileOpsService.isFile.mockResolvedValue(true) // Add this mock
 
       const result = await service.findFiles(tempDir, '*.js')
 
@@ -192,6 +201,7 @@ describe('FileDiscoveryService', () => {
     it('should find files by multiple patterns', async () => {
       mockFileOpsService.pathExists.mockResolvedValue(true)
       mockFileOpsService.isDirectory.mockResolvedValue(true)
+      mockFileOpsService.isFile.mockResolvedValue(true) // Add this mock
 
       const patterns = ['*.js', '*.ts']
       const result = await service.findFiles(tempDir, patterns)
@@ -203,6 +213,7 @@ describe('FileDiscoveryService', () => {
     it('should find files with glob patterns', async () => {
       mockFileOpsService.pathExists.mockResolvedValue(true)
       mockFileOpsService.isDirectory.mockResolvedValue(true)
+      mockFileOpsService.isFile.mockResolvedValue(true) // Add this mock
 
       const result = await service.findFiles(tempDir, '**/config/**')
 
@@ -212,6 +223,7 @@ describe('FileDiscoveryService', () => {
     it('should respect search options', async () => {
       mockFileOpsService.pathExists.mockResolvedValue(true)
       mockFileOpsService.isDirectory.mockResolvedValue(true)
+      mockFileOpsService.isFile.mockResolvedValue(true) // Add this mock
 
       const result = await service.findFiles(tempDir, '**/*', {
         caseSensitive: true,
@@ -229,6 +241,7 @@ describe('FileDiscoveryService', () => {
 
       mockFileOpsService.pathExists.mockResolvedValue(true)
       mockFileOpsService.isDirectory.mockResolvedValue(true)
+      mockFileOpsService.isFile.mockResolvedValue(true) // Add this mock
 
       // Case sensitive search
       const sensitiveResult = await service.findFiles(tempDir, 'Test.js', {
@@ -272,6 +285,7 @@ describe('FileDiscoveryService', () => {
     it('should find source code files', async () => {
       mockFileOpsService.pathExists.mockResolvedValue(true)
       mockFileOpsService.isDirectory.mockResolvedValue(true)
+      mockFileOpsService.isFile.mockResolvedValue(true) // Add this mock
 
       const result = await service.getFilesByType(tempDir, 'source-code')
 
@@ -284,6 +298,7 @@ describe('FileDiscoveryService', () => {
     it('should find documentation files', async () => {
       mockFileOpsService.pathExists.mockResolvedValue(true)
       mockFileOpsService.isDirectory.mockResolvedValue(true)
+      mockFileOpsService.isFile.mockResolvedValue(true) // Add this mock
 
       const result = await service.getFilesByType(tempDir, 'documentation')
 
@@ -294,6 +309,7 @@ describe('FileDiscoveryService', () => {
     it('should find configuration files', async () => {
       mockFileOpsService.pathExists.mockResolvedValue(true)
       mockFileOpsService.isDirectory.mockResolvedValue(true)
+      mockFileOpsService.isFile.mockResolvedValue(true) // Add this mock
 
       const result = await service.getFilesByType(tempDir, 'configuration')
 
@@ -304,6 +320,7 @@ describe('FileDiscoveryService', () => {
     it('should handle unknown file types', async () => {
       mockFileOpsService.pathExists.mockResolvedValue(true)
       mockFileOpsService.isDirectory.mockResolvedValue(true)
+      mockFileOpsService.isFile.mockResolvedValue(true) // Add this mock
 
       await expect(service.getFilesByType(tempDir, 'unknown-type' as any))
         .rejects
@@ -465,6 +482,7 @@ describe('FileDiscoveryService', () => {
 
       mockFileOpsService.pathExists.mockResolvedValue(true)
       mockFileOpsService.isDirectory.mockResolvedValue(true)
+      mockFileOpsService.isFile.mockResolvedValue(true) // Add this mock
 
       const result = await service.findFiles(tempDir, '*.js', {
         maxResults: 10

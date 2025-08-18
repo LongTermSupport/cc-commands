@@ -37,7 +37,7 @@ export interface IFileDiscoveryService {
    * @param directory - Directory to search in (defaults to current directory)
    * @returns Promise resolving to discovery results with matching files
    */
-  findFiles(pattern: string, directory?: string): Promise<FileDiscoveryResultDTO>
+  findFiles(directory: string, pattern: string | string[], options?: { caseSensitive?: boolean, includeHidden?: boolean, maxDepth?: number, maxResults?: number }): Promise<FileDiscoveryResultDTO>
 
   /**
    * Find files by file extensions
@@ -95,12 +95,57 @@ export interface IFileDiscoveryService {
   getFileMetadata(path: string): Promise<FileMetadataDTO>
 
   /**
+   * Get file preview with content and metadata
+   * 
+   * @param filePath - Path to file to preview
+   * @param options - Preview options
+   * @returns Promise resolving to file preview with content
+   */
+  getFilePreview(
+    filePath: string,
+    options?: { encoding?: string; maxBytes?: number; maxLines?: number; }
+  ): Promise<{
+    content: string
+    encoding: string
+    filePath: string
+    isBinary: boolean
+    isComplete: boolean
+    lineCount: number
+    path: string
+    size: number
+  }>
+
+  /**
+   * Get files by type classification
+   * 
+   * @param directory - Directory to search
+   * @param fileType - Type of files to find
+   * @returns Promise resolving to FileDiscoveryResultDTO
+   */
+  getFilesByType(
+    directory: string,
+    fileType: string
+  ): Promise<FileDiscoveryResultDTO>
+
+  /**
    * Get metadata for multiple files
    * 
    * @param paths - Array of file paths
    * @returns Promise resolving to array of file metadata DTOs
    */
   getMultipleFileMetadata(paths: string[]): Promise<FileMetadataDTO[]>
+
+  /**
+   * Scan directory and return directory structure
+   * 
+   * @param directory - Directory to scan
+   * @param options - Scan options
+   * @returns Promise resolving to DirectoryStructureDTO
+   */
+  scanDirectory(
+    directory: string,
+    options?: { caseSensitive?: boolean; excludePatterns?: string[], includeExtensions?: string[], maxDepth?: number, maxSize?: number, minSize?: number, }
+  ): Promise<import('../dto/DirectoryStructureDTO.js').DirectoryStructureDTO>
 
   /**
    * Advanced file search with multiple criteria
