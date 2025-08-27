@@ -291,7 +291,7 @@ export class ProxyAwareGitHubService {
   async getAuthenticatedUser(): Promise<string> {
     try {
       const client = await this.apiClient
-      const response = await client.get('/user')
+      const response = await client.get<{ login: string }>('/user')
       return response.data.login
     } catch (error) {
       throw new OrchestratorError(
@@ -310,7 +310,7 @@ export class ProxyAwareGitHubService {
   async getRateLimit(): Promise<GitHubRateLimit> {
     try {
       const client = await this.apiClient
-      const response = await client.get('/rate_limit')
+      const response = await client.get<{ rate: GitHubRateLimit }>('/rate_limit')
       const {data} = response
       
       return {
@@ -338,7 +338,7 @@ export class ProxyAwareGitHubService {
   async getRepository(owner: string, repo: string): Promise<RepositoryDataDTO> {
     try {
       const client = await this.apiClient
-      const response = await client.get(`/repos/${owner}/${repo}`)
+      const response = await client.get<GitHubRepositoryApiResponse>(`/repos/${owner}/${repo}`)
       
       // Map API response to our interface
       const mappedResponse: GitHubRepositoryResponse = {
@@ -361,15 +361,14 @@ export class ProxyAwareGitHubService {
         name: response.data.name,
         open_issues_count: response.data.open_issues_count,
         owner: {
-          avatar_url: response.data.owner.avatar_url,
           id: response.data.owner.id,
           login: response.data.owner.login,
           node_id: response.data.owner.node_id,
-          type: response.data.owner.type as 'Organization' | 'User',
-          url: response.data.owner.url
+          type: response.data.owner.type as 'Organization' | 'User'
+          // avatar_url and url are optional and not in the API response
         },
         private: response.data.private,
-        pushed_at: response.data.pushed_at,
+        pushed_at: response.data.pushed_at ?? undefined,
         size: response.data.size,
         ssh_url: response.data.ssh_url,
         stargazers_count: response.data.stargazers_count,

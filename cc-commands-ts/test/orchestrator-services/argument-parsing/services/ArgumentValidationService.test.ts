@@ -64,8 +64,8 @@ describe('ArgumentValidationService', () => {
       
       expect(result.isValid).toBe(false)
       expect(result.formatErrors).toHaveLength(2)
-      expect(result.formatErrors[0]?.argumentName).toBe('email')
-      expect(result.formatErrors[1]?.argumentName).toBe('number')
+      expect(result.formatErrors?.[0]?.argumentName).toBe('email')
+      expect(result.formatErrors?.[1]?.argumentName).toBe('number')
     })
 
     it('should validate mixed success and failure scenarios', async () => {
@@ -81,7 +81,7 @@ describe('ArgumentValidationService', () => {
       
       expect(result.isValid).toBe(false) // Due to number format error
       expect(result.formatErrors).toHaveLength(1)
-      expect(result.formatErrors[0]?.argumentName).toBe('number')
+      expect(result.formatErrors?.[0]?.argumentName).toBe('number')
       expect(result.validatedArguments.email).toBe('user@example.com')
     })
   })
@@ -371,8 +371,8 @@ describe('ArgumentValidationService', () => {
       
       expect(result.isValid).toBe(false)
       expect(result.formatErrors).toHaveLength(2)
-      expect(result.formatErrors[0]?.argumentName).toBe('pattern_github_repo')
-      expect(result.formatErrors[1]?.argumentName).toBe('pattern_date')
+      expect(result.formatErrors?.[0]?.argumentName).toBe('pattern_github_repo')
+      expect(result.formatErrors?.[1]?.argumentName).toBe('pattern_date')
     })
 
     it('should handle multiple matches for same pattern', async () => {

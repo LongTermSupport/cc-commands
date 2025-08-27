@@ -5,9 +5,11 @@
  * and falls back to direct requests when proxy is unavailable.
  */
 
+import type { HealthStatus, ProxyMetricsSummary } from '../monitoring/ProxyMetrics.js'
+
 import { getProxyConfig } from '../proxy/config/ProxyConfig.js'
 import { CachingProxyServer } from '../proxy/server/CachingProxyServer.js'
-import { ApiClient, type ApiRequestConfig } from './ApiClient.js'
+import { ApiClient, type ApiRequestConfig, type HttpMethod } from './ApiClient.js'
 
 /**
  * Proxy server manager for lifecycle management
@@ -136,16 +138,16 @@ async function getApiClient(): Promise<ApiClient> {
  * @param init - Fetch init options
  * @returns Promise resolving to Response
  */
-export async function proxyAwareFetch(url: string, init?: RequestInit): Promise<Response> {
+export async function proxyAwareFetch(url: string, init?: globalThis.RequestInit): Promise<Response> {
   try {
     const apiClient = await getApiClient()
     
     // Convert fetch init to our API config format
+    // Since we're passing fetchOptions, we don't need to duplicate body
     const config: ApiRequestConfig = {
-      body: init?.body,
       fetchOptions: init,
       headers: init?.headers ? Object.fromEntries(new Headers(init.headers).entries()) : {},
-      method: (init?.method as any) || 'GET',
+      method: (init?.method as HttpMethod) || 'GET',
       url
     }
 
@@ -214,7 +216,7 @@ export const ProxyUtils = {
   /**
    * Get proxy server health status
    */
-  getProxyHealth(): any {
+  getProxyHealth(): HealthStatus | undefined {
     const manager = ProxyServerManager.getInstance()
     const server = manager.getServer()
     return server?.getHealthStatus()
@@ -223,7 +225,7 @@ export const ProxyUtils = {
   /**
    * Get proxy server metrics
    */
-  async getProxyMetrics(): Promise<any> {
+  async getProxyMetrics(): Promise<ProxyMetricsSummary | undefined> {
     const manager = ProxyServerManager.getInstance()
     const server = manager.getServer()
     return server?.getMetrics()
@@ -262,7 +264,7 @@ export function initializeProxySystem(): void {
   const cleanup = async () => {
     console.log('Shutting down proxy system...')
     await ProxyUtils.stopProxy()
-    process.exit(0)
+    throw new Error('Demo completed successfully')
   }
 
   process.on('SIGTERM', cleanup)

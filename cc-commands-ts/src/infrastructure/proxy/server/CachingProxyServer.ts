@@ -5,7 +5,7 @@
  * and proper error handling for API requests.
  */
 
-import express, { type Application, type Request, type Response } from 'express'
+import express, { type Application, type NextFunction, type Request, type Response } from 'express'
 import { createServer, type Server } from 'node:http'
 
 import { OrchestratorError } from '../../../core/error/OrchestratorError.js'
@@ -21,7 +21,7 @@ interface ProxyRequestOptions {
   /** Request body */
   body?: Buffer | string
   /** Additional fetch options */
-  fetchOptions?: RequestInit
+  fetchOptions?: globalThis.RequestInit
   /** Request headers */
   headers: Record<string, string>
   /** Request method */
@@ -210,18 +210,18 @@ export class CachingProxyServer {
     // Handle different URL formats
     if (path.startsWith('http://') || path.startsWith('https://')) {
       // Full URL provided
-      return path + (req.url.includes('?') ? '?' + req.url.split('?')[1] : '')
+      return path + (req.url.includes('?') ? '?' + req.url.split('?')[1]! : '')
     }
  
     // Assume HTTPS and construct URL
     const url = `https://${path}`
-    return url + (req.url.includes('?') ? '?' + req.url.split('?')[1] : '')
+    return url + (req.url.includes('?') ? '?' + req.url.split('?')[1]! : '')
   }
 
   /**
    * Handle proxy errors
    */
-  private handleProxyError(error: any, req: Request, res: Response): void {
+  private handleProxyError(error: unknown, req: Request, res: Response): void {
     console.error('Proxy error:', error)
 
     if (res.headersSent) {
@@ -319,7 +319,7 @@ export class CachingProxyServer {
   private async makeProxyRequest(options: ProxyRequestOptions): Promise<ProxyResponse> {
     try {
       // Don't send body for GET/HEAD requests
-      const fetchOptions: RequestInit = {
+      const fetchOptions: globalThis.RequestInit = {
         headers: options.headers,
         method: options.method,
         redirect: this.config.proxy.followRedirects ? 'follow' : 'manual',
@@ -385,7 +385,7 @@ export class CachingProxyServer {
   /**
    * Serve cached response
    */
-  private serveCachedResponse(res: Response, entry: any, rateLimitResult: any): void {
+  private serveCachedResponse(res: Response, entry: { data: Buffer | string; headers: Record<string, string>; statusCode: number; ttl: number; }, rateLimitResult: { limit: number; remaining: number; resetTime: number }): void {
     // Set cache headers
     res.set('X-Cache', 'HIT')
     res.set('X-Cache-TTL', entry.ttl.toString())
@@ -408,7 +408,7 @@ export class CachingProxyServer {
   /**
    * Serve proxy response
    */
-  private serveProxyResponse(res: Response, proxyResponse: ProxyResponse, rateLimitResult: any): void {
+  private serveProxyResponse(res: Response, proxyResponse: ProxyResponse, rateLimitResult: { limit: number; remaining: number; resetTime: number }): void {
     // Set cache headers
     res.set('X-Cache', 'MISS')
     
@@ -430,13 +430,14 @@ export class CachingProxyServer {
    */
   private setupErrorHandlers(): void {
     // Express error handler
-    this.app.use((error: any, _req: any, res: any, _next: any) => {
+    this.app.use((error: unknown, _req: unknown, res: { headersSent: boolean; json: (data: unknown) => unknown; status: (code: number) => { json: (data: unknown) => unknown } }, _next: unknown) => {
       console.error('Express error:', error)
       
       if (!res.headersSent) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
         res.status(500).json({
           error: 'Internal server error',
-          message: this.config.monitoring.logLevel === 'debug' ? error.message : undefined
+          message: this.config.monitoring.logLevel === 'debug' ? errorMessage : undefined
         })
       }
     })
@@ -466,7 +467,7 @@ export class CachingProxyServer {
 
     // Add metrics middleware if enabled
     if (this.config.monitoring.metricsEnabled) {
-      this.app.use(createMetricsMiddleware(this.proxyMetrics))
+      this.app.use(createMetricsMiddleware(this.proxyMetrics) as (req: Request, res: Response, next: NextFunction) => void)
     }
 
     // CORS headers for cross-origin requests

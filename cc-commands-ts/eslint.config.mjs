@@ -120,6 +120,17 @@ export default [
     }
   },
   {
+    // GitHub API files that deal with snake_case responses
+    files: [
+      'src/orchestrator-services/github/services/ProxyAwareGitHubService.ts',
+      'src/orchestrator-services/github/services/GitHubRestApiService.ts',
+      'src/orchestrator-services/github/types/GitHubApiTypes.ts'
+    ],
+    rules: {
+      'camelcase': 'off' // GitHub API uses snake_case
+    }
+  },
+  {
     // Test files - enforce type-safe mocking patterns and relax some rules for mock data
     files: ['test/**/*.ts', 'test/**/*.js', '**/*.test.ts', '**/*.spec.ts'],
     rules: {

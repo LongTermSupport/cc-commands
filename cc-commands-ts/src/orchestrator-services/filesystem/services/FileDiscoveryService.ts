@@ -6,7 +6,7 @@
  * All operations are read-only.
  */
 
-import * as glob from 'glob'
+import { glob } from 'glob'
 import { promises as fs } from 'node:fs'
 import { join, parse, resolve } from 'node:path'
 
@@ -85,6 +85,7 @@ export class FileDiscoveryService implements IFileDiscoveryService {
   /**
    * Find files matching a glob pattern
    */
+  // eslint-disable-next-line complexity
   async findFiles(directory: string, pattern: string | string[], options?: TFileSearchOptions): Promise<FileDiscoveryResultDTO> {
     if (!directory) {
       throw new Error('Directory path is required')
@@ -109,7 +110,7 @@ export class FileDiscoveryService implements IFileDiscoveryService {
         // Use glob pattern syntax for multiple patterns
         let globPattern: string
         if (pattern.length === 1) {
-          const singlePattern = pattern[0] || '**/*'
+          const singlePattern = pattern?.[0] || '**/*'
           // Handle patterns that start with **/ (already recursive)
           globPattern = singlePattern.startsWith('**/') 
             ? singlePattern
@@ -124,16 +125,13 @@ export class FileDiscoveryService implements IFileDiscoveryService {
         try {
           // Use glob.glob with callback converted to Promise
           matches = await new Promise<string[]>((resolve, reject) => {
-            (glob as any)(globPattern, {
+            glob(globPattern, {
               absolute: true,  // Return absolute paths
               cwd: searchDirectory,  // Use cwd instead of joining paths
               dot: options?.includeHidden || false,
               ignore: ['**/node_modules/**', '**/.git/**', ...(options?.excludePatterns || [])],
               maxDepth: options?.maxDepth
-            }, (err: any, files: string[]) => {
-              if (err) reject(err)
-              else resolve(files)
-            })
+            }).then(resolve).catch(reject)
           })
         } catch (error) {
           // Log the actual glob error for debugging
@@ -177,16 +175,13 @@ export class FileDiscoveryService implements IFileDiscoveryService {
         try {
           // Use glob.glob with callback converted to Promise
           matches = await new Promise<string[]>((resolve, reject) => {
-            (glob as any)(globPattern, {
+            glob(globPattern, {
               absolute: true,  // Return absolute paths
               cwd: searchDirectory,  // Use cwd instead of joining paths
               dot: options?.includeHidden || false,
               ignore: ['**/node_modules/**', '**/.git/**', ...(options?.excludePatterns || [])],
               maxDepth: options?.maxDepth
-            }, (err: any, files: string[]) => {
-              if (err) reject(err)
-              else resolve(files)
-            })
+            }).then(resolve).catch(reject)
           })
         } catch (error) {
           // Log the actual glob error for debugging
@@ -428,7 +423,7 @@ export class FileDiscoveryService implements IFileDiscoveryService {
     }
 
     try {
-      const encoding = (options?.encoding as BufferEncoding) ?? 'utf8'
+      const encoding = (options?.encoding as BufferEncoding | undefined) ?? 'utf8'
       const maxLines = options?.maxLines ?? 100
       
       // Read file content
@@ -498,7 +493,7 @@ export class FileDiscoveryService implements IFileDiscoveryService {
       throw FileOperationError.invalidPath(fileType, `Unknown file type. Use one of: ${Object.keys(extensions).join(', ')}`)
     }
 
-    return await this.findFilesByExtension(typeExtensions, directory)
+    return this.findFilesByExtension(typeExtensions, directory)
   }
 
   /**
@@ -587,15 +582,10 @@ export class FileDiscoveryService implements IFileDiscoveryService {
         '**/.git/**'
       ]
       
-      const matches = await new Promise<string[]>((resolve, reject) => {
-        (glob as any)(fullPattern, {
-          dot: includeHidden,
-          ignore: ignorePatterns,
-          maxDepth
-        }, (err: any, files: string[]) => {
-          if (err) reject(err)
-          else resolve(files)
-        })
+      const matches = await glob(fullPattern, {
+        dot: includeHidden,
+        ignore: ignorePatterns,
+        maxDepth
       })
       
       const files: FileMetadataDTO[] = []

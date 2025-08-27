@@ -339,13 +339,13 @@ private readonly startTime = Date.now()
  * Middleware function to track request metrics
  */
 export function createMetricsMiddleware(proxyMetrics: ProxyMetrics) {
-  return (req: any, res: any, next: any) => {
+  return (req: { get: (header: string) => string; method: string; originalUrl: string; protocol: string; }, res: { end: (...args: unknown[]) => void; get: (header: string) => string; statusCode: number }, next: () => void) => {
     const startTime = Date.now()
     
     // Capture original end method
-    const originalEnd = res.end
+    const originalEnd = res.end.bind(res)
 
-    res.end = function(this: any, ...args: any[]) {
+    res.end = function(this: typeof res, ...args: unknown[]) {
       // Record metrics when response ends
       const duration = Date.now() - startTime
       const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`
@@ -369,8 +369,9 @@ export function createMetricsMiddleware(proxyMetrics: ProxyMetrics) {
       }
 
       // Call original end method
-      originalEnd.apply(this, args)
-    }
+      originalEnd(...args)
+      return this
+    } as typeof res.end
 
     next()
   }

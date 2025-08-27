@@ -18,9 +18,9 @@ export type HttpMethod = 'DELETE' | 'GET' | 'HEAD' | 'OPTIONS' | 'PATCH' | 'POST
  */
 export interface ApiRequestConfig {
   /** Request body */
-  body?: any
+  body?: Buffer | Record<string, unknown> | string
   /** Custom fetch options */
-  fetchOptions?: RequestInit
+  fetchOptions?: globalThis.RequestInit
   /** Whether to follow redirects */
   followRedirects?: boolean
   /** Request headers */
@@ -38,7 +38,7 @@ export interface ApiRequestConfig {
 /**
  * API response
  */
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   /** Response data */
   data: T
   /** Whether response came from cache */
@@ -149,7 +149,7 @@ export class ApiClient {
    * @param config - Additional request configuration
    * @returns Promise resolving to API response
    */
-  async delete<T = any>(url: string, config: Omit<ApiRequestConfig, 'method' | 'url'> = {}): Promise<ApiResponse<T>> {
+  async delete<T = unknown>(url: string, config: Omit<ApiRequestConfig, 'method' | 'url'> = {}): Promise<ApiResponse<T>> {
     return this.request<T>({ ...config, method: 'DELETE', url })
   }
 
@@ -160,7 +160,7 @@ export class ApiClient {
    * @param config - Additional request configuration
    * @returns Promise resolving to API response
    */
-  async get<T = any>(url: string, config: Omit<ApiRequestConfig, 'method' | 'url'> = {}): Promise<ApiResponse<T>> {
+  async get<T = unknown>(url: string, config: Omit<ApiRequestConfig, 'method' | 'url'> = {}): Promise<ApiResponse<T>> {
     return this.request<T>({ ...config, method: 'GET', url })
   }
 
@@ -169,7 +169,7 @@ export class ApiClient {
    * 
    * @returns Promise resolving to proxy metrics or undefined
    */
-  async getProxyMetrics(): Promise<any> {
+  async getProxyMetrics(): Promise<Record<string, unknown> | undefined> {
     if (!this.config.useProxy || !this.config.proxyBaseUrl) {
       return undefined
     }
@@ -221,7 +221,7 @@ export class ApiClient {
    * @param config - Additional request configuration
    * @returns Promise resolving to API response
    */
-  async patch<T = any>(url: string, body?: any, config: Omit<ApiRequestConfig, 'body' | 'method' | 'url'> = {}): Promise<ApiResponse<T>> {
+  async patch<T = unknown>(url: string, body?: Buffer | Record<string, unknown> | string, config: Omit<ApiRequestConfig, 'body' | 'method' | 'url'> = {}): Promise<ApiResponse<T>> {
     return this.request<T>({ ...config, body, method: 'PATCH', url })
   }
 
@@ -233,7 +233,7 @@ export class ApiClient {
    * @param config - Additional request configuration
    * @returns Promise resolving to API response
    */
-  async post<T = any>(url: string, body?: any, config: Omit<ApiRequestConfig, 'body' | 'method' | 'url'> = {}): Promise<ApiResponse<T>> {
+  async post<T = unknown>(url: string, body?: Buffer | Record<string, unknown> | string, config: Omit<ApiRequestConfig, 'body' | 'method' | 'url'> = {}): Promise<ApiResponse<T>> {
     return this.request<T>({ ...config, body, method: 'POST', url })
   }
 
@@ -245,7 +245,7 @@ export class ApiClient {
    * @param config - Additional request configuration
    * @returns Promise resolving to API response
    */
-  async put<T = any>(url: string, body?: any, config: Omit<ApiRequestConfig, 'body' | 'method' | 'url'> = {}): Promise<ApiResponse<T>> {
+  async put<T = unknown>(url: string, body?: Buffer | Record<string, unknown> | string, config: Omit<ApiRequestConfig, 'body' | 'method' | 'url'> = {}): Promise<ApiResponse<T>> {
     return this.request<T>({ ...config, body, method: 'PUT', url })
   }
 
@@ -255,13 +255,14 @@ export class ApiClient {
    * @param requestConfig - Request configuration
    * @returns Promise resolving to API response
    */
-  async request<T = any>(requestConfig: ApiRequestConfig): Promise<ApiResponse<T>> {
+  async request<T = unknown>(requestConfig: ApiRequestConfig): Promise<ApiResponse<T>> {
     const config = this.mergeConfig(requestConfig)
     
     let lastError: Error | undefined
     
     for (let attempt = 1; attempt <= this.retryConfig.maxAttempts; attempt++) {
       try {
+        // eslint-disable-next-line no-await-in-loop
         const response = await this.makeRequest<T>(config, attempt)
         return response
       } catch (error) {
@@ -274,6 +275,7 @@ export class ApiClient {
         
         // Wait before retry
         const delay = this.calculateRetryDelay(attempt)
+        // eslint-disable-next-line no-await-in-loop
         await this.sleep(delay)
       }
     }
@@ -339,7 +341,7 @@ export class ApiClient {
     const requestUrl = shouldUseProxy ? this.buildProxyUrl(config.url) : config.url
     
     // Prepare fetch options
-    const fetchOptions: RequestInit = {
+    const fetchOptions: globalThis.RequestInit = {
       headers: this.buildHeaders(config),
       method: config.method || 'GET',
       redirect: config.followRedirects === false ? 'manual' : 'follow',
@@ -502,7 +504,9 @@ export class ApiClient {
    * Sleep for specified milliseconds
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms))
+    return new Promise(resolve => {
+      setTimeout(resolve, ms)
+    })
   }
 }
 
