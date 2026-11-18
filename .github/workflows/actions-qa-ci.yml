@@ -19,4 +19,4 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Check the workflows with actions-qa-ci
-        uses: LongTermSupport/actions-qa-ci@c692fb40e93f3ad63d59adf78a86d1a1d0111449 # v0.1.1
+        uses: LongTermSupport/actions-qa-ci@5cee0932cc3e49ed6e4e1085a7c66fcec361707e # v0.1.2
