@@ -10,6 +10,10 @@ on:
       - '.claude/cc-commands/**'
       - '.github/workflows/cc-commands-check.yml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ci-check:
     name: CI Check

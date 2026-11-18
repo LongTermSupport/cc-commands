@@ -1,0 +1,22 @@
+name: actions-qa-ci
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actions-qa-ci:
+    name: actions-qa-ci
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check the workflows with actions-qa-ci
+        uses: LongTermSupport/actions-qa-ci@c692fb40e93f3ad63d59adf78a86d1a1d0111449 # v0.1.1
